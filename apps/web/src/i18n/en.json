@@ -1,0 +1,223 @@
+{
+  "brand": {
+    "name": "StrikeLab",
+    "tagline": "Get Dialed In.",
+    "secondary": "Every session becomes a plan."
+  },
+  "nav": {
+    "home": "Home",
+    "chat": "AI Coach",
+    "sessions": "Sessions",
+    "stats": "Stats",
+    "myBag": "My Bag",
+    "courses": "Courses",
+    "connectors": "Connectors",
+    "coach": "Reports",
+    "training": "Training",
+    "swingLab": "Swing Lab",
+    "calendar": "Calendar",
+    "friends": "Friends"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Create Account",
+    "logout": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "displayName": "Display Name",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "recentSessions": "Recent Sessions",
+    "upcomingTeeTimes": "Upcoming Tee Times",
+    "currentPlan": "Current Plan",
+    "coachSummary": "Coach Summary",
+    "yourNextMove": "Your Next Best Move",
+    "noSessions": "No sessions yet. Import your first data.",
+    "noTeeTimes": "No upcoming tee times."
+  },
+  "scores": {
+    "strikeScore": "Strike Score",
+    "faceControl": "Face Control",
+    "distanceControl": "Distance Control",
+    "dispersion": "Dispersion",
+    "elite": "Elite",
+    "solid": "Solid",
+    "developing": "Developing",
+    "focus": "Focus Area"
+  },
+  "sessions": {
+    "title": "Sessions",
+    "newSession": "Import Session",
+    "shotCount": "shots",
+    "viewDetails": "View Details",
+    "noShots": "No shots recorded",
+    "filters": {
+      "all": "All",
+      "range": "Range",
+      "simulator": "Simulator",
+      "round": "Round"
+    }
+  },
+  "sessionDetail": {
+    "overview": "Overview",
+    "shots": "Shots",
+    "dispersion": "Dispersion",
+    "trends": "Trends",
+    "log": "Session Log",
+    "coachReport": "Coach Report",
+    "markMishit": "Mark as Mishit",
+    "excludeMishits": "Exclude Mishits",
+    "replay": "Session Replay"
+  },
+  "log": {
+    "title": "Session Log",
+    "template": "Template",
+    "preSession": "Pre-Session",
+    "postSession": "Post-Session",
+    "energy": "Energy Level",
+    "mentalState": "Mental State",
+    "intent": "Intent",
+    "intentPlaceholder": "What are you working on today?",
+    "routineDiscipline": "Following routine?",
+    "feelTags": "How do you feel?",
+    "shotBlocks": "Shot Blocks",
+    "hitTarget": "Hit target?",
+    "missPattern": "Miss pattern",
+    "whatWorked": "What worked?",
+    "takeForward": "What to take forward?",
+    "dontOverthink": "What not to overthink?",
+    "coachNote": "Note to self",
+    "fatigueMode": "Fatigue Mode",
+    "fatigueModeDesc": "Quick log - skip to post-session",
+    "submit": "Save Log",
+    "saved": "Log saved"
+  },
+  "coach": {
+    "title": "Coach Reports",
+    "generateReport": "Generate Report",
+    "diagnosis": "Diagnosis",
+    "interpretation": "Interpretation",
+    "prescription": "Prescription",
+    "validation": "Validation",
+    "nextBestMove": "Next Best Move",
+    "linkedMetrics": "Supporting Data",
+    "noReports": "No coach reports yet."
+  },
+  "connectors": {
+    "title": "Connectors",
+    "connected": "Connected",
+    "notConnected": "Not Connected",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "importCSV": "Import CSV",
+    "uploadFile": "Upload File",
+    "comingSoon": "Coming Soon",
+    "lastSync": "Last synced"
+  },
+  "training": {
+    "title": "Training Plan",
+    "currentWeek": "Week",
+    "adherence": "Adherence",
+    "drills": "Drills",
+    "startPlan": "Start Plan",
+    "completeDrill": "Mark Complete",
+    "noPlan": "No active training plan."
+  },
+  "swingLab": {
+    "title": "Swing Lab",
+    "upload": "Upload Video",
+    "faceOn": "Face-On",
+    "dtl": "Down the Line",
+    "keyFrames": "Key Frames",
+    "analysis": "Analysis",
+    "compare": "Compare",
+    "noVideos": "No swing videos yet."
+  },
+  "calendar": {
+    "title": "Calendar",
+    "addTeeTime": "Add Tee Time",
+    "course": "Course",
+    "time": "Time",
+    "players": "Players",
+    "notes": "Notes",
+    "prepNotes": "Prep Notes"
+  },
+  "friends": {
+    "title": "Friends",
+    "invite": "Invite Friend",
+    "compare": "Compare",
+    "leaderboard": "Leaderboard",
+    "pending": "Pending",
+    "accepted": "Friends",
+    "noFriends": "No friends yet. Send an invite!"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "success": "Success",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "thisWeek": "This Week",
+    "lastWeek": "Last Week"
+  },
+  "feelTags": {
+    "calm": "Calm",
+    "heavy": "Heavy",
+    "late": "Late",
+    "stress": "Stress",
+    "focused": "Focused",
+    "smooth": "Smooth",
+    "quick": "Quick",
+    "tight": "Tight"
+  },
+  "missPatterns": {
+    "push": "Push",
+    "pull": "Pull",
+    "fade": "Fade",
+    "draw": "Draw",
+    "slice": "Slice",
+    "hook": "Hook",
+    "thin": "Thin",
+    "fat": "Fat",
+    "toe": "Toe",
+    "heel": "Heel"
+  },
+  "myBag": {
+    "title": "My Bag",
+    "addClub": "Add Club",
+    "removeClub": "Remove",
+    "editClub": "Edit",
+    "gameBall": "Game Ball",
+    "selectBrand": "Select Brand",
+    "selectType": "Select Type",
+    "selectModel": "Select Model",
+    "emptyBag": "Your bag is empty",
+    "maxClubs": "Maximum 14 clubs allowed"
+  },
+  "courses": {
+    "title": "Golf Courses",
+    "search": "Search courses...",
+    "allCountries": "All Countries",
+    "allTypes": "All Types",
+    "par": "Par",
+    "rating": "Rating",
+    "slope": "Slope",
+    "facilities": "Facilities",
+    "designer": "Designer",
+    "established": "Established",
+    "visitWebsite": "Visit Website"
+  }
+}

@@ -1,0 +1,221 @@
+{
+  "brand": {
+    "name": "StrikeLab",
+    "tagline": "Bli presis.",
+    "secondary": "Hver økt blir en plan."
+  },
+  "nav": {
+    "home": "Hjem",
+    "sessions": "Økter",
+    "myBag": "Min Bag",
+    "courses": "Baner",
+    "connectors": "Koblinger",
+    "coach": "Coach",
+    "training": "Trening",
+    "swingLab": "Swing Lab",
+    "calendar": "Kalender",
+    "friends": "Venner"
+  },
+  "auth": {
+    "login": "Logg inn",
+    "register": "Opprett konto",
+    "logout": "Logg ut",
+    "email": "E-post",
+    "password": "Passord",
+    "confirmPassword": "Bekreft passord",
+    "displayName": "Visningsnavn",
+    "forgotPassword": "Glemt passord?",
+    "noAccount": "Har du ikke konto?",
+    "hasAccount": "Har du allerede konto?"
+  },
+  "dashboard": {
+    "welcome": "Velkommen tilbake",
+    "recentSessions": "Nylige økter",
+    "upcomingTeeTimes": "Kommende tee-tider",
+    "currentPlan": "Gjeldende plan",
+    "coachSummary": "Coach-oppsummering",
+    "yourNextMove": "Ditt neste trekk",
+    "noSessions": "Ingen økter ennå. Importer din første data.",
+    "noTeeTimes": "Ingen kommende tee-tider."
+  },
+  "scores": {
+    "strikeScore": "Treff-score",
+    "faceControl": "Facekontroll",
+    "distanceControl": "Avstandskontroll",
+    "dispersion": "Spredning",
+    "elite": "Elite",
+    "solid": "Solid",
+    "developing": "Utviklende",
+    "focus": "Fokusområde"
+  },
+  "sessions": {
+    "title": "Økter",
+    "newSession": "Importer økt",
+    "shotCount": "slag",
+    "viewDetails": "Se detaljer",
+    "noShots": "Ingen slag registrert",
+    "filters": {
+      "all": "Alle",
+      "range": "Range",
+      "simulator": "Simulator",
+      "round": "Runde"
+    }
+  },
+  "sessionDetail": {
+    "overview": "Oversikt",
+    "shots": "Slag",
+    "dispersion": "Spredning",
+    "trends": "Trender",
+    "log": "Øktlogg",
+    "coachReport": "Coach-rapport",
+    "markMishit": "Marker som feilslag",
+    "excludeMishits": "Ekskluder feilslag",
+    "replay": "Økt-replay"
+  },
+  "log": {
+    "title": "Øktlogg",
+    "template": "Mal",
+    "preSession": "Før økt",
+    "postSession": "Etter økt",
+    "energy": "Energinivå",
+    "mentalState": "Mental tilstand",
+    "intent": "Intensjon",
+    "intentPlaceholder": "Hva trener du på i dag?",
+    "routineDiscipline": "Følger du rutinen?",
+    "feelTags": "Hvordan føler du deg?",
+    "shotBlocks": "Slagblokker",
+    "hitTarget": "Traff målet?",
+    "missPattern": "Missmønster",
+    "whatWorked": "Hva fungerte?",
+    "takeForward": "Hva tar du med videre?",
+    "dontOverthink": "Hva skal du ikke overtenke?",
+    "coachNote": "Notat til deg selv",
+    "fatigueMode": "Sliten-modus",
+    "fatigueModeDesc": "Rask logg - hopp til etter-økt",
+    "submit": "Lagre logg",
+    "saved": "Logg lagret"
+  },
+  "coach": {
+    "title": "Coach-rapporter",
+    "generateReport": "Generer rapport",
+    "diagnosis": "Diagnose",
+    "interpretation": "Tolkning",
+    "prescription": "Resept",
+    "validation": "Validering",
+    "nextBestMove": "Neste beste trekk",
+    "linkedMetrics": "Underbyggende data",
+    "noReports": "Ingen coach-rapporter ennå."
+  },
+  "connectors": {
+    "title": "Koblinger",
+    "connected": "Tilkoblet",
+    "notConnected": "Ikke tilkoblet",
+    "connect": "Koble til",
+    "disconnect": "Koble fra",
+    "importCSV": "Importer CSV",
+    "uploadFile": "Last opp fil",
+    "comingSoon": "Kommer snart",
+    "lastSync": "Sist synkronisert"
+  },
+  "training": {
+    "title": "Treningsplan",
+    "currentWeek": "Uke",
+    "adherence": "Gjennomføring",
+    "drills": "Øvelser",
+    "startPlan": "Start plan",
+    "completeDrill": "Marker fullført",
+    "noPlan": "Ingen aktiv treningsplan."
+  },
+  "swingLab": {
+    "title": "Swing Lab",
+    "upload": "Last opp video",
+    "faceOn": "Forfra",
+    "dtl": "Ned linjen",
+    "keyFrames": "Nøkkelbilder",
+    "analysis": "Analyse",
+    "compare": "Sammenlign",
+    "noVideos": "Ingen swingvideoer ennå."
+  },
+  "calendar": {
+    "title": "Kalender",
+    "addTeeTime": "Legg til tee-tid",
+    "course": "Bane",
+    "time": "Tidspunkt",
+    "players": "Spillere",
+    "notes": "Notater",
+    "prepNotes": "Forberedelsesnotater"
+  },
+  "friends": {
+    "title": "Venner",
+    "invite": "Inviter venn",
+    "compare": "Sammenlign",
+    "leaderboard": "Toppliste",
+    "pending": "Venter",
+    "accepted": "Venner",
+    "noFriends": "Ingen venner ennå. Send en invitasjon!"
+  },
+  "common": {
+    "save": "Lagre",
+    "cancel": "Avbryt",
+    "delete": "Slett",
+    "edit": "Rediger",
+    "loading": "Laster...",
+    "error": "Noe gikk galt",
+    "success": "Suksess",
+    "confirm": "Bekreft",
+    "back": "Tilbake",
+    "next": "Neste",
+    "previous": "Forrige",
+    "today": "I dag",
+    "yesterday": "I går",
+    "thisWeek": "Denne uken",
+    "lastWeek": "Forrige uke"
+  },
+  "feelTags": {
+    "calm": "Rolig",
+    "heavy": "Tung",
+    "late": "Sen",
+    "stress": "Stress",
+    "focused": "Fokusert",
+    "smooth": "Myk",
+    "quick": "Hurtig",
+    "tight": "Stram"
+  },
+  "missPatterns": {
+    "push": "Push",
+    "pull": "Pull",
+    "fade": "Fade",
+    "draw": "Draw",
+    "slice": "Slice",
+    "hook": "Hook",
+    "thin": "Tynn",
+    "fat": "Feit",
+    "toe": "Tå",
+    "heel": "Hæl"
+  },
+  "myBag": {
+    "title": "Min Bag",
+    "addClub": "Legg til kølle",
+    "removeClub": "Fjern",
+    "editClub": "Rediger",
+    "gameBall": "Spillball",
+    "selectBrand": "Velg merke",
+    "selectType": "Velg type",
+    "selectModel": "Velg modell",
+    "emptyBag": "Bagen din er tom",
+    "maxClubs": "Maks 14 køller tillatt"
+  },
+  "courses": {
+    "title": "Golfbaner",
+    "search": "Søk baner...",
+    "allCountries": "Alle land",
+    "allTypes": "Alle typer",
+    "par": "Par",
+    "rating": "Rating",
+    "slope": "Slope",
+    "facilities": "Fasiliteter",
+    "designer": "Designer",
+    "established": "Etablert",
+    "visitWebsite": "Besøk nettside"
+  }
+}

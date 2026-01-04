@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Colors */
+  --color-obsidian: #0A0A0F;
+  --color-graphite: #141419;
+  --color-surface: #1A1A22;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-ice-white: #F4F4F6;
+  --color-muted: #8A8A99;
+  --color-cyan: #23D5FF;
+  --color-cyan-glow: rgba(35, 213, 255, 0.3);
+  --color-cyan-dim: rgba(35, 213, 255, 0.15);
+  
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Inter Tight', 'Inter', sans-serif;
+  
+  /* Spacing */
+  --radius-card: 20px;
+  --radius-button: 12px;
+  
+  /* Shadows */
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 24px var(--color-cyan-glow);
+  --shadow-glow-sm: 0 0 12px rgba(35, 213, 255, 0.2);
+  
+  /* Motion */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    @apply antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  
+  body {
+    @apply bg-obsidian text-ice-white font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  ::selection {
+    @apply bg-cyan/30 text-ice-white;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-obsidian;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted/50;
+  }
+}
+
+@layer components {
+  /* Card styles */
+  .card {
+    @apply bg-surface rounded-card border border-border shadow-card;
+  }
+  
+  .card-hover {
+    @apply card transition-all duration-250 hover:-translate-y-0.5 hover:shadow-glow-sm hover:border-cyan/20;
+  }
+  
+  /* Glow effects */
+  .glow {
+    @apply shadow-glow;
+  }
+  
+  .glow-sm {
+    @apply shadow-glow-sm;
+  }
+  
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-gradient-to-r from-cyan to-cyan/70 bg-clip-text text-transparent;
+  }
+  
+  /* Animated gradient background */
+  .bg-gradient-animated {
+    background: linear-gradient(
+      135deg,
+      var(--color-obsidian) 0%,
+      var(--color-graphite) 25%,
+      var(--color-cyan-dim) 50%,
+      var(--color-graphite) 75%,
+      var(--color-obsidian) 100%
+    );
+    background-size: 400% 400%;
+    animation: gradient 8s ease infinite;
+  }
+  
+  /* Shimmer loading effect */
+  .shimmer {
+    @apply relative overflow-hidden;
+  }
+  
+  .shimmer::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(35, 213, 255, 0.1),
+      transparent
+    );
+    animation: shimmer 2s linear infinite;
+  }
+  
+  /* Precision grid background */
+  .bg-precision-grid {
+    background-image: 
+      linear-gradient(rgba(35, 213, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(35, 213, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  
+  /* Dot pattern background */
+  .bg-dots {
+    background-image: radial-gradient(
+      rgba(35, 213, 255, 0.08) 1px,
+      transparent 1px
+    );
+    background-size: 24px 24px;
+  }
+}
+
+@layer utilities {
+  .duration-250 {
+    transition-duration: 250ms;
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
