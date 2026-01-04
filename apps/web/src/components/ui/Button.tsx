@@ -21,17 +21,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium transition-all duration-250 focus:outline-none focus:ring-2 focus:ring-cyan/50 focus:ring-offset-2 focus:ring-offset-obsidian disabled:opacity-50 disabled:cursor-not-allowed'
+      'inline-flex items-center justify-center font-medium transition-all duration-250 focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:ring-offset-2 focus:ring-offset-theme-bg-primary disabled:opacity-50 disabled:cursor-not-allowed'
 
     const variants = {
       primary:
-        'bg-cyan text-obsidian hover:bg-cyan/90 hover:shadow-glow-sm active:scale-[0.98]',
+        'bg-theme-accent text-theme-text-inverted hover:bg-theme-accent-hover hover:shadow-glow-sm active:scale-[0.98]',
       secondary:
-        'bg-surface border border-border text-ice-white hover:bg-graphite hover:border-cyan/30 active:scale-[0.98]',
+        'bg-theme-bg-surface border border-theme-border text-theme-text-primary hover:bg-theme-bg-elevated hover:border-theme-accent/30 active:scale-[0.98]',
       ghost:
-        'bg-transparent text-ice-white hover:bg-surface hover:text-cyan',
+        'bg-transparent text-theme-text-primary hover:bg-theme-bg-surface hover:text-theme-accent',
       danger:
-        'bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50',
+        'bg-theme-error-dim border border-theme-error/30 text-theme-error hover:bg-theme-error/20 hover:border-theme-error/50',
     }
 
     const sizes = {

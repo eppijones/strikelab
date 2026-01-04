@@ -31,10 +31,10 @@ export function ScoreRing({
   const offset = circumference - (percentage / 100) * circumference
 
   const getColor = (score: number) => {
-    if (score >= 90) return { stroke: '#22c55e', glow: 'rgba(34, 197, 94, 0.3)' }
-    if (score >= 75) return { stroke: '#23D5FF', glow: 'rgba(35, 213, 255, 0.3)' }
-    if (score >= 60) return { stroke: '#eab308', glow: 'rgba(234, 179, 8, 0.3)' }
-    return { stroke: '#ef4444', glow: 'rgba(239, 68, 68, 0.3)' }
+    if (score >= 90) return { stroke: 'var(--color-success)', glow: 'var(--color-success-dim)' }
+    if (score >= 75) return { stroke: 'var(--color-accent)', glow: 'var(--color-accent-glow)' }
+    if (score >= 60) return { stroke: 'var(--color-warning)', glow: 'var(--color-warning-dim)' }
+    return { stroke: 'var(--color-error)', glow: 'var(--color-error-dim)' }
   }
 
   const color = getColor(score)
@@ -52,7 +52,7 @@ export function ScoreRing({
             cx={ring / 2}
             cy={ring / 2}
             r={radius}
-            stroke="rgba(255, 255, 255, 0.08)"
+            stroke="var(--color-border)"
             strokeWidth={stroke}
             fill="none"
           />
@@ -75,14 +75,14 @@ export function ScoreRing({
         </svg>
         {showValue && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className={cn('font-display font-bold text-ice-white', text)}>
+            <span className={cn('font-display font-bold text-theme-text-primary', text)}>
               {Math.round(score)}
             </span>
           </div>
         )}
       </div>
       {label && (
-        <span className={cn('mt-2 text-muted', labelSize)}>{label}</span>
+        <span className={cn('mt-2 text-theme-text-muted', labelSize)}>{label}</span>
       )}
     </div>
   )

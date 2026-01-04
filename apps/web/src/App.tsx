@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { Shell } from '@/components/layout/Shell'
 import Dashboard from '@/pages/Dashboard'
 import Sessions from '@/pages/Sessions'
@@ -53,6 +55,14 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const theme = useSettingsStore((state) => state.theme)
+  
+  // Initialize theme class on mount
+  useEffect(() => {
+    document.documentElement.classList.remove('dark', 'light')
+    document.documentElement.classList.add(theme)
+  }, [theme])
+  
   return (
     <BrowserRouter>
       <Routes>

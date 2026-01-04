@@ -11,7 +11,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
     const variants = {
       default: 'card',
       hover: 'card-hover',
-      glow: 'card shadow-glow border-cyan/20',
+      glow: 'card shadow-glow border-theme-accent/20',
     }
 
     const paddings = {
@@ -56,7 +56,7 @@ export const CardTitle = forwardRef<HTMLHeadingElement, CardTitleProps>(
     <h3
       ref={ref}
       className={cn(
-        'text-lg font-semibold leading-none tracking-tight text-ice-white',
+        'text-lg font-semibold leading-none tracking-tight text-theme-text-primary',
         className
       )}
       {...props}
@@ -72,7 +72,7 @@ export const CardDescription = forwardRef<
   HTMLParagraphElement,
   CardDescriptionProps
 >(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn('text-sm text-muted', className)} {...props} />
+  <p ref={ref} className={cn('text-sm text-theme-text-muted', className)} {...props} />
 ))
 
 CardDescription.displayName = 'CardDescription'

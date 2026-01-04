@@ -7,7 +7,7 @@ export function Shell() {
   const sidebarCollapsed = useSettingsStore((state) => state.sidebarCollapsed)
 
   return (
-    <div className="min-h-screen bg-obsidian bg-precision-grid">
+    <div className="min-h-screen bg-theme-bg-primary bg-precision-grid transition-colors duration-300">
       <Sidebar />
       <main
         className={cn(

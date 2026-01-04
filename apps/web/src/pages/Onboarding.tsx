@@ -222,7 +222,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidian bg-precision-grid flex items-center justify-center p-4">
+    <div className="min-h-screen bg-theme-bg-primary bg-precision-grid flex items-center justify-center p-4 transition-colors duration-300">
       <div className="w-full max-w-2xl">
         {/* Progress Indicator */}
         <div className="flex items-center justify-center gap-2 mb-8">
@@ -231,10 +231,10 @@ export default function Onboarding() {
               key={s}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
                 step === s 
-                  ? 'w-8 bg-cyan' 
+                  ? 'w-8 bg-theme-accent' 
                   : ['welcome', 'handicap', 'goals', 'practice', 'equipment', 'complete'].indexOf(step) > i
-                    ? 'bg-cyan/50'
-                    : 'bg-graphite'
+                    ? 'bg-theme-accent/50'
+                    : 'bg-theme-bg-secondary'
               }`}
             />
           ))}
@@ -244,21 +244,21 @@ export default function Onboarding() {
         {step === 'welcome' && (
           <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="inline-flex items-center gap-3 mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-graphite border border-border flex items-center justify-center relative">
-                <div className="absolute w-12 h-12 rounded-full border border-white/10" />
-                <div className="absolute w-9 h-9 rounded-full border border-white/8" />
-                <div className="absolute w-6 h-6 rounded-full border border-white/6" />
-                <div className="absolute w-3 h-3 rounded-full bg-cyan shadow-glow translate-x-0.5 -translate-y-0.5" />
+              <div className="w-16 h-16 rounded-2xl bg-theme-bg-secondary border border-theme-border flex items-center justify-center relative">
+                <div className="absolute w-12 h-12 rounded-full border border-theme-text-muted/20" />
+                <div className="absolute w-9 h-9 rounded-full border border-theme-text-muted/15" />
+                <div className="absolute w-6 h-6 rounded-full border border-theme-text-muted/10" />
+                <div className="absolute w-3 h-3 rounded-full bg-theme-accent shadow-glow translate-x-0.5 -translate-y-0.5" />
               </div>
             </div>
             
-            <h1 className="text-4xl font-display font-bold text-ice-white mb-4">
-              Welcome to Strike<span className="text-cyan">Lab</span>
+            <h1 className="text-4xl font-display font-bold text-theme-text-primary mb-4">
+              Welcome to Strike<span className="text-theme-accent">Lab</span>
             </h1>
-            <p className="text-xl text-muted mb-2">
+            <p className="text-xl text-theme-text-muted mb-2">
               Hi {user?.displayName?.split(' ')[0] || 'Golfer'}! 👋
             </p>
-            <p className="text-muted max-w-md mx-auto mb-8">
+            <p className="text-theme-text-muted max-w-md mx-auto mb-8">
               Let's set up your profile so we can give you personalized coaching 
               and help you reach your goals faster.
             </p>
@@ -267,18 +267,18 @@ export default function Onboarding() {
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div className="p-4">
                   <span className="text-3xl block mb-2">🎯</span>
-                  <p className="text-sm text-ice-white font-medium">Track Progress</p>
-                  <p className="text-xs text-muted">See your improvement</p>
+                  <p className="text-sm text-theme-text-primary font-medium">Track Progress</p>
+                  <p className="text-xs text-theme-text-muted">See your improvement</p>
                 </div>
                 <div className="p-4">
                   <span className="text-3xl block mb-2">🤖</span>
-                  <p className="text-sm text-ice-white font-medium">AI Coach</p>
-                  <p className="text-xs text-muted">Personalized advice</p>
+                  <p className="text-sm text-theme-text-primary font-medium">AI Coach</p>
+                  <p className="text-xs text-theme-text-muted">Personalized advice</p>
                 </div>
                 <div className="p-4">
                   <span className="text-3xl block mb-2">📈</span>
-                  <p className="text-sm text-ice-white font-medium">Predict</p>
-                  <p className="text-xs text-muted">Future handicap</p>
+                  <p className="text-sm text-theme-text-primary font-medium">Predict</p>
+                  <p className="text-xs text-theme-text-muted">Future handicap</p>
                 </div>
               </div>
             </Card>

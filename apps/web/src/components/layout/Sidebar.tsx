@@ -22,7 +22,7 @@ const navItems = [
 export function Sidebar() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { sidebarCollapsed, toggleSidebar, language, setLanguage } = useSettingsStore()
+  const { sidebarCollapsed, toggleSidebar, language, setLanguage, theme, toggleTheme } = useSettingsStore()
   const { user, logout } = useAuthStore()
 
   const handleLogout = () => {
@@ -33,27 +33,28 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 h-full bg-obsidian/60 backdrop-blur-xl border-r border-white/5 flex flex-col transition-all duration-300 z-50',
+        'fixed left-0 top-0 h-full backdrop-blur-xl border-r flex flex-col transition-all duration-300 z-50',
+        'bg-theme-bg-secondary/80 border-theme-border',
         sidebarCollapsed ? 'w-[72px]' : 'w-60'
       )}
     >
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-white/5">
+      <div className="h-16 flex items-center px-4 border-b border-theme-border">
         <button
           onClick={toggleSidebar}
           className="flex items-center gap-3 hover:opacity-90 transition-opacity"
         >
-          <div className="w-9 h-9 rounded-lg bg-surface/80 flex items-center justify-center relative overflow-hidden">
+          <div className="w-9 h-9 rounded-lg bg-theme-bg-surface/80 border border-theme-border flex items-center justify-center relative overflow-hidden">
             {/* Simplified target */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-6 h-6 rounded-full border border-white/10" />
-              <div className="absolute w-3 h-3 rounded-full border border-white/8" />
+              <div className="w-6 h-6 rounded-full border border-theme-text-muted/20" />
+              <div className="absolute w-3 h-3 rounded-full border border-theme-text-muted/15" />
             </div>
-            <div className="absolute w-1.5 h-1.5 rounded-full bg-cyan shadow-glow" />
+            <div className="absolute w-1.5 h-1.5 rounded-full bg-theme-accent shadow-glow" />
           </div>
           {!sidebarCollapsed && (
-            <span className="font-display font-bold text-base text-ice-white/90">
-              Strike<span className="text-cyan">Lab</span>
+            <span className="font-display font-bold text-base text-theme-text-primary/90">
+              Strike<span className="text-theme-accent">Lab</span>
             </span>
           )}
         </button>
@@ -69,10 +70,10 @@ export function Sidebar() {
               cn(
                 'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 relative group',
                 isActive
-                  ? 'bg-cyan/8 text-cyan'
+                  ? 'bg-theme-accent-dim text-theme-accent'
                   : item.highlight
-                    ? 'text-emerald-400/80 hover:text-emerald-400 hover:bg-emerald-500/5'
-                    : 'text-white/40 hover:text-white/70 hover:bg-white/3'
+                    ? 'text-emerald-500 dark:text-emerald-400/80 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-500/5'
+                    : 'text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-accent-subtle'
               )
             }
           >
@@ -80,14 +81,14 @@ export function Sidebar() {
               <>
                 {/* Active indicator */}
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-cyan rounded-r" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-theme-accent rounded-r" />
                 )}
                 <item.icon className={cn('w-[18px] h-[18px] flex-shrink-0', isActive && 'drop-shadow-sm')} />
                 {!sidebarCollapsed && (
                   <>
                     <span className="text-[13px] font-medium">{t(item.label)}</span>
                     {item.highlight && (
-                      <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-emerald-400/80" />
+                      <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400/80" />
                     )}
                   </>
                 )}
@@ -98,15 +99,36 @@ export function Sidebar() {
       </nav>
 
       {/* User & Settings */}
-      <div className="border-t border-white/5 p-3 space-y-3">
-        {/* Language Toggle */}
-        <div className={cn('flex', sidebarCollapsed ? 'justify-center' : 'justify-start')}>
-          <div className="inline-flex rounded-md border border-white/5 bg-white/3 p-0.5">
+      <div className="border-t border-theme-border p-3 space-y-3">
+        {/* Theme & Language Toggles */}
+        <div className={cn('flex gap-2', sidebarCollapsed ? 'flex-col items-center' : 'justify-between')}>
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className={cn(
+              'flex items-center justify-center rounded-md border border-theme-border bg-theme-accent-subtle p-1.5 transition-all hover:border-theme-accent/30',
+              sidebarCollapsed ? 'w-full' : ''
+            )}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? (
+              <svg className="w-4 h-4 text-theme-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-theme-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
+          </button>
+          
+          {/* Language Toggle */}
+          <div className="inline-flex rounded-md border border-theme-border bg-theme-accent-subtle p-0.5">
             <button
               onClick={() => setLanguage('en')}
               className={cn(
                 'px-2 py-0.5 text-[11px] font-medium rounded transition-all',
-                language === 'en' ? 'bg-cyan/90 text-obsidian' : 'text-white/40 hover:text-white/60'
+                language === 'en' ? 'bg-theme-accent text-theme-text-inverted' : 'text-theme-text-muted hover:text-theme-text-secondary'
               )}
             >
               EN
@@ -115,7 +137,7 @@ export function Sidebar() {
               onClick={() => setLanguage('no')}
               className={cn(
                 'px-2 py-0.5 text-[11px] font-medium rounded transition-all',
-                language === 'no' ? 'bg-cyan/90 text-obsidian' : 'text-white/40 hover:text-white/60'
+                language === 'no' ? 'bg-theme-accent text-theme-text-inverted' : 'text-theme-text-muted hover:text-theme-text-secondary'
               )}
             >
               NO
@@ -128,22 +150,22 @@ export function Sidebar() {
           <div className={cn('flex items-center gap-2.5', sidebarCollapsed && 'justify-center')}>
             <NavLink
               to="/settings"
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan/20 to-emerald-500/20 border border-white/10 flex items-center justify-center hover:border-cyan/30 transition-colors"
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-theme-accent/20 to-emerald-500/20 border border-theme-border flex items-center justify-center hover:border-theme-accent/30 transition-colors"
             >
-              <span className="text-xs font-medium text-cyan/90">
+              <span className="text-xs font-medium text-theme-accent">
                 {user.displayName.charAt(0).toUpperCase()}
               </span>
             </NavLink>
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
                 <NavLink to="/settings" className="block">
-                  <p className="text-xs font-medium text-white/70 truncate hover:text-cyan transition-colors">
+                  <p className="text-xs font-medium text-theme-text-secondary truncate hover:text-theme-accent transition-colors">
                     {user.displayName}
                   </p>
                 </NavLink>
                 <button
                   onClick={handleLogout}
-                  className="text-[11px] text-white/30 hover:text-cyan transition-colors"
+                  className="text-[11px] text-theme-text-muted hover:text-theme-accent transition-colors"
                 >
                   {t('auth.logout')}
                 </button>

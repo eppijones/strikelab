@@ -22,7 +22,7 @@ export function ScaleInput({
   return (
     <div className={cn('space-y-2', className)}>
       {label && (
-        <label className="block text-sm font-medium text-ice-white">
+        <label className="block text-sm font-medium text-theme-text-primary">
           {label}
         </label>
       )}
@@ -37,8 +37,8 @@ export function ScaleInput({
               className={cn(
                 'w-10 h-10 flex items-center justify-center text-sm font-medium rounded-button border transition-all duration-250',
                 isSelected
-                  ? 'bg-cyan text-obsidian border-cyan shadow-glow-sm'
-                  : 'bg-surface border-border text-muted hover:text-ice-white hover:border-ice-white/30'
+                  ? 'bg-theme-accent text-theme-text-inverted border-theme-accent shadow-glow-sm'
+                  : 'bg-theme-bg-surface border-theme-border text-theme-text-muted hover:text-theme-text-primary hover:border-theme-accent/30'
               )}
             >
               {num}
@@ -46,7 +46,7 @@ export function ScaleInput({
           )
         })}
       </div>
-      <div className="flex justify-between text-xs text-muted">
+      <div className="flex justify-between text-xs text-theme-text-muted">
         <span>Low</span>
         <span>High</span>
       </div>

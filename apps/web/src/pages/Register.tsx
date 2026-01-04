@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useRegister } from '@/api/auth'
-import { Button, Input, Card, Select } from '@/components/ui'
+import { Button, Input, Card } from '@/components/ui'
 import { useSettingsStore } from '@/stores/settingsStore'
 
 export default function Register() {
@@ -46,22 +46,22 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidian bg-precision-grid flex items-center justify-center p-4">
+    <div className="min-h-screen bg-theme-bg-primary bg-precision-grid flex items-center justify-center p-4 transition-colors duration-300">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-graphite border border-border flex items-center justify-center relative">
-              <div className="absolute w-8 h-8 rounded-full border border-white/10" />
-              <div className="absolute w-6 h-6 rounded-full border border-white/8" />
-              <div className="absolute w-4 h-4 rounded-full border border-white/6" />
-              <div className="absolute w-2 h-2 rounded-full bg-cyan shadow-glow translate-x-0.5 -translate-y-0.5" />
+            <div className="w-12 h-12 rounded-xl bg-theme-bg-secondary border border-theme-border flex items-center justify-center relative">
+              <div className="absolute w-8 h-8 rounded-full border border-theme-text-muted/20" />
+              <div className="absolute w-6 h-6 rounded-full border border-theme-text-muted/15" />
+              <div className="absolute w-4 h-4 rounded-full border border-theme-text-muted/10" />
+              <div className="absolute w-2 h-2 rounded-full bg-theme-accent shadow-glow translate-x-0.5 -translate-y-0.5" />
             </div>
-            <span className="font-display font-bold text-2xl text-ice-white">
-              Strike<span className="text-cyan">Lab</span>
+            <span className="font-display font-bold text-2xl text-theme-text-primary">
+              Strike<span className="text-theme-accent">Lab</span>
             </span>
           </div>
-          <p className="text-muted">{t('brand.secondary')}</p>
+          <p className="text-theme-text-muted">{t('brand.secondary')}</p>
         </div>
 
         <Card padding="lg">
@@ -103,7 +103,7 @@ export default function Register() {
             />
 
             {error && (
-              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-button px-3 py-2">
+              <p className="text-sm text-theme-error bg-theme-error-dim border border-theme-error/30 rounded-button px-3 py-2">
                 {error}
               </p>
             )}
@@ -119,9 +119,9 @@ export default function Register() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-muted text-sm">
+            <p className="text-theme-text-muted text-sm">
               {t('auth.hasAccount')}{' '}
-              <Link to="/login" className="text-cyan hover:underline">
+              <Link to="/login" className="text-theme-accent hover:underline">
                 {t('auth.login')}
               </Link>
             </p>

@@ -34,18 +34,18 @@ export function Toggle({
         <div
           className={cn(
             'w-11 h-6 rounded-full transition-colors duration-250',
-            checked ? 'bg-cyan' : 'bg-surface border border-border'
+            checked ? 'bg-theme-accent' : 'bg-theme-bg-surface border border-theme-border'
           )}
         />
         <div
           className={cn(
-            'absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-ice-white shadow-md transition-transform duration-250',
-            checked && 'translate-x-5'
+            'absolute left-0.5 top-0.5 w-5 h-5 rounded-full shadow-md transition-transform duration-250',
+            checked ? 'translate-x-5 bg-theme-text-inverted' : 'bg-theme-text-primary'
           )}
         />
       </div>
       {label && (
-        <span className="ml-3 text-sm text-ice-white">{label}</span>
+        <span className="ml-3 text-sm text-theme-text-primary">{label}</span>
       )}
     </label>
   )
@@ -67,7 +67,7 @@ export function ToggleGroup<T extends string>({
   return (
     <div
       className={cn(
-        'inline-flex rounded-button border border-border bg-surface p-1',
+        'inline-flex rounded-button border border-theme-border bg-theme-bg-surface p-1',
         className
       )}
     >
@@ -78,8 +78,8 @@ export function ToggleGroup<T extends string>({
           className={cn(
             'px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-250',
             value === option.value
-              ? 'bg-cyan text-obsidian'
-              : 'text-muted hover:text-ice-white'
+              ? 'bg-theme-accent text-theme-text-inverted'
+              : 'text-theme-text-muted hover:text-theme-text-primary'
           )}
         >
           {option.label}

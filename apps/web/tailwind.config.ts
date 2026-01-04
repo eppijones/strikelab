@@ -8,6 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Legacy colors for backward compatibility (dark theme)
         obsidian: '#0A0A0F',
         graphite: '#141419',
         surface: '#1A1A22',
@@ -19,6 +20,45 @@ export default {
           dim: 'rgba(35, 213, 255, 0.15)',
         },
         border: 'rgba(255, 255, 255, 0.08)',
+        
+        // Theme-aware colors using CSS variables
+        theme: {
+          bg: {
+            primary: 'var(--color-bg-primary)',
+            secondary: 'var(--color-bg-secondary)',
+            surface: 'var(--color-bg-surface)',
+            elevated: 'var(--color-bg-elevated)',
+          },
+          text: {
+            primary: 'var(--color-text-primary)',
+            secondary: 'var(--color-text-secondary)',
+            muted: 'var(--color-text-muted)',
+            inverted: 'var(--color-text-inverted)',
+          },
+          border: {
+            DEFAULT: 'var(--color-border)',
+            focus: 'var(--color-border-focus)',
+          },
+          accent: {
+            DEFAULT: 'var(--color-accent)',
+            hover: 'var(--color-accent-hover)',
+            glow: 'var(--color-accent-glow)',
+            dim: 'var(--color-accent-dim)',
+            subtle: 'var(--color-accent-subtle)',
+          },
+          success: {
+            DEFAULT: 'var(--color-success)',
+            dim: 'var(--color-success-dim)',
+          },
+          warning: {
+            DEFAULT: 'var(--color-warning)',
+            dim: 'var(--color-warning-dim)',
+          },
+          error: {
+            DEFAULT: 'var(--color-error)',
+            dim: 'var(--color-error-dim)',
+          },
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -29,9 +69,9 @@ export default {
         'button': '12px',
       },
       boxShadow: {
-        'card': '0 8px 32px rgba(0, 0, 0, 0.4)',
-        'glow': '0 0 24px rgba(35, 213, 255, 0.3)',
-        'glow-sm': '0 0 12px rgba(35, 213, 255, 0.2)',
+        'card': 'var(--shadow-card)',
+        'glow': 'var(--shadow-glow)',
+        'glow-sm': 'var(--shadow-glow-sm)',
       },
       animation: {
         'gradient': 'gradient 8s ease infinite',

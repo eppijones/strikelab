@@ -16,7 +16,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-ice-white"
+            className="block text-sm font-medium text-theme-text-primary"
           >
             {label}
           </label>
@@ -26,17 +26,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           id={inputId}
           type={type}
           className={cn(
-            'flex h-10 w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-ice-white placeholder:text-muted',
+            'flex h-10 w-full rounded-button border border-theme-border bg-theme-bg-surface px-3 py-2 text-sm text-theme-text-primary placeholder:text-theme-text-muted',
             'transition-all duration-250',
-            'focus:outline-none focus:ring-2 focus:ring-cyan/50 focus:border-cyan/50',
+            'focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:border-theme-border-focus',
             'disabled:cursor-not-allowed disabled:opacity-50',
-            error && 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50',
+            error && 'border-theme-error/50 focus:ring-theme-error/50 focus:border-theme-error/50',
             className
           )}
           {...props}
         />
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        {hint && !error && <p className="text-sm text-muted">{hint}</p>}
+        {error && <p className="text-sm text-theme-error">{error}</p>}
+        {hint && !error && <p className="text-sm text-theme-text-muted">{hint}</p>}
       </div>
     )
   }
@@ -60,7 +60,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
         {label && (
           <label
             htmlFor={textareaId}
-            className="block text-sm font-medium text-ice-white"
+            className="block text-sm font-medium text-theme-text-primary"
           >
             {label}
           </label>
@@ -69,17 +69,17 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           ref={ref}
           id={textareaId}
           className={cn(
-            'flex min-h-[100px] w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-ice-white placeholder:text-muted',
+            'flex min-h-[100px] w-full rounded-button border border-theme-border bg-theme-bg-surface px-3 py-2 text-sm text-theme-text-primary placeholder:text-theme-text-muted',
             'transition-all duration-250 resize-none',
-            'focus:outline-none focus:ring-2 focus:ring-cyan/50 focus:border-cyan/50',
+            'focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:border-theme-border-focus',
             'disabled:cursor-not-allowed disabled:opacity-50',
-            error && 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50',
+            error && 'border-theme-error/50 focus:ring-theme-error/50 focus:border-theme-error/50',
             className
           )}
           {...props}
         />
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        {hint && !error && <p className="text-sm text-muted">{hint}</p>}
+        {error && <p className="text-sm text-theme-error">{error}</p>}
+        {hint && !error && <p className="text-sm text-theme-text-muted">{hint}</p>}
       </div>
     )
   }

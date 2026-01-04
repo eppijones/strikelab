@@ -21,10 +21,10 @@ export default function Sessions() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-display font-bold text-ice-white">
+          <h1 className="text-2xl font-display font-bold text-theme-text-primary">
             {t('sessions.title')}
           </h1>
-          <p className="text-muted mt-1">
+          <p className="text-theme-text-muted mt-1">
             {data?.total || 0} sessions recorded
           </p>
         </div>
@@ -60,14 +60,14 @@ export default function Sessions() {
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-medium text-ice-white">
+                      <h3 className="text-lg font-medium text-theme-text-primary">
                         {session.name || `${session.source} Session`}
                       </h3>
                       <Badge variant="cyan" size="sm">
                         {session.source}
                       </Badge>
                     </div>
-                    <p className="text-muted mt-1">
+                    <p className="text-theme-text-muted mt-1">
                       {formatDate(session.session_date)} • {session.shot_count}{' '}
                       {t('sessions.shotCount')}
                     </p>
@@ -76,13 +76,13 @@ export default function Sessions() {
                         {session.computed_stats.clubs_used.slice(0, 4).map((club) => (
                           <span
                             key={club}
-                            className="text-xs px-2 py-1 rounded-full bg-surface border border-border text-muted"
+                            className="text-xs px-2 py-1 rounded-full bg-theme-bg-surface border border-theme-border text-theme-text-muted"
                           >
                             {club}
                           </span>
                         ))}
                         {session.computed_stats.clubs_used.length > 4 && (
-                          <span className="text-xs text-muted">
+                          <span className="text-xs text-theme-text-muted">
                             +{session.computed_stats.clubs_used.length - 4} more
                           </span>
                         )}
@@ -92,10 +92,10 @@ export default function Sessions() {
                   <div className="flex gap-4 text-right">
                     {session.computed_stats?.strike_score && (
                       <div>
-                        <p className="text-2xl font-display font-bold text-cyan">
+                        <p className="text-2xl font-display font-bold text-theme-accent">
                           {Math.round(session.computed_stats.strike_score)}
                         </p>
-                        <p className="text-xs text-muted">{t('scores.strikeScore')}</p>
+                        <p className="text-xs text-theme-text-muted">{t('scores.strikeScore')}</p>
                       </div>
                     )}
                   </div>
@@ -106,7 +106,7 @@ export default function Sessions() {
         </div>
       ) : (
         <Card className="text-center py-12">
-          <p className="text-muted text-lg">{t('dashboard.noSessions')}</p>
+          <p className="text-theme-text-muted text-lg">{t('dashboard.noSessions')}</p>
           <Link to="/connectors">
             <Button className="mt-4">{t('connectors.importCSV')}</Button>
           </Link>

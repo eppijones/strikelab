@@ -17,7 +17,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="block text-sm font-medium text-ice-white"
+            className="block text-sm font-medium text-theme-text-primary"
           >
             {label}
           </label>
@@ -26,12 +26,12 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           id={selectId}
           className={cn(
-            'flex h-10 w-full rounded-button border border-border bg-surface px-3 py-2 text-sm text-ice-white',
+            'flex h-10 w-full rounded-button border border-theme-border bg-theme-bg-surface px-3 py-2 text-sm text-theme-text-primary',
             'transition-all duration-250 appearance-none cursor-pointer',
-            'focus:outline-none focus:ring-2 focus:ring-cyan/50 focus:border-cyan/50',
+            'focus:outline-none focus:ring-2 focus:ring-theme-accent/50 focus:border-theme-border-focus',
             'disabled:cursor-not-allowed disabled:opacity-50',
             'bg-[url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%238A8A99\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")] bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.5em_1.5em] pr-10',
-            error && 'border-red-500/50',
+            error && 'border-theme-error/50',
             className
           )}
           {...props}
@@ -46,7 +46,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             : children
           }
         </select>
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-theme-error">{error}</p>}
       </div>
     )
   }

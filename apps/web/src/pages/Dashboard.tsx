@@ -43,17 +43,17 @@ const DEMO_CLUBS = [
 
 // Score color helper
 function getScoreColor(score: number): string {
-  if (score >= 88) return 'text-emerald-400'
-  if (score >= 80) return 'text-cyan'
-  if (score >= 70) return 'text-amber-400'
-  return 'text-red-400'
+  if (score >= 88) return 'text-theme-success'
+  if (score >= 80) return 'text-theme-accent'
+  if (score >= 70) return 'text-theme-warning'
+  return 'text-theme-error'
 }
 
 function getScoreBg(score: number): string {
-  if (score >= 88) return 'from-emerald-500/20 to-emerald-500/5 border-emerald-500/30'
-  if (score >= 80) return 'from-cyan/20 to-cyan/5 border-cyan/30'
-  if (score >= 70) return 'from-amber-500/20 to-amber-500/5 border-amber-500/30'
-  return 'from-red-500/20 to-red-500/5 border-red-500/30'
+  if (score >= 88) return 'from-theme-success/20 to-theme-success/5 border-theme-success/30'
+  if (score >= 80) return 'from-theme-accent/20 to-theme-accent/5 border-theme-accent/30'
+  if (score >= 70) return 'from-theme-warning/20 to-theme-warning/5 border-theme-warning/30'
+  return 'from-theme-error/20 to-theme-error/5 border-theme-error/30'
 }
 
 export default function Dashboard() {
@@ -150,22 +150,22 @@ export default function Dashboard() {
         <div className="max-w-3xl mx-auto text-center">
           {/* Profile + Greeting */}
           <div className="inline-flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan to-emerald-500 flex items-center justify-center text-obsidian font-bold shadow-glow ring-2 ring-white/10">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-theme-accent to-theme-success flex items-center justify-center text-theme-text-inverted font-bold shadow-glow ring-2 ring-theme-border">
               {user?.displayName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'G'}
             </div>
             <div className="text-left">
-              <h1 className="text-xl font-display font-bold text-ice-white">
+              <h1 className="text-xl font-display font-bold text-theme-text-primary">
                 {getGreeting()}, {user?.displayName?.split(' ')[0] || 'Golfer'}
               </h1>
-              <p className="text-sm text-muted">Let's get dialed in</p>
+              <p className="text-sm text-theme-text-muted">Let's get dialed in</p>
             </div>
           </div>
           
           {/* Handicap Journey */}
-          <div className="inline-flex items-center gap-4 px-6 py-4 rounded-2xl bg-surface/60 border border-white/[0.06] backdrop-blur-sm">
+          <div className="inline-flex items-center gap-4 px-6 py-4 rounded-2xl bg-theme-bg-surface/60 border border-theme-border backdrop-blur-sm">
             <div className="text-center">
-              <p className="text-[10px] text-muted uppercase tracking-wider mb-0.5">Current</p>
-              <p className="text-3xl font-display font-bold text-ice-white">
+              <p className="text-[10px] text-theme-text-muted uppercase tracking-wider mb-0.5">Current</p>
+              <p className="text-3xl font-display font-bold text-theme-text-primary">
                 {user?.handicapIndex?.toFixed(1) || '8.5'}
               </p>
             </div>
@@ -173,20 +173,20 @@ export default function Dashboard() {
             {user?.goalHandicap && (
               <>
                 <div className="flex flex-col items-center gap-1">
-                  <div className="w-10 h-0.5 rounded-full bg-white/10 overflow-hidden">
+                  <div className="w-10 h-0.5 rounded-full bg-theme-border overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-cyan to-emerald-400"
+                      className="h-full bg-gradient-to-r from-theme-accent to-theme-success"
                       style={{ width: `${progressToGoal || 60}%` }}
                     />
                   </div>
-                  <svg className="w-4 h-4 text-cyan/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 text-theme-accent/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 </div>
                 
                 <div className="text-center">
-                  <p className="text-[10px] text-muted uppercase tracking-wider mb-0.5">Goal</p>
-                  <p className="text-3xl font-display font-bold text-cyan">
+                  <p className="text-[10px] text-theme-text-muted uppercase tracking-wider mb-0.5">Goal</p>
+                  <p className="text-3xl font-display font-bold text-theme-accent">
                     {user.goalHandicap}
                   </p>
                 </div>
@@ -195,7 +195,7 @@ export default function Dashboard() {
             
             {/* Primary CTA */}
             {lastSession && (
-              <div className="pl-4 border-l border-white/10">
+              <div className="pl-4 border-l border-theme-border">
                 <Link to={`/sessions/${lastSession.id}`}>
                   <Button size="sm" className="shadow-glow-sm">
                     Review Session
@@ -216,26 +216,26 @@ export default function Dashboard() {
           <div 
             className="w-[700px] h-[500px] rounded-full opacity-40"
             style={{
-              background: 'radial-gradient(ellipse at center, rgba(35, 213, 255, 0.12) 0%, rgba(45, 212, 191, 0.06) 40%, transparent 70%)',
+              background: 'radial-gradient(ellipse at center, var(--color-accent-dim) 0%, var(--color-success-dim) 40%, transparent 70%)',
               filter: 'blur(40px)',
             }}
           />
         </div>
 
         <div className="max-w-4xl mx-auto">
-          <Card className="overflow-hidden bg-gradient-to-b from-surface/90 to-graphite/60 border-white/[0.08] shadow-2xl backdrop-blur-sm">
+          <Card className="overflow-hidden bg-gradient-to-b from-theme-bg-surface/90 to-theme-bg-secondary/60 border-theme-border shadow-2xl backdrop-blur-sm">
             {/* Header */}
-            <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-white/[0.04]">
+            <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-theme-border">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan/20 to-emerald-500/20 flex items-center justify-center border border-cyan/20">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-theme-accent/20 to-theme-success/20 flex items-center justify-center border border-theme-accent/20">
                   <span className="text-lg">🏌️</span>
                 </div>
                 <div>
-                  <h2 className="font-display font-semibold text-ice-white">Your Bag</h2>
-                  <p className="text-xs text-muted">{clubData.length} clubs • {bag?.ball_model || 'Pro V1x'}</p>
+                  <h2 className="font-display font-semibold text-theme-text-primary">Your Bag</h2>
+                  <p className="text-xs text-theme-text-muted">{clubData.length} clubs • {bag?.ball_model || 'Pro V1x'}</p>
                 </div>
               </div>
-              <Link to="/my-bag" className="text-sm text-cyan hover:text-cyan/80 transition-colors flex items-center gap-1">
+              <Link to="/my-bag" className="text-sm text-theme-accent hover:opacity-80 transition-colors flex items-center gap-1">
                 Manage
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path d="M9 5l7 7-7 7" />
@@ -256,12 +256,12 @@ export default function Dashboard() {
                         relative flex flex-col items-center px-3 py-3 rounded-xl transition-all duration-200
                         ${isSelected 
                           ? `bg-gradient-to-b ${getScoreBg(club.score)} border shadow-lg scale-105` 
-                          : 'bg-white/[0.02] border border-transparent hover:bg-white/[0.04] hover:border-white/[0.06]'
+                          : 'bg-theme-accent-subtle border border-transparent hover:bg-theme-accent-dim hover:border-theme-border'
                         }
                       `}
                     >
                       {/* Club Label */}
-                      <span className={`text-xs font-semibold mb-1 ${isSelected ? 'text-ice-white' : 'text-muted'}`}>
+                      <span className={`text-xs font-semibold mb-1 ${isSelected ? 'text-theme-text-primary' : 'text-theme-text-muted'}`}>
                         {club.shortLabel}
                       </span>
                       
@@ -272,14 +272,14 @@ export default function Dashboard() {
                       
                       {/* Distance */}
                       {club.distance && (
-                        <span className={`text-[10px] ${isSelected ? 'text-white/60' : 'text-muted/60'}`}>
+                        <span className={`text-[10px] ${isSelected ? 'text-theme-text-secondary' : 'text-theme-text-muted/60'}`}>
                           {club.distance}y
                         </span>
                       )}
                       
                       {/* Selected indicator */}
                       {isSelected && (
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan" />
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-theme-accent" />
                       )}
                     </button>
                   )
@@ -298,17 +298,17 @@ export default function Dashboard() {
                   <div className="flex items-center gap-4">
                     <div className={`
                       w-16 h-16 rounded-2xl flex items-center justify-center
-                      bg-gradient-to-br from-white/10 to-white/5 border border-white/10
+                      bg-gradient-to-br from-theme-text-primary/10 to-theme-text-primary/5 border border-theme-border
                     `}>
                       <span className={`text-3xl font-display font-bold ${getScoreColor(selectedClub.score)}`}>
                         {selectedClub.score}
                       </span>
                     </div>
                     <div>
-                      <h3 className="text-xl font-display font-bold text-ice-white">
+                      <h3 className="text-xl font-display font-bold text-theme-text-primary">
                         {selectedClub.label}
                       </h3>
-                      <p className="text-sm text-muted">
+                      <p className="text-sm text-theme-text-muted">
                         {selectedClub.distance ? `${selectedClub.distance} yards avg carry` : 'Putting club'}
                       </p>
                     </div>
@@ -317,24 +317,24 @@ export default function Dashboard() {
                   {/* Quick Stats */}
                   <div className="flex-1 flex items-center gap-6 md:justify-center">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-ice-white">
+                      <p className="text-2xl font-bold text-theme-text-primary">
                         {(selectedClub as any).totalShots || '147'}
                       </p>
-                      <p className="text-xs text-muted">Total Shots</p>
+                      <p className="text-xs text-theme-text-muted">Total Shots</p>
                     </div>
-                    <div className="w-px h-8 bg-white/10" />
+                    <div className="w-px h-8 bg-theme-border" />
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-ice-white">
+                      <p className="text-2xl font-bold text-theme-text-primary">
                         {(selectedClub as any).smashFactor?.toFixed(2) || '1.48'}
                       </p>
-                      <p className="text-xs text-muted">Smash Factor</p>
+                      <p className="text-xs text-theme-text-muted">Smash Factor</p>
                     </div>
-                    <div className="w-px h-8 bg-white/10" />
+                    <div className="w-px h-8 bg-theme-border" />
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-ice-white">
+                      <p className="text-2xl font-bold text-theme-text-primary">
                         {(selectedClub as any).dispersion ? `${Math.round((selectedClub as any).dispersion)}ft` : '12ft'}
                       </p>
-                      <p className="text-xs text-muted">Dispersion</p>
+                      <p className="text-xs text-theme-text-muted">Dispersion</p>
                     </div>
                   </div>
                   
@@ -358,15 +358,15 @@ export default function Dashboard() {
             {/* No data hint - only shown when needed */}
             {!hasData && (
               <div className="px-6 pb-6 pt-0">
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan/5 border border-cyan/10">
-                  <svg className="w-5 h-5 text-cyan flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-theme-accent-subtle border border-theme-accent/10">
+                  <svg className="w-5 h-5 text-theme-accent flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 16v-4M12 8h.01" />
                   </svg>
-                  <p className="text-sm text-muted">
-                    <span className="text-cyan font-medium">Demo data shown.</span>
+                  <p className="text-sm text-theme-text-muted">
+                    <span className="text-theme-accent font-medium">Demo data shown.</span>
                     {' '}
-                    <Link to="/connectors" className="text-cyan hover:underline">
+                    <Link to="/connectors" className="text-theme-accent hover:underline">
                       Import a session
                     </Link>
                     {' '}to see your real club performance.
@@ -387,24 +387,24 @@ export default function Dashboard() {
           {(latestReport?.next_best_move || latestReport?.prescription) && (
             <Link 
               to="/coach"
-              className="group p-5 rounded-2xl bg-surface/40 border border-white/[0.04] hover:border-cyan/20 transition-all"
+              className="group p-5 rounded-2xl bg-theme-bg-surface/40 border border-theme-border hover:border-theme-accent/20 transition-all"
             >
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-cyan/10 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                <div className="w-10 h-10 rounded-xl bg-theme-accent-dim flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-theme-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
                     <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan animate-pulse" />
-                    <span className="text-xs font-medium text-cyan uppercase tracking-wider">Next Best Move</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-theme-accent animate-pulse" />
+                    <span className="text-xs font-medium text-theme-accent uppercase tracking-wider">Next Best Move</span>
                   </div>
-                  <p className="text-sm text-ice-white leading-relaxed line-clamp-2 group-hover:text-cyan transition-colors">
+                  <p className="text-sm text-theme-text-primary leading-relaxed line-clamp-2 group-hover:text-theme-accent transition-colors">
                     {latestReport.next_best_move || latestReport.prescription}
                   </p>
                 </div>
-                <svg className="w-5 h-5 text-muted group-hover:text-cyan transition-colors flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-5 h-5 text-theme-text-muted group-hover:text-theme-accent transition-colors flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path d="M9 5l7 7-7 7" />
                 </svg>
               </div>
@@ -415,11 +415,11 @@ export default function Dashboard() {
           {nextTeeTime ? (
             <Link 
               to="/calendar"
-              className="group p-5 rounded-2xl bg-surface/40 border border-white/[0.04] hover:border-emerald-500/20 transition-all"
+              className="group p-5 rounded-2xl bg-theme-bg-surface/40 border border-theme-border hover:border-theme-success/20 transition-all"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <div className="w-10 h-10 rounded-xl bg-theme-success-dim flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-theme-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                     <line x1="16" y1="2" x2="16" y2="6" />
                     <line x1="8" y1="2" x2="8" y2="6" />
@@ -427,11 +427,11 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-emerald-400 font-medium uppercase tracking-wider mb-0.5">Next Round</p>
-                  <p className="text-sm font-medium text-ice-white truncate group-hover:text-emerald-400 transition-colors">
+                  <p className="text-xs text-theme-success font-medium uppercase tracking-wider mb-0.5">Next Round</p>
+                  <p className="text-sm font-medium text-theme-text-primary truncate group-hover:text-theme-success transition-colors">
                     {nextTeeTime.course?.name || 'Golf Course'}
                   </p>
-                  <p className="text-xs text-muted">
+                  <p className="text-xs text-theme-text-muted">
                     {new Date(nextTeeTime.tee_time).toLocaleDateString('en-US', {
                       weekday: 'short', month: 'short', day: 'numeric',
                     })} • {new Date(nextTeeTime.tee_time).toLocaleTimeString('en-US', {
@@ -445,11 +445,11 @@ export default function Dashboard() {
           ) : !latestReport?.next_best_move && (
             <Link 
               to="/calendar"
-              className="group p-5 rounded-2xl bg-surface/40 border border-white/[0.04] border-dashed hover:border-emerald-500/20 transition-all"
+              className="group p-5 rounded-2xl bg-theme-bg-surface/40 border border-theme-border border-dashed hover:border-theme-success/20 transition-all"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center">
-                  <svg className="w-5 h-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <div className="w-10 h-10 rounded-xl bg-theme-accent-subtle flex items-center justify-center">
+                  <svg className="w-5 h-5 text-theme-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                     <line x1="16" y1="2" x2="16" y2="6" />
                     <line x1="8" y1="2" x2="8" y2="6" />
@@ -457,11 +457,11 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-muted group-hover:text-ice-white transition-colors">
+                  <p className="text-sm font-medium text-theme-text-muted group-hover:text-theme-text-primary transition-colors">
                     Schedule your next round
                   </p>
                 </div>
-                <svg className="w-5 h-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-5 h-5 text-theme-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
@@ -476,36 +476,36 @@ export default function Dashboard() {
       <section className="max-w-4xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {/* This Month Sessions */}
-          <div className="p-4 rounded-xl bg-surface/30 border border-white/[0.03]">
-            <p className="text-xs text-muted mb-1">Sessions</p>
-            <p className="text-2xl font-display font-bold text-ice-white">{totalSessions || 0}</p>
-            <p className="text-[10px] text-muted">this month</p>
+          <div className="p-4 rounded-xl bg-theme-bg-surface/30 border border-theme-border">
+            <p className="text-xs text-theme-text-muted mb-1">Sessions</p>
+            <p className="text-2xl font-display font-bold text-theme-text-primary">{totalSessions || 0}</p>
+            <p className="text-[10px] text-theme-text-muted">this month</p>
           </div>
 
           {/* Total Shots */}
-          <div className="p-4 rounded-xl bg-surface/30 border border-white/[0.03]">
-            <p className="text-xs text-muted mb-1">Total Shots</p>
-            <p className="text-2xl font-display font-bold text-ice-white">{totalShots.toLocaleString() || '0'}</p>
-            <p className="text-[10px] text-muted">tracked</p>
+          <div className="p-4 rounded-xl bg-theme-bg-surface/30 border border-theme-border">
+            <p className="text-xs text-theme-text-muted mb-1">Total Shots</p>
+            <p className="text-2xl font-display font-bold text-theme-text-primary">{totalShots.toLocaleString() || '0'}</p>
+            <p className="text-[10px] text-theme-text-muted">tracked</p>
           </div>
 
           {/* Day Streak */}
-          <div className="p-4 rounded-xl bg-surface/30 border border-white/[0.03]">
-            <p className="text-xs text-muted mb-1">Streak</p>
+          <div className="p-4 rounded-xl bg-theme-bg-surface/30 border border-theme-border">
+            <p className="text-xs text-theme-text-muted mb-1">Streak</p>
             <div className="flex items-baseline gap-1">
-              <p className="text-2xl font-display font-bold text-amber-400">7</p>
-              <svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
+              <p className="text-2xl font-display font-bold text-theme-warning">7</p>
+              <svg className="w-4 h-4 text-theme-warning" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <p className="text-[10px] text-muted">days</p>
+            <p className="text-[10px] text-theme-text-muted">days</p>
           </div>
 
           {/* Goal Progress */}
-          <div className="p-4 rounded-xl bg-surface/30 border border-white/[0.03]">
-            <p className="text-xs text-muted mb-1">Goal Progress</p>
-            <p className="text-2xl font-display font-bold text-cyan">{progressToGoal || 60}%</p>
-            <p className="text-[10px] text-muted">{weeksToGoal ? `~${weeksToGoal} weeks` : 'to target'}</p>
+          <div className="p-4 rounded-xl bg-theme-bg-surface/30 border border-theme-border">
+            <p className="text-xs text-theme-text-muted mb-1">Goal Progress</p>
+            <p className="text-2xl font-display font-bold text-theme-accent">{progressToGoal || 60}%</p>
+            <p className="text-[10px] text-theme-text-muted">{weeksToGoal ? `~${weeksToGoal} weeks` : 'to target'}</p>
           </div>
         </div>
       </section>
@@ -516,15 +516,15 @@ export default function Dashboard() {
       {totalSessions > 0 && (
         <section className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Recent Sessions</h2>
-            <Link to="/sessions" className="text-xs text-cyan hover:underline">
+            <h2 className="text-sm font-semibold text-theme-text-muted uppercase tracking-wider">Recent Sessions</h2>
+            <Link to="/sessions" className="text-xs text-theme-accent hover:underline">
               View all →
             </Link>
           </div>
           
           {sessionsLoading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="w-6 h-6 border-2 border-cyan border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-theme-accent border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -532,15 +532,15 @@ export default function Dashboard() {
                 <Link
                   key={session.id}
                   to={`/sessions/${session.id}`}
-                  className="group p-4 rounded-xl bg-surface/30 border border-white/[0.03] hover:border-cyan/20 hover:bg-surface/40 transition-all"
+                  className="group p-4 rounded-xl bg-theme-bg-surface/30 border border-theme-border hover:border-theme-accent/20 hover:bg-theme-bg-surface/40 transition-all"
                 >
                   <div className="flex justify-between items-start mb-1">
-                    <p className="text-sm font-medium text-ice-white group-hover:text-cyan transition-colors truncate pr-2">
+                    <p className="text-sm font-medium text-theme-text-primary group-hover:text-theme-accent transition-colors truncate pr-2">
                       {session.name || `${session.source} Session`}
                     </p>
                     <Badge variant="cyan" size="sm">{session.shot_count}</Badge>
                   </div>
-                  <p className="text-xs text-muted">{formatDate(session.session_date)}</p>
+                  <p className="text-xs text-theme-text-muted">{formatDate(session.session_date)}</p>
                 </Link>
               ))}
             </div>
