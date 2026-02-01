@@ -138,23 +138,6 @@ export default function Login() {
           </Card>
         </FadeIn>
 
-        {/* Demo hint */}
-        <FadeIn delay={0.5}>
-          <motion.div 
-            className="mt-6 text-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-theme-bg-surface border border-theme-border">
-              <span className="w-1.5 h-1.5 rounded-full bg-theme-success animate-pulse" />
-              <span className="text-xs text-theme-text-muted">
-                Demo: <span className="font-mono text-theme-accent">demo@strikelab.golf</span> / <span className="font-mono text-theme-accent">demo123</span>
-              </span>
-            </div>
-          </motion.div>
-        </FadeIn>
-
         {/* Features hint */}
         <FadeIn delay={0.6}>
           <div className="mt-10 grid grid-cols-3 gap-4 text-center">

@@ -3,6 +3,9 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 import os
 import sys
+from dotenv import load_dotenv
+
+load_dotenv()
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
