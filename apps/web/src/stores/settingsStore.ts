@@ -4,7 +4,7 @@ import i18n from '@/i18n'
 
 type Language = 'en' | 'no'
 type Units = 'yards' | 'meters'
-type Theme = 'dark' | 'light'
+type Theme = 'midnight' | 'scandinavian'
 
 interface SettingsState {
   language: Language
@@ -24,7 +24,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set, get) => ({
       language: 'en',
       units: 'yards',
-      theme: 'dark',
+      theme: 'scandinavian', // Default to scandinavian (light)
       sidebarCollapsed: false,
       
       setLanguage: (language) => {
@@ -37,15 +37,21 @@ export const useSettingsStore = create<SettingsState>()(
       
       setTheme: (theme) => {
         // Apply theme class to document
-        document.documentElement.classList.remove('dark', 'light')
+        document.documentElement.classList.remove('midnight', 'scandinavian', 'dark', 'light')
         document.documentElement.classList.add(theme)
+        if (theme === 'midnight') {
+            document.documentElement.classList.add('dark')
+        }
         set({ theme })
       },
       
       toggleTheme: () => {
-        const newTheme = get().theme === 'dark' ? 'light' : 'dark'
-        document.documentElement.classList.remove('dark', 'light')
+        const newTheme = get().theme === 'midnight' ? 'scandinavian' : 'midnight'
+        document.documentElement.classList.remove('midnight', 'scandinavian', 'dark', 'light')
         document.documentElement.classList.add(newTheme)
+        if (newTheme === 'midnight') {
+            document.documentElement.classList.add('dark')
+        }
         set({ theme: newTheme })
       },
       
@@ -60,8 +66,14 @@ export const useSettingsStore = create<SettingsState>()(
       onRehydrateStorage: () => (state) => {
         // Apply theme on initial load
         if (state?.theme) {
-          document.documentElement.classList.remove('dark', 'light')
+          document.documentElement.classList.remove('midnight', 'scandinavian', 'dark', 'light')
           document.documentElement.classList.add(state.theme)
+          if (state.theme === 'midnight') {
+              document.documentElement.classList.add('dark')
+          }
+        } else {
+             // Fallback default
+             document.documentElement.classList.add('scandinavian')
         }
       },
     }

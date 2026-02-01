@@ -6,15 +6,18 @@
   },
   "nav": {
     "home": "Hjem",
+    "chat": "AI Coach",
     "sessions": "Økter",
+    "stats": "Statistikk",
     "myBag": "Min Bag",
     "courses": "Baner",
     "connectors": "Koblinger",
-    "coach": "Coach",
+    "coach": "Rapporter",
     "training": "Trening",
     "swingLab": "Swing Lab",
     "calendar": "Kalender",
-    "friends": "Venner"
+    "friends": "Venner",
+    "settings": "Innstillinger"
   },
   "auth": {
     "login": "Logg inn",
@@ -26,17 +29,48 @@
     "displayName": "Visningsnavn",
     "forgotPassword": "Glemt passord?",
     "noAccount": "Har du ikke konto?",
-    "hasAccount": "Har du allerede konto?"
+    "hasAccount": "Har du allerede konto?",
+    "welcomeBack": "Velkommen tilbake",
+    "createYourAccount": "Opprett din konto",
+    "signingIn": "Logger inn...",
+    "creatingAccount": "Oppretter konto..."
   },
   "dashboard": {
     "welcome": "Velkommen tilbake",
+    "goodMorning": "God morgen",
+    "goodAfternoon": "God ettermiddag",
+    "goodEvening": "God kveld",
     "recentSessions": "Nylige økter",
     "upcomingTeeTimes": "Kommende tee-tider",
     "currentPlan": "Gjeldende plan",
     "coachSummary": "Coach-oppsummering",
     "yourNextMove": "Ditt neste trekk",
     "noSessions": "Ingen økter ennå. Importer din første data.",
-    "noTeeTimes": "Ingen kommende tee-tider."
+    "noTeeTimes": "Ingen kommende tee-tider.",
+    "currentIndex": "Nåværende indeks",
+    "targetHandicap": "Mål",
+    "progressToGoal": "Fremgang mot mål",
+    "weeksAtPace": "uker i nåværende tempo",
+    "totalSessions": "Økter",
+    "totalShots": "Totalt slag",
+    "streak": "Rekke",
+    "nextRound": "Neste runde",
+    "yourBag": "Din Bag",
+    "clubs": "køller",
+    "manage": "Administrer",
+    "reviewStats": "Se statistikk",
+    "practice": "Øv",
+    "askCoach": "Spør Coach",
+    "reviewSession": "Se økt",
+    "viewAll": "Se alle",
+    "demoData": "Demodata vises.",
+    "importSession": "Importer en økt",
+    "toSeeReal": "for å se din virkelige kølleytelse.",
+    "neuralActive": "Neural prosessering aktiv",
+    "shots": "Slag",
+    "smash": "Smash",
+    "dispersion": "Spredning",
+    "avgCarry": "gj.snitt carry"
   },
   "scores": {
     "strikeScore": "Treff-score",
@@ -59,7 +93,9 @@
       "range": "Range",
       "simulator": "Simulator",
       "round": "Runde"
-    }
+    },
+    "empty": "Ingen økter ennå",
+    "emptyDescription": "Importer din første økt for å begynne å spore fremgangen din."
   },
   "sessionDetail": {
     "overview": "Oversikt",
@@ -104,7 +140,10 @@
     "validation": "Validering",
     "nextBestMove": "Neste beste trekk",
     "linkedMetrics": "Underbyggende data",
-    "noReports": "Ingen coach-rapporter ennå."
+    "noReports": "Ingen coach-rapporter ennå.",
+    "askAnything": "Spør om hva som helst om spillet ditt...",
+    "thinking": "Tenker...",
+    "send": "Send"
   },
   "connectors": {
     "title": "Koblinger",
@@ -115,7 +154,10 @@
     "importCSV": "Importer CSV",
     "uploadFile": "Last opp fil",
     "comingSoon": "Kommer snart",
-    "lastSync": "Sist synkronisert"
+    "lastSync": "Sist synkronisert",
+    "description": "Koble til dine launch monitors og importer øktdata.",
+    "csvDescription": "Last opp CSV-filer fra enhver launch monitor",
+    "dragDrop": "Dra og slipp filen din her, eller klikk for å bla"
   },
   "training": {
     "title": "Treningsplan",
@@ -124,7 +166,10 @@
     "drills": "Øvelser",
     "startPlan": "Start plan",
     "completeDrill": "Marker fullført",
-    "noPlan": "Ingen aktiv treningsplan."
+    "noPlan": "Ingen aktiv treningsplan.",
+    "createPlan": "Lag plan",
+    "weeklyGoals": "Ukentlige mål",
+    "focusAreas": "Fokusområder"
   },
   "swingLab": {
     "title": "Swing Lab",
@@ -143,7 +188,8 @@
     "time": "Tidspunkt",
     "players": "Spillere",
     "notes": "Notater",
-    "prepNotes": "Forberedelsesnotater"
+    "prepNotes": "Forberedelsesnotater",
+    "noEvents": "Ingen hendelser planlagt"
   },
   "friends": {
     "title": "Venner",
@@ -169,7 +215,53 @@
     "today": "I dag",
     "yesterday": "I går",
     "thisWeek": "Denne uken",
-    "lastWeek": "Forrige uke"
+    "lastWeek": "Forrige uke",
+    "days": "dager",
+    "hours": "timer",
+    "minutes": "minutter",
+    "viewMore": "Se mer",
+    "showLess": "Vis mindre",
+    "search": "Søk",
+    "filter": "Filtrer",
+    "sort": "Sorter",
+    "noResults": "Ingen resultater funnet",
+    "tryAgain": "Prøv igjen",
+    "close": "Lukk",
+    "open": "Åpne",
+    "select": "Velg",
+    "selected": "Valgt",
+    "all": "Alle",
+    "none": "Ingen"
+  },
+  "settings": {
+    "title": "Innstillinger",
+    "appearance": "Utseende",
+    "theme": "Tema",
+    "light": "Lys",
+    "dark": "Mørk",
+    "system": "System",
+    "language": "Språk",
+    "units": "Enheter",
+    "yards": "Yards",
+    "meters": "Meter",
+    "profile": "Profil",
+    "notifications": "Varsler",
+    "privacy": "Personvern",
+    "account": "Konto"
+  },
+  "onboarding": {
+    "welcome": "Velkommen til StrikeLab",
+    "letsGetStarted": "La oss komme i gang",
+    "handicap": "Hva er ditt nåværende handicap?",
+    "goalHandicap": "Hva er ditt mål-handicap?",
+    "practiceFrequency": "Hvor ofte trener du?",
+    "daily": "Daglig",
+    "frequentlyWeek": "4-5x per uke",
+    "regularWeek": "2-3x per uke",
+    "weekly": "Ukentlig",
+    "occasional": "Av og til",
+    "finish": "Fullfør oppsett",
+    "skip": "Hopp over for nå"
   },
   "feelTags": {
     "calm": "Rolig",
@@ -179,7 +271,11 @@
     "focused": "Fokusert",
     "smooth": "Myk",
     "quick": "Hurtig",
-    "tight": "Stram"
+    "tight": "Stram",
+    "confident": "Selvsikker",
+    "uncertain": "Usikker",
+    "relaxed": "Avslappet",
+    "tense": "Anspent"
   },
   "missPatterns": {
     "push": "Push",
@@ -203,7 +299,10 @@
     "selectType": "Velg type",
     "selectModel": "Velg modell",
     "emptyBag": "Bagen din er tom",
-    "maxClubs": "Maks 14 køller tillatt"
+    "maxClubs": "Maks 14 køller tillatt",
+    "clubStats": "Køllestatistikk",
+    "avgDistance": "Gj.snitt avstand",
+    "consistency": "Konsistens"
   },
   "courses": {
     "title": "Golfbaner",
@@ -216,6 +315,24 @@
     "facilities": "Fasiliteter",
     "designer": "Designer",
     "established": "Etablert",
-    "visitWebsite": "Besøk nettside"
+    "visitWebsite": "Besøk nettside",
+    "addToFavorites": "Legg til favoritter",
+    "removeFromFavorites": "Fjern fra favoritter"
+  },
+  "stats": {
+    "title": "Statistikk",
+    "overview": "Oversikt",
+    "byClub": "Per kølle",
+    "trends": "Trender",
+    "comparison": "Sammenligning",
+    "timeRange": "Tidsperiode",
+    "last7Days": "Siste 7 dager",
+    "last30Days": "Siste 30 dager",
+    "last90Days": "Siste 90 dager",
+    "allTime": "All tid"
+  },
+  "templates": {
+    "sessionLog": "ØKT – LOGG",
+    "newYearPlan": "ØKT – NYÅRSPLAN"
   }
 }

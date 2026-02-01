@@ -10,6 +10,7 @@ interface User {
   dreamHandicap?: number
   practiceFrequency?: string
   onboardingCompleted?: boolean
+  clearanceLevel: 1 | 2 | 3
   language: string
   units: string
 }

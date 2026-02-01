@@ -34,7 +34,7 @@ export function DispersionChart({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Set up high DPI canvas
+    // High DPI support
     const dpr = window.devicePixelRatio || 1
     canvas.width = width * dpr
     canvas.height = height * dpr
@@ -42,8 +42,11 @@ export function DispersionChart({
     canvas.style.height = `${height}px`
     ctx.scale(dpr, dpr)
 
-    // Clear canvas
-    ctx.fillStyle = '#1A1A22'
+    // Background with gradient
+    const bgGradient = ctx.createLinearGradient(0, 0, 0, height)
+    bgGradient.addColorStop(0, '#12121a')
+    bgGradient.addColorStop(1, '#0c0c12')
+    ctx.fillStyle = bgGradient
     ctx.fillRect(0, 0, width, height)
 
     // Filter valid shots
@@ -52,8 +55,8 @@ export function DispersionChart({
     )
 
     if (validShots.length === 0) {
-      ctx.fillStyle = '#8A8A99'
-      ctx.font = '14px Inter'
+      ctx.fillStyle = '#606070'
+      ctx.font = '14px Outfit'
       ctx.textAlign = 'center'
       ctx.fillText('No shot data available', width / 2, height / 2)
       return
@@ -68,10 +71,9 @@ export function DispersionChart({
     const minCarry = Math.min(...carryValues)
     const maxCarry = Math.max(...carryValues)
 
-    // Add padding
     const offlineRange = Math.max(maxOffline - minOffline, 20)
     const carryRange = Math.max(maxCarry - minCarry, 20)
-    const padding = 40
+    const padding = 50
 
     // Scale functions
     const scaleX = (offline: number) => {
@@ -84,11 +86,11 @@ export function DispersionChart({
       return height - padding - normalized * (height - 2 * padding)
     }
 
-    // Draw grid
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'
+    // Draw grid with subtle glow
+    ctx.strokeStyle = 'rgba(0, 212, 255, 0.03)'
     ctx.lineWidth = 1
 
-    // Vertical grid lines
+    // Vertical lines
     for (let i = 0; i <= 5; i++) {
       const x = padding + (i / 5) * (width - 2 * padding)
       ctx.beginPath()
@@ -97,7 +99,7 @@ export function DispersionChart({
       ctx.stroke()
     }
 
-    // Horizontal grid lines
+    // Horizontal lines
     for (let i = 0; i <= 5; i++) {
       const y = padding + (i / 5) * (height - 2 * padding)
       ctx.beginPath()
@@ -108,7 +110,7 @@ export function DispersionChart({
 
     // Draw center line (target line)
     const centerX = scaleX(0)
-    ctx.strokeStyle = 'rgba(35, 213, 255, 0.3)'
+    ctx.strokeStyle = 'rgba(0, 212, 255, 0.2)'
     ctx.lineWidth = 1
     ctx.setLineDash([5, 5])
     ctx.beginPath()
@@ -117,10 +119,10 @@ export function DispersionChart({
     ctx.stroke()
     ctx.setLineDash([])
 
-    // Draw target distance line if provided
+    // Target distance line
     if (targetDistance) {
       const targetY = scaleY(targetDistance)
-      ctx.strokeStyle = 'rgba(35, 213, 255, 0.3)'
+      ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)'
       ctx.setLineDash([5, 5])
       ctx.beginPath()
       ctx.moveTo(padding, targetY)
@@ -129,20 +131,16 @@ export function DispersionChart({
       ctx.setLineDash([])
     }
 
-    // Calculate and draw dispersion ellipse
+    // Draw dispersion ellipse with gradient
     if (showEllipse && validShots.length >= 3) {
-      const meanOffline =
-        offlineValues.reduce((a, b) => a + b, 0) / offlineValues.length
-      const meanCarry =
-        carryValues.reduce((a, b) => a + b, 0) / carryValues.length
+      const meanOffline = offlineValues.reduce((a, b) => a + b, 0) / offlineValues.length
+      const meanCarry = carryValues.reduce((a, b) => a + b, 0) / carryValues.length
 
       const stdOffline = Math.sqrt(
-        offlineValues.reduce((sum, v) => sum + Math.pow(v - meanOffline, 2), 0) /
-          offlineValues.length
+        offlineValues.reduce((sum, v) => sum + Math.pow(v - meanOffline, 2), 0) / offlineValues.length
       )
       const stdCarry = Math.sqrt(
-        carryValues.reduce((sum, v) => sum + Math.pow(v - meanCarry, 2), 0) /
-          carryValues.length
+        carryValues.reduce((sum, v) => sum + Math.pow(v - meanCarry, 2), 0) / carryValues.length
       )
 
       const ellipseX = scaleX(meanOffline)
@@ -150,67 +148,100 @@ export function DispersionChart({
       const radiusX = (stdOffline * 2 * (width - 2 * padding)) / (offlineRange * 1.2)
       const radiusY = (stdCarry * 2 * (height - 2 * padding)) / (carryRange * 1.2)
 
-      // Draw ellipse fill
-      ctx.fillStyle = 'rgba(35, 213, 255, 0.1)'
+      // Ellipse gradient fill
+      const ellipseGradient = ctx.createRadialGradient(
+        ellipseX, ellipseY, 0,
+        ellipseX, ellipseY, Math.max(radiusX, radiusY)
+      )
+      ellipseGradient.addColorStop(0, 'rgba(0, 212, 255, 0.15)')
+      ellipseGradient.addColorStop(0.5, 'rgba(139, 92, 246, 0.08)')
+      ellipseGradient.addColorStop(1, 'transparent')
+
+      ctx.fillStyle = ellipseGradient
       ctx.beginPath()
       ctx.ellipse(ellipseX, ellipseY, radiusX, radiusY, 0, 0, 2 * Math.PI)
       ctx.fill()
 
-      // Draw ellipse stroke
-      ctx.strokeStyle = 'rgba(35, 213, 255, 0.5)'
+      // Ellipse stroke with glow
+      ctx.strokeStyle = 'rgba(0, 212, 255, 0.5)'
       ctx.lineWidth = 2
+      ctx.shadowColor = 'rgba(0, 212, 255, 0.5)'
+      ctx.shadowBlur = 10
       ctx.beginPath()
       ctx.ellipse(ellipseX, ellipseY, radiusX, radiusY, 0, 0, 2 * Math.PI)
       ctx.stroke()
+      ctx.shadowBlur = 0
 
-      // Draw center point
-      ctx.fillStyle = '#23D5FF'
+      // Center crosshair
+      ctx.strokeStyle = 'rgba(0, 212, 255, 0.3)'
+      ctx.lineWidth = 1
+      const crossSize = 8
       ctx.beginPath()
-      ctx.arc(ellipseX, ellipseY, 4, 0, 2 * Math.PI)
+      ctx.moveTo(ellipseX - crossSize, ellipseY)
+      ctx.lineTo(ellipseX + crossSize, ellipseY)
+      ctx.moveTo(ellipseX, ellipseY - crossSize)
+      ctx.lineTo(ellipseX, ellipseY + crossSize)
+      ctx.stroke()
+
+      // Center dot with glow
+      ctx.fillStyle = '#00d4ff'
+      ctx.shadowColor = '#00d4ff'
+      ctx.shadowBlur = 12
+      ctx.beginPath()
+      ctx.arc(ellipseX, ellipseY, 5, 0, 2 * Math.PI)
       ctx.fill()
+      ctx.shadowBlur = 0
     }
 
-    // Draw shots
-    validShots.forEach((shot) => {
+    // Draw shots with gradient and glow
+    validShots.forEach((shot, index) => {
       const x = scaleX(shot.offlineDistance)
       const y = scaleY(shot.carryDistance)
 
-      // Shot point
-      ctx.fillStyle = 'rgba(244, 244, 246, 0.8)'
+      // Outer glow
+      ctx.fillStyle = 'rgba(240, 240, 245, 0.1)'
+      ctx.beginPath()
+      ctx.arc(x, y, 10, 0, 2 * Math.PI)
+      ctx.fill()
+
+      // Shot point with gradient
+      const shotGradient = ctx.createRadialGradient(x, y, 0, x, y, 5)
+      shotGradient.addColorStop(0, 'rgba(240, 240, 245, 1)')
+      shotGradient.addColorStop(1, 'rgba(0, 212, 255, 0.8)')
+      
+      ctx.fillStyle = shotGradient
+      ctx.shadowColor = 'rgba(0, 212, 255, 0.5)'
+      ctx.shadowBlur = 6
       ctx.beginPath()
       ctx.arc(x, y, 4, 0, 2 * Math.PI)
       ctx.fill()
-
-      // Glow effect
-      ctx.fillStyle = 'rgba(244, 244, 246, 0.2)'
-      ctx.beginPath()
-      ctx.arc(x, y, 8, 0, 2 * Math.PI)
-      ctx.fill()
+      ctx.shadowBlur = 0
     })
 
-    // Draw axes labels
-    ctx.fillStyle = '#8A8A99'
-    ctx.font = '11px Inter'
+    // Axes labels
+    ctx.fillStyle = '#606070'
+    ctx.font = '11px Outfit'
     ctx.textAlign = 'center'
 
     // X-axis label
-    ctx.fillText('Offline Distance (m)', width / 2, height - 10)
+    ctx.fillText('Offline Distance (m)', width / 2, height - 12)
 
     // Y-axis label
     ctx.save()
-    ctx.translate(12, height / 2)
+    ctx.translate(14, height / 2)
     ctx.rotate(-Math.PI / 2)
     ctx.fillText('Carry Distance (m)', 0, 0)
     ctx.restore()
 
-    // Draw tick labels
-    ctx.font = '10px Inter'
-    
+    // Tick labels
+    ctx.font = '10px JetBrains Mono'
+    ctx.fillStyle = '#606070'
+
     // X-axis ticks
     const xTicks = [minOffline, 0, maxOffline]
     xTicks.forEach((tick) => {
       const x = scaleX(tick)
-      ctx.fillText(tick.toFixed(0), x, height - padding + 15)
+      ctx.fillText(tick.toFixed(0), x, height - padding + 18)
     })
 
     // Y-axis ticks
@@ -218,14 +249,15 @@ export function DispersionChart({
     ctx.textAlign = 'right'
     yTicks.forEach((tick) => {
       const y = scaleY(tick)
-      ctx.fillText(tick.toFixed(0), padding - 5, y + 4)
+      ctx.fillText(tick.toFixed(0), padding - 8, y + 4)
     })
+
   }, [shots, targetDistance, width, height, showEllipse])
 
   return (
     <canvas
       ref={canvasRef}
-      className={cn('rounded-card', className)}
+      className={cn('rounded-xl', className)}
       style={{ width, height }}
     />
   )

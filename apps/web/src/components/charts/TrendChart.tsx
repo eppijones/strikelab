@@ -6,87 +6,150 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  Area,
+  AreaChart,
 } from 'recharts'
-import { cn } from '@/lib/utils'
-
-interface DataPoint {
-  name: string
-  [key: string]: string | number
-}
 
 interface TrendChartProps {
-  data: DataPoint[]
+  data: Array<Record<string, any>>
   lines: Array<{
     dataKey: string
     name: string
-    color?: string
+    color: string
   }>
   height?: number
-  className?: string
+  showArea?: boolean
 }
 
-export function TrendChart({
-  data,
-  lines,
-  height = 300,
-  className,
-}: TrendChartProps) {
-  const defaultColors = ['#23D5FF', '#22c55e', '#eab308', '#ef4444', '#a855f7']
+// Custom tooltip component
+function CustomTooltip({ active, payload, label }: any) {
+  if (!active || !payload || !payload.length) return null
 
   return (
-    <div className={cn('w-full', className)} style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={data}
-          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="rgba(255, 255, 255, 0.05)"
-            vertical={false}
+    <div className="bg-theme-bg-elevated/95 backdrop-blur-xl border border-theme-border rounded-xl p-3 shadow-neural">
+      <p className="text-xs text-theme-text-muted mb-2 font-medium">{label}</p>
+      {payload.map((entry: any, index: number) => (
+        <div key={index} className="flex items-center gap-2">
+          <span 
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: entry.color }}
           />
-          <XAxis
-            dataKey="name"
-            tick={{ fill: '#8A8A99', fontSize: 11 }}
-            axisLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fill: '#8A8A99', fontSize: 11 }}
-            axisLine={{ stroke: 'rgba(255, 255, 255, 0.1)' }}
-            tickLine={false}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#1A1A22',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '12px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-            }}
-            labelStyle={{ color: '#F4F4F6', fontWeight: 500 }}
-            itemStyle={{ color: '#8A8A99' }}
-          />
-          <Legend
-            wrapperStyle={{ paddingTop: '20px' }}
-            formatter={(value) => (
-              <span style={{ color: '#8A8A99', fontSize: '12px' }}>{value}</span>
-            )}
-          />
-          {lines.map((line, index) => (
+          <span className="text-xs text-theme-text-secondary">{entry.name}:</span>
+          <span 
+            className="text-xs font-mono font-bold"
+            style={{ color: entry.color }}
+          >
+            {typeof entry.value === 'number' ? entry.value.toFixed(1) : entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function TrendChart({ 
+  data, 
+  lines, 
+  height = 300,
+  showArea = false 
+}: TrendChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div 
+        className="flex items-center justify-center bg-theme-bg-surface/30 rounded-xl border border-theme-border"
+        style={{ height }}
+      >
+        <p className="text-sm text-theme-text-muted">No data available</p>
+      </div>
+    )
+  }
+
+  const Chart = showArea ? AreaChart : LineChart
+
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <Chart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+        <defs>
+          {lines.map((line) => (
+            <linearGradient 
+              key={`gradient-${line.dataKey}`} 
+              id={`gradient-${line.dataKey}`} 
+              x1="0" y1="0" x2="0" y2="1"
+            >
+              <stop offset="5%" stopColor={line.color} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={line.color} stopOpacity={0} />
+            </linearGradient>
+          ))}
+          {/* Glow filter */}
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <CartesianGrid 
+          strokeDasharray="3 3" 
+          stroke="rgba(0, 212, 255, 0.05)" 
+          vertical={false}
+        />
+        
+        <XAxis 
+          dataKey="name" 
+          tick={{ fill: '#606070', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+          axisLine={{ stroke: 'rgba(255, 255, 255, 0.06)' }}
+          tickLine={false}
+        />
+        
+        <YAxis 
+          tick={{ fill: '#606070', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+          axisLine={false}
+          tickLine={false}
+        />
+        
+        <Tooltip content={<CustomTooltip />} />
+
+        {lines.map((line) => (
+          showArea ? (
+            <Area
+              key={line.dataKey}
+              type="monotone"
+              dataKey={line.dataKey}
+              name={line.name}
+              stroke={line.color}
+              strokeWidth={2}
+              fill={`url(#gradient-${line.dataKey})`}
+              filter="url(#glow)"
+              dot={false}
+              activeDot={{
+                r: 5,
+                fill: line.color,
+                stroke: '#06060a',
+                strokeWidth: 2,
+              }}
+            />
+          ) : (
             <Line
               key={line.dataKey}
               type="monotone"
               dataKey={line.dataKey}
               name={line.name}
-              stroke={line.color || defaultColors[index % defaultColors.length]}
+              stroke={line.color}
               strokeWidth={2}
-              dot={{ fill: line.color || defaultColors[index % defaultColors.length], r: 4 }}
-              activeDot={{ r: 6, stroke: '#0A0A0F', strokeWidth: 2 }}
+              filter="url(#glow)"
+              dot={false}
+              activeDot={{
+                r: 5,
+                fill: line.color,
+                stroke: '#06060a',
+                strokeWidth: 2,
+              }}
             />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+          )
+        ))}
+      </Chart>
+    </ResponsiveContainer>
   )
 }

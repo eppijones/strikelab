@@ -33,9 +33,18 @@ function BrandLogo({ brand, size = 'md', selected = false }: { brand: GolfBrand;
           : 'bg-surface border border-border hover:border-cyan/30'
         }
       `}
-      style={{ color: selected ? brand.color : 'var(--color-ice-white)' }}
-      dangerouslySetInnerHTML={{ __html: brand.logo }}
-    />
+    >
+      <img 
+        src={brand.logoPath} 
+        alt={brand.name}
+        className="w-full h-full object-contain"
+        onError={(e) => {
+          // Fallback to text if image fails
+          e.currentTarget.style.display = 'none'
+          e.currentTarget.parentElement!.innerHTML = `<span class="text-xs font-bold text-muted">${brand.name}</span>`
+        }}
+      />
+    </div>
   )
 }
 
@@ -53,11 +62,13 @@ function ClubCard({
     <div className="group relative p-4 rounded-xl bg-graphite border border-border hover:border-cyan/30 transition-all">
       <div className="flex items-center gap-4">
         {brand && (
-          <div 
-            className="w-12 h-6 flex items-center"
-            style={{ color: brand.color }}
-            dangerouslySetInnerHTML={{ __html: brand.logo }}
-          />
+          <div className="w-12 h-6 flex items-center justify-center">
+            <img 
+              src={brand.logoPath} 
+              alt={brand.name}
+              className="w-full h-full object-contain"
+            />
+          </div>
         )}
         <div className="flex-1 min-w-0">
           <p className="text-ice-white font-medium truncate">{club.model_name}</p>
@@ -163,11 +174,13 @@ function AddClubModal({
                         : 'border-border hover:border-cyan/30 bg-graphite'
                     }`}
                   >
-                    <div 
-                      className="h-8 flex items-center justify-center"
-                      style={{ color: brand.color }}
-                      dangerouslySetInnerHTML={{ __html: brand.logo }}
-                    />
+                    <div className="h-8 flex items-center justify-center">
+                      <img 
+                        src={brand.logoPath} 
+                        alt={brand.name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                     <p className="text-xs text-muted mt-2 truncate">{brand.name}</p>
                   </button>
                 ))}
@@ -321,11 +334,13 @@ function BallSelectionModal({
                     : 'border-border hover:border-cyan/30 bg-graphite'
                 }`}
               >
-                <div 
-                  className="h-6 flex items-center justify-center"
-                  style={{ color: brand.color }}
-                  dangerouslySetInnerHTML={{ __html: brand.logo }}
-                />
+                <div className="h-6 flex items-center justify-center">
+                  <img 
+                    src={brand.logoPath} 
+                    alt={brand.name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
               </button>
             ))}
           </div>
@@ -458,11 +473,13 @@ export default function MyBag() {
                 {bag?.ball_model ? (
                   <div className="flex items-center gap-3">
                     {ballBrand && (
-                      <div 
-                        className="h-5"
-                        style={{ color: ballBrand.color }}
-                        dangerouslySetInnerHTML={{ __html: ballBrand.logo }}
-                      />
+                      <div className="h-5 w-10 flex items-center justify-center">
+                        <img 
+                          src={ballBrand.logoPath} 
+                          alt={ballBrand.name}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
                     )}
                     <span className="text-ice-white font-medium">{bag.ball_model}</span>
                   </div>
@@ -552,9 +569,13 @@ export default function MyBag() {
               <div
                 key={brand.id}
                 className="px-5 py-3 h-14 min-w-[100px] rounded-xl bg-surface/80 border border-border/50 flex items-center justify-center hover:border-cyan/30 transition-all"
-                style={{ color: brand.color }}
-                dangerouslySetInnerHTML={{ __html: brand.logo }}
-              />
+              >
+                <img 
+                  src={brand.logoPath} 
+                  alt={brand.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
             ))}
           </div>
         </CardContent>

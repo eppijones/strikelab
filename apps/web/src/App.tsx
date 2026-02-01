@@ -21,6 +21,8 @@ import MyBag from '@/pages/MyBag'
 import Courses from '@/pages/Courses'
 import Settings from '@/pages/Settings'
 import Stats from '@/pages/Stats'
+import Play from '@/pages/Play'
+import PracticeHub from '@/pages/PracticeHub'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -84,6 +86,8 @@ function App() {
           </ProtectedRoute>
         }>
           <Route index element={<Dashboard />} />
+          <Route path="play" element={<Play />} />
+          <Route path="practice" element={<PracticeHub />} />
           <Route path="sessions" element={<Sessions />} />
           <Route path="sessions/:id" element={<SessionDetail />} />
           <Route path="sessions/:id/log" element={<SessionLog />} />

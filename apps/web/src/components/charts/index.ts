@@ -1,3 +1,4 @@
+export { BarChart } from './BarChart'
 export { DispersionChart } from './DispersionChart'
 export { TrendChart } from './TrendChart'
-export { BarChart } from './BarChart'
+export { SessionTimeline, ShotStrip } from './SessionTimeline'

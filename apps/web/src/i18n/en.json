@@ -16,7 +16,8 @@
     "training": "Training",
     "swingLab": "Swing Lab",
     "calendar": "Calendar",
-    "friends": "Friends"
+    "friends": "Friends",
+    "settings": "Settings"
   },
   "auth": {
     "login": "Sign In",
@@ -28,17 +29,48 @@
     "displayName": "Display Name",
     "forgotPassword": "Forgot password?",
     "noAccount": "Don't have an account?",
-    "hasAccount": "Already have an account?"
+    "hasAccount": "Already have an account?",
+    "welcomeBack": "Welcome back",
+    "createYourAccount": "Create your account",
+    "signingIn": "Signing in...",
+    "creatingAccount": "Creating account..."
   },
   "dashboard": {
     "welcome": "Welcome back",
+    "goodMorning": "Good morning",
+    "goodAfternoon": "Good afternoon",
+    "goodEvening": "Good evening",
     "recentSessions": "Recent Sessions",
     "upcomingTeeTimes": "Upcoming Tee Times",
     "currentPlan": "Current Plan",
     "coachSummary": "Coach Summary",
     "yourNextMove": "Your Next Best Move",
     "noSessions": "No sessions yet. Import your first data.",
-    "noTeeTimes": "No upcoming tee times."
+    "noTeeTimes": "No upcoming tee times.",
+    "currentIndex": "Current Index",
+    "targetHandicap": "Target",
+    "progressToGoal": "Progress to Goal",
+    "weeksAtPace": "weeks at current pace",
+    "totalSessions": "Sessions",
+    "totalShots": "Total Shots",
+    "streak": "Streak",
+    "nextRound": "Next Round",
+    "yourBag": "Your Bag",
+    "clubs": "clubs",
+    "manage": "Manage",
+    "reviewStats": "Review Stats",
+    "practice": "Practice",
+    "askCoach": "Ask Coach",
+    "reviewSession": "Review Session",
+    "viewAll": "View all",
+    "demoData": "Demo data shown.",
+    "importSession": "Import a session",
+    "toSeeReal": "to see your real club performance.",
+    "neuralActive": "Neural processing active",
+    "shots": "Shots",
+    "smash": "Smash",
+    "dispersion": "Dispersion",
+    "avgCarry": "avg carry"
   },
   "scores": {
     "strikeScore": "Strike Score",
@@ -61,7 +93,9 @@
       "range": "Range",
       "simulator": "Simulator",
       "round": "Round"
-    }
+    },
+    "empty": "No sessions yet",
+    "emptyDescription": "Import your first session to start tracking your progress."
   },
   "sessionDetail": {
     "overview": "Overview",
@@ -106,7 +140,10 @@
     "validation": "Validation",
     "nextBestMove": "Next Best Move",
     "linkedMetrics": "Supporting Data",
-    "noReports": "No coach reports yet."
+    "noReports": "No coach reports yet.",
+    "askAnything": "Ask anything about your game...",
+    "thinking": "Thinking...",
+    "send": "Send"
   },
   "connectors": {
     "title": "Connectors",
@@ -117,7 +154,10 @@
     "importCSV": "Import CSV",
     "uploadFile": "Upload File",
     "comingSoon": "Coming Soon",
-    "lastSync": "Last synced"
+    "lastSync": "Last synced",
+    "description": "Connect your launch monitors and import session data.",
+    "csvDescription": "Upload CSV files from any launch monitor",
+    "dragDrop": "Drag and drop your file here, or click to browse"
   },
   "training": {
     "title": "Training Plan",
@@ -126,7 +166,10 @@
     "drills": "Drills",
     "startPlan": "Start Plan",
     "completeDrill": "Mark Complete",
-    "noPlan": "No active training plan."
+    "noPlan": "No active training plan.",
+    "createPlan": "Create Plan",
+    "weeklyGoals": "Weekly Goals",
+    "focusAreas": "Focus Areas"
   },
   "swingLab": {
     "title": "Swing Lab",
@@ -145,7 +188,8 @@
     "time": "Time",
     "players": "Players",
     "notes": "Notes",
-    "prepNotes": "Prep Notes"
+    "prepNotes": "Prep Notes",
+    "noEvents": "No events scheduled"
   },
   "friends": {
     "title": "Friends",
@@ -171,7 +215,53 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "thisWeek": "This Week",
-    "lastWeek": "Last Week"
+    "lastWeek": "Last Week",
+    "days": "days",
+    "hours": "hours",
+    "minutes": "minutes",
+    "viewMore": "View more",
+    "showLess": "Show less",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "noResults": "No results found",
+    "tryAgain": "Try again",
+    "close": "Close",
+    "open": "Open",
+    "select": "Select",
+    "selected": "Selected",
+    "all": "All",
+    "none": "None"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "language": "Language",
+    "units": "Units",
+    "yards": "Yards",
+    "meters": "Meters",
+    "profile": "Profile",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "account": "Account"
+  },
+  "onboarding": {
+    "welcome": "Welcome to StrikeLab",
+    "letsGetStarted": "Let's get you set up",
+    "handicap": "What's your current handicap?",
+    "goalHandicap": "What's your goal handicap?",
+    "practiceFrequency": "How often do you practice?",
+    "daily": "Daily",
+    "frequentlyWeek": "4-5x per week",
+    "regularWeek": "2-3x per week",
+    "weekly": "Weekly",
+    "occasional": "Occasionally",
+    "finish": "Finish Setup",
+    "skip": "Skip for now"
   },
   "feelTags": {
     "calm": "Calm",
@@ -181,7 +271,11 @@
     "focused": "Focused",
     "smooth": "Smooth",
     "quick": "Quick",
-    "tight": "Tight"
+    "tight": "Tight",
+    "confident": "Confident",
+    "uncertain": "Uncertain",
+    "relaxed": "Relaxed",
+    "tense": "Tense"
   },
   "missPatterns": {
     "push": "Push",
@@ -205,7 +299,10 @@
     "selectType": "Select Type",
     "selectModel": "Select Model",
     "emptyBag": "Your bag is empty",
-    "maxClubs": "Maximum 14 clubs allowed"
+    "maxClubs": "Maximum 14 clubs allowed",
+    "clubStats": "Club Stats",
+    "avgDistance": "Avg Distance",
+    "consistency": "Consistency"
   },
   "courses": {
     "title": "Golf Courses",
@@ -218,6 +315,24 @@
     "facilities": "Facilities",
     "designer": "Designer",
     "established": "Established",
-    "visitWebsite": "Visit Website"
+    "visitWebsite": "Visit Website",
+    "addToFavorites": "Add to Favorites",
+    "removeFromFavorites": "Remove from Favorites"
+  },
+  "stats": {
+    "title": "Statistics",
+    "overview": "Overview",
+    "byClub": "By Club",
+    "trends": "Trends",
+    "comparison": "Comparison",
+    "timeRange": "Time Range",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days",
+    "last90Days": "Last 90 Days",
+    "allTime": "All Time"
+  },
+  "templates": {
+    "sessionLog": "Session Log",
+    "newYearPlan": "New Year Plan"
   }
 }

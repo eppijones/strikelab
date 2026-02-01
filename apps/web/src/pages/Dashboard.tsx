@@ -1,123 +1,32 @@
 import { useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { useSessions } from '@/api/sessions'
-import { useCoachReports } from '@/api/coach'
-import { useTeeTimes } from '@/api/courses'
-import { useMyBag, useClubStats } from '@/api/equipment'
-import { Card, CardContent, Badge, Button } from '@/components/ui'
-import { formatDate } from '@/lib/utils'
+import { useClubStats } from '@/api/equipment'
+import { CardGlass } from '@/components/ui/CardGlass'
+import { Badge, Button } from '@/components/ui'
+import { cn } from '@/lib/utils'
+import { SpotlightCard, TextReveal } from '@/components/ui/MotionPrimitives'
 
-// Calculate predicted time to goal
-function predictWeeksToGoal(current: number, goal: number, frequency?: string): number | null {
-  if (!frequency || goal >= current) return null
+// Helper to predict date
+const getProjectedDate = (current: number, goal: number) => {
+  if (current <= goal) return "Goal Achieved"
   const diff = current - goal
-  const weeklyRate: Record<string, number> = {
-    'daily': 0.15,
-    '4-5x_week': 0.1,
-    '2-3x_week': 0.06,
-    'weekly': 0.03,
-    'occasional': 0.01,
-  }
-  return Math.ceil(diff / (weeklyRate[frequency] || 0.03))
-}
-
-// Demo club data
-const DEMO_CLUBS = [
-  { label: 'Driver', shortLabel: 'D', score: 76, distance: 268, type: 'driver' },
-  { label: '3-Wood', shortLabel: '3W', score: 81, distance: 238, type: 'wood' },
-  { label: '5-Wood', shortLabel: '5W', score: 79, distance: 218, type: 'wood' },
-  { label: '4-Iron', shortLabel: '4i', score: 85, distance: 195, type: 'iron' },
-  { label: '5-Iron', shortLabel: '5i', score: 87, distance: 182, type: 'iron' },
-  { label: '6-Iron', shortLabel: '6i', score: 88, distance: 170, type: 'iron' },
-  { label: '7-Iron', shortLabel: '7i', score: 89, distance: 162, type: 'iron' },
-  { label: '8-Iron', shortLabel: '8i', score: 91, distance: 150, type: 'iron' },
-  { label: '9-Iron', shortLabel: '9i', score: 90, distance: 138, type: 'iron' },
-  { label: 'PW', shortLabel: 'PW', score: 88, distance: 125, type: 'wedge' },
-  { label: 'GW', shortLabel: 'GW', score: 86, distance: 110, type: 'wedge' },
-  { label: 'SW', shortLabel: 'SW', score: 84, distance: 95, type: 'wedge' },
-  { label: 'LW', shortLabel: 'LW', score: 82, distance: 85, type: 'wedge' },
-  { label: 'Putter', shortLabel: 'P', score: 78, distance: null, type: 'putter' },
-]
-
-// Score color helper
-function getScoreColor(score: number): string {
-  if (score >= 88) return 'text-theme-success'
-  if (score >= 80) return 'text-theme-accent'
-  if (score >= 70) return 'text-theme-warning'
-  return 'text-theme-error'
-}
-
-function getScoreBg(score: number): string {
-  if (score >= 88) return 'from-theme-success/20 to-theme-success/5 border-theme-success/30'
-  if (score >= 80) return 'from-theme-accent/20 to-theme-accent/5 border-theme-accent/30'
-  if (score >= 70) return 'from-theme-warning/20 to-theme-warning/5 border-theme-warning/30'
-  return 'from-theme-error/20 to-theme-error/5 border-theme-error/30'
+  const weeksNeeded = Math.ceil(diff / 0.15) // Assume 0.15 improvement per week
+  const date = new Date()
+  date.setDate(date.getDate() + (weeksNeeded * 7))
+  // Format: Nov 2027
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
 export default function Dashboard() {
-  const { t } = useTranslation()
   const user = useAuthStore((state) => state.user)
-  const { data: sessionsData, isLoading: sessionsLoading } = useSessions({ limit: 5 })
-  const { data: coachReports } = useCoachReports()
-  const { data: teeTimes } = useTeeTimes(true)
-  const { data: bag } = useMyBag()
+  const units = useSettingsStore((state) => state.units)
+  const { data: sessionsData } = useSessions({ limit: 5 })
   const { data: clubStats } = useClubStats()
 
-  // Selected club for focus view
-  const [selectedClubIndex, setSelectedClubIndex] = useState(0)
-
-  // Get latest coach report
-  const latestReport = coachReports?.[0]
-  
-  // Get next tee time
-  const nextTeeTime = teeTimes?.[0]
-
-  // Determine greeting based on time
-  const getGreeting = () => {
-    const hour = new Date().getHours()
-    if (hour < 12) return t('dashboard.goodMorning', 'Good morning')
-    if (hour < 18) return t('dashboard.goodAfternoon', 'Good afternoon')
-    return t('dashboard.goodEvening', 'Good evening')
-  }
-
-  // Stats summary
-  const totalSessions = sessionsData?.total ?? 0
-  const totalShots = useMemo(() => {
-    return sessionsData?.sessions?.reduce((sum, s) => sum + (s.shot_count || 0), 0) ?? 0
-  }, [sessionsData])
-  
-  // Last session info
-  const lastSession = sessionsData?.sessions?.[0]
-  
-  // Handicap prediction
-  const weeksToGoal = useMemo(() => {
-    if (!user?.handicapIndex || !user?.goalHandicap) return null
-    return predictWeeksToGoal(user.handicapIndex, user.goalHandicap, user.practiceFrequency)
-  }, [user])
-
-  // Calculate progress percentage to goal
-  const progressToGoal = useMemo(() => {
-    if (!user?.handicapIndex || !user?.goalHandicap) return null
-    const startHandicap = user.handicapIndex + 5
-    const total = startHandicap - user.goalHandicap
-    const achieved = startHandicap - user.handicapIndex
-    return Math.min(100, Math.max(0, Math.round((achieved / total) * 100)))
-  }, [user])
-
-  // Format days until next tee time
-  const daysUntilTeeTime = useMemo(() => {
-    if (!nextTeeTime) return null
-    const now = new Date()
-    const teeDate = new Date(nextTeeTime.tee_time)
-    const diff = Math.ceil((teeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    if (diff === 0) return 'Today'
-    if (diff === 1) return 'Tomorrow'
-    return `${diff} days`
-  }, [nextTeeTime])
-
-  // Build club data from stats or use demo
   const clubData = useMemo(() => {
     if (clubStats && clubStats.length > 0) {
       return clubStats.map(s => ({
@@ -125,428 +34,233 @@ export default function Dashboard() {
         shortLabel: s.club_label.replace('-', '').replace('Iron', 'i').replace('Wood', 'W'),
         score: s.good_shots && s.total_shots ? Math.round((s.good_shots / s.total_shots) * 100) : 80,
         distance: s.avg_carry ? Math.round(s.avg_carry) : null,
-        type: s.club_label.toLowerCase().includes('driver') ? 'driver' : 
-              s.club_label.toLowerCase().includes('wood') ? 'wood' :
-              s.club_label.toLowerCase().includes('iron') ? 'iron' :
-              s.club_label.toLowerCase().includes('w') ? 'wedge' : 'putter',
-        totalShots: s.total_shots,
-        smashFactor: s.avg_smash_factor,
-        dispersion: s.dispersion_radius,
+        status: (s.good_shots / s.total_shots) > 0.8 ? 'dialed' : (s.good_shots / s.total_shots) > 0.6 ? 'stable' : 'needs_work'
       }))
     }
-    return DEMO_CLUBS
+    return [
+      { label: 'Driver', shortLabel: 'DRV', score: 76, distance: 268, status: 'stable' },
+      { label: '7-Iron', shortLabel: '7i', score: 89, distance: 162, status: 'dialed' },
+      { label: 'Pitching Wedge', shortLabel: 'PW', score: 65, distance: 125, status: 'needs_work' },
+      { label: 'Putter', shortLabel: 'PUT', score: 78, distance: null, status: 'needs_work' },
+    ]
   }, [clubStats])
 
-  const selectedClub = clubData[selectedClubIndex] || clubData[0]
-  const hasData = totalSessions > 0
+  const projectedDate = useMemo(() => 
+    getProjectedDate(user?.handicapIndex || 12.4, user?.goalHandicap || 8.0), 
+  [user])
+
+  const currentHC = user?.handicapIndex || 12.4
+  const goalHC = user?.goalHandicap || 8.0
 
   return (
-    <div className="space-y-12 pb-16">
+    <div className="space-y-8 pb-32">
       
-      {/* ═══════════════════════════════════════════════════════════════
-          HERO HEADER - Identity + Handicap Journey
-      ═══════════════════════════════════════════════════════════════ */}
-      <header className="relative pt-6 pb-4">
-        <div className="max-w-3xl mx-auto text-center">
-          {/* Profile + Greeting */}
-          <div className="inline-flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-theme-accent to-theme-success flex items-center justify-center text-theme-text-inverted font-bold shadow-glow ring-2 ring-theme-border">
-              {user?.displayName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'G'}
-            </div>
-            <div className="text-left">
-              <h1 className="text-xl font-display font-bold text-theme-text-primary">
-                {getGreeting()}, {user?.displayName?.split(' ')[0] || 'Golfer'}
-              </h1>
-              <p className="text-sm text-theme-text-muted">Let's get dialed in</p>
-            </div>
-          </div>
-          
-          {/* Handicap Journey */}
-          <div className="inline-flex items-center gap-4 px-6 py-4 rounded-2xl bg-theme-bg-surface/60 border border-theme-border backdrop-blur-sm">
-            <div className="text-center">
-              <p className="text-[10px] text-theme-text-muted uppercase tracking-wider mb-0.5">Current</p>
-              <p className="text-3xl font-display font-bold text-theme-text-primary">
-                {user?.handicapIndex?.toFixed(1) || '8.5'}
-              </p>
-            </div>
-            
-            {user?.goalHandicap && (
-              <>
-                <div className="flex flex-col items-center gap-1">
-                  <div className="w-10 h-0.5 rounded-full bg-theme-border overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-theme-accent to-theme-success"
-                      style={{ width: `${progressToGoal || 60}%` }}
-                    />
-                  </div>
-                  <svg className="w-4 h-4 text-theme-accent/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </div>
-                
-                <div className="text-center">
-                  <p className="text-[10px] text-theme-text-muted uppercase tracking-wider mb-0.5">Goal</p>
-                  <p className="text-3xl font-display font-bold text-theme-accent">
-                    {user.goalHandicap}
-                  </p>
-                </div>
-              </>
-            )}
-            
-            {/* Primary CTA */}
-            {lastSession && (
-              <div className="pl-4 border-l border-theme-border">
-                <Link to={`/sessions/${lastSession.id}`}>
-                  <Button size="sm" className="shadow-glow-sm">
-                    Review Session
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          YOUR BAG - Central Hero Element
-      ═══════════════════════════════════════════════════════════════ */}
-      <section className="relative">
-        {/* Spotlight gradient behind the card */}
-        <div className="absolute inset-0 -z-10 flex items-center justify-center pointer-events-none">
-          <div 
-            className="w-[700px] h-[500px] rounded-full opacity-40"
-            style={{
-              background: 'radial-gradient(ellipse at center, var(--color-accent-dim) 0%, var(--color-success-dim) 40%, transparent 70%)',
-              filter: 'blur(40px)',
-            }}
+      {/* --- HEADER: Tactical Welcome --- */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 px-1">
+        <div>
+           <TextReveal 
+            text={`COMMAND CENTER`} 
+            className="text-[10px] font-bold text-nordic-sage uppercase tracking-[0.2em] mb-1"
           />
+          <h1 className="text-3xl md:text-4xl font-bold text-nordic-forest dark:text-white tracking-tight">
+            {user?.displayName?.split(' ')[0] || 'Golfer'}
+            <span className="text-nordic-forest/20 dark:text-white/20">.HQ</span>
+          </h1>
         </div>
+      </div>
 
-        <div className="max-w-4xl mx-auto">
-          <Card className="overflow-hidden bg-gradient-to-b from-theme-bg-surface/90 to-theme-bg-secondary/60 border-theme-border shadow-2xl backdrop-blur-sm">
-            {/* Header */}
-            <div className="px-6 pt-6 pb-4 flex items-center justify-between border-b border-theme-border">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-theme-accent/20 to-theme-success/20 flex items-center justify-center border border-theme-accent/20">
-                  <span className="text-lg">🏌️</span>
-                </div>
+      {/* --- SECTION 1: FLIGHT PATH (New Handicap HUD) --- */}
+      <section className="relative group">
+        <div className="absolute inset-0 bg-gradient-to-r from-nordic-forest/5 via-nordic-sage/10 to-nordic-forest/5 dark:from-white/5 dark:via-white/10 dark:to-white/5 rounded-2xl blur-xl opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
+        
+        <CardGlass className="relative overflow-hidden border-nordic-forest/10 dark:border-white/10" padding="md">
+          <div className="flex items-center justify-between gap-6 md:gap-12">
+            
+            {/* Current State */}
+            <div className="text-left shrink-0">
+               <div className="flex items-center gap-2 mb-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[10px] font-mono text-nordic-forest/60 dark:text-white/60 uppercase tracking-widest">Current</span>
+               </div>
+               <div className="text-5xl md:text-6xl font-bold text-nordic-forest dark:text-white tracking-tighter tabular-nums font-mono">
+                 {currentHC.toFixed(1)}
+               </div>
+            </div>
+
+            {/* The Flight Path (Visualizer) */}
+            <div className="flex-1 relative h-16 md:h-20 flex items-center px-4">
+              {/* Background Line */}
+              <div className="absolute left-0 right-0 h-[1px] bg-nordic-forest/10 dark:bg-white/10" />
+              
+              {/* Progress Line */}
+              <motion.div 
+                className="absolute left-0 h-[2px] bg-gradient-to-r from-nordic-forest via-nordic-sage to-transparent dark:from-white dark:via-white/60 dark:to-transparent"
+                initial={{ width: 0 }}
+                animate={{ width: "60%" }}
+                transition={{ duration: 1.5, ease: "circOut" }}
+              />
+
+              {/* Data Points on Line */}
+              <div className="relative w-full flex justify-between text-[10px] font-mono font-medium text-nordic-forest/40 dark:text-white/40 pt-6 uppercase tracking-wider">
+                <span>Now</span>
+                <span className="hidden md:inline-block">Milestone 1</span>
+                <span>Target</span>
+              </div>
+            </div>
+
+            {/* Target State */}
+            <div className="text-right shrink-0">
+               <div className="flex items-center justify-end gap-2 mb-1">
+                  <span className="text-[10px] font-mono text-nordic-forest/40 dark:text-white/40 uppercase tracking-widest">Projection</span>
+               </div>
+               <div className="text-4xl md:text-5xl font-bold text-nordic-forest/30 dark:text-white/30 tracking-tighter tabular-nums font-mono">
+                 {goalHC.toFixed(1)}
+               </div>
+               <div className="mt-1">
+                  <Badge variant="outline" className="border-nordic-forest/10 dark:border-white/10 text-nordic-sage text-[10px] font-mono py-0 h-5">
+                    BY {projectedDate.toUpperCase()}
+                  </Badge>
+               </div>
+            </div>
+
+          </div>
+        </CardGlass>
+      </section>
+
+      {/* --- SECTION 2: MISSION CONTROL (Action Center) --- */}
+      <section className="grid md:grid-cols-2 gap-6">
+        
+        {/* Primary Mission Card */}
+        <Link to="/calendar" className="group h-full">
+          <SpotlightCard className="h-full bg-nordic-forest text-white dark:bg-white dark:text-nordic-forest border-none overflow-hidden relative">
+             <div className="absolute top-0 right-0 p-32 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+             
+             <div className="p-8 h-full flex flex-col justify-between relative z-10">
                 <div>
-                  <h2 className="font-display font-semibold text-theme-text-primary">Your Bag</h2>
-                  <p className="text-xs text-theme-text-muted">{clubData.length} clubs • {bag?.ball_model || 'Pro V1x'}</p>
+                  <div className="flex items-center justify-between mb-6">
+                    <Badge className="bg-white/20 text-white dark:bg-nordic-forest/10 dark:text-nordic-forest border-none backdrop-blur-md">
+                      PRIORITY MISSION
+                    </Badge>
+                    <span className="font-mono text-xs opacity-60">T-MINUS 14HRS</span>
+                  </div>
+                  
+                  <h3 className="text-3xl font-bold mb-2">Driver Optimization</h3>
+                  <p className="opacity-80 leading-relaxed max-w-sm">
+                    Your dispersion has increased by 12% in the last 2 sessions. Let's tighten it up.
+                  </p>
                 </div>
-              </div>
-              <Link to="/my-bag" className="text-sm text-theme-accent hover:opacity-80 transition-colors flex items-center gap-1">
-                Manage
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            </div>
 
-            {/* Club Strip - Scrollable */}
-            <div className="px-4 py-5 overflow-x-auto scrollbar-hide">
-              <div className="flex gap-2 min-w-max px-2">
-                {clubData.map((club, index) => {
-                  const isSelected = index === selectedClubIndex
-                  return (
-                    <button
-                      key={club.label}
-                      onClick={() => setSelectedClubIndex(index)}
-                      className={`
-                        relative flex flex-col items-center px-3 py-3 rounded-xl transition-all duration-200
-                        ${isSelected 
-                          ? `bg-gradient-to-b ${getScoreBg(club.score)} border shadow-lg scale-105` 
-                          : 'bg-theme-accent-subtle border border-transparent hover:bg-theme-accent-dim hover:border-theme-border'
-                        }
-                      `}
-                    >
-                      {/* Club Label */}
-                      <span className={`text-xs font-semibold mb-1 ${isSelected ? 'text-theme-text-primary' : 'text-theme-text-muted'}`}>
-                        {club.shortLabel}
-                      </span>
-                      
-                      {/* Score */}
-                      <span className={`text-lg font-bold ${getScoreColor(club.score)}`}>
-                        {club.score}
-                      </span>
-                      
-                      {/* Distance */}
-                      {club.distance && (
-                        <span className={`text-[10px] ${isSelected ? 'text-theme-text-secondary' : 'text-theme-text-muted/60'}`}>
-                          {club.distance}y
-                        </span>
-                      )}
-                      
-                      {/* Selected indicator */}
-                      {isSelected && (
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-theme-accent" />
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+                <div className="flex items-center gap-4 mt-8 pt-8 border-t border-white/10 dark:border-nordic-forest/10">
+                   <div className="w-12 h-12 rounded-full bg-white/10 dark:bg-nordic-forest/10 flex items-center justify-center backdrop-blur-sm">
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                   </div>
+                   <div>
+                     <p className="font-bold text-sm uppercase tracking-wider">Range Session</p>
+                     <p className="font-mono text-xs opacity-60">45 Minutes • 60 Balls</p>
+                   </div>
+                   <div className="ml-auto">
+                      <div className="w-8 h-8 rounded-full border border-white/30 dark:border-nordic-forest/30 flex items-center justify-center group-hover:bg-white group-hover:text-nordic-forest dark:group-hover:bg-nordic-forest dark:group-hover:text-white transition-all">
+                        →
+                      </div>
+                   </div>
+                </div>
+             </div>
+          </SpotlightCard>
+        </Link>
 
-            {/* Focused Club Summary */}
-            <div className="px-6 pb-6">
-              <div className={`
-                p-5 rounded-2xl bg-gradient-to-br ${getScoreBg(selectedClub.score)}
-                border backdrop-blur-sm
-              `}>
-                <div className="flex flex-col md:flex-row md:items-center gap-6">
-                  {/* Club Identity */}
-                  <div className="flex items-center gap-4">
-                    <div className={`
-                      w-16 h-16 rounded-2xl flex items-center justify-center
-                      bg-gradient-to-br from-theme-text-primary/10 to-theme-text-primary/5 border border-theme-border
-                    `}>
-                      <span className={`text-3xl font-display font-bold ${getScoreColor(selectedClub.score)}`}>
-                        {selectedClub.score}
-                      </span>
+        {/* Quick Stats / Secondary Intel */}
+        <div className="grid grid-rows-2 gap-6">
+           <Link to="/stats" className="block">
+              <CardGlass className="h-full p-6 flex flex-col justify-center relative overflow-hidden group hover:bg-white/60 dark:hover:bg-nordic-forest/60 transition-colors">
+                 <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-nordic-sage">Consistency</span>
+                    <span className="text-green-500 text-xs font-bold">+2.4%</span>
+                 </div>
+                 <div className="flex items-baseline gap-2">
+                   <span className="text-3xl font-bold text-nordic-forest dark:text-white font-mono">82<span className="text-lg">%</span></span>
+                   <span className="text-sm text-nordic-forest/40 dark:text-white/40">GIR Last 5</span>
+                 </div>
+                 {/* Mini Chart Decoration */}
+                 <div className="absolute bottom-0 left-0 right-0 h-12 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <svg className="w-full h-full" preserveAspectRatio="none">
+                      <path d="M0,40 Q50,30 100,10 T200,30 T300,5 T400,20 L400,50 L0,50 Z" fill="currentColor" />
+                    </svg>
+                 </div>
+              </CardGlass>
+           </Link>
+
+           <Link to="/training" className="block">
+             <CardGlass className="h-full p-6 flex flex-col justify-center hover:bg-white/60 dark:hover:bg-nordic-forest/60 transition-colors">
+                <div className="flex justify-between items-center mb-2">
+                   <span className="text-[10px] font-bold uppercase tracking-widest text-nordic-sage">Training Plan</span>
+                   <span className="text-xs font-mono text-nordic-forest/40 dark:text-white/40">WEEK 3/8</span>
+                </div>
+                <div className="w-full bg-nordic-forest/5 dark:bg-white/5 h-2 rounded-full overflow-hidden mb-3">
+                   <div className="h-full bg-nordic-sage w-[65%]" />
+                </div>
+                <p className="text-sm font-medium text-nordic-forest dark:text-white truncate">
+                  Iron Compression Drills
+                </p>
+             </CardGlass>
+           </Link>
+        </div>
+
+      </section>
+
+      {/* --- SECTION 3: ARSENAL CHIPS (Compact Club Data) --- */}
+      <section>
+        <div className="flex items-center justify-between mb-4 px-1">
+          <h3 className="text-[10px] font-bold text-nordic-forest/40 dark:text-white/40 uppercase tracking-[0.2em]">Active Arsenal</h3>
+          <Link to="/my-bag" className="text-[10px] font-bold text-nordic-sage hover:text-nordic-forest dark:hover:text-white uppercase tracking-widest transition-colors">
+            Manage Loadout →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {clubData.map((club, index) => (
+            <Link to={`/my-bag?club=${club.shortLabel}`} key={club.label}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + (index * 0.05) }}
+              >
+                <CardGlass className={cn(
+                  "p-4 group hover:border-nordic-sage/50 transition-colors h-full",
+                  club.status === 'dialed' && "bg-green-500/5 border-green-500/20"
+                )}>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-start">
+                      <span className="font-mono text-xs font-bold text-nordic-forest/60 dark:text-white/60">{club.shortLabel}</span>
+                      <div className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        club.status === 'dialed' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : 
+                        club.status === 'stable' ? "bg-nordic-sage" : "bg-amber-500"
+                      )} />
                     </div>
+                    
                     <div>
-                      <h3 className="text-xl font-display font-bold text-theme-text-primary">
-                        {selectedClub.label}
-                      </h3>
-                      <p className="text-sm text-theme-text-muted">
-                        {selectedClub.distance ? `${selectedClub.distance} yards avg carry` : 'Putting club'}
-                      </p>
+                      <div className="text-xl font-bold font-mono text-nordic-forest dark:text-white tabular-nums">
+                        {club.distance || '--'}
+                      </div>
+                      <div className="text-[9px] uppercase tracking-widest text-nordic-forest/40 dark:text-white/40 mt-1">
+                        Carry {units === 'yards' ? 'Yds' : 'M'}
+                      </div>
                     </div>
                   </div>
-                  
-                  {/* Quick Stats */}
-                  <div className="flex-1 flex items-center gap-6 md:justify-center">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-theme-text-primary">
-                        {(selectedClub as any).totalShots || '147'}
-                      </p>
-                      <p className="text-xs text-theme-text-muted">Total Shots</p>
-                    </div>
-                    <div className="w-px h-8 bg-theme-border" />
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-theme-text-primary">
-                        {(selectedClub as any).smashFactor?.toFixed(2) || '1.48'}
-                      </p>
-                      <p className="text-xs text-theme-text-muted">Smash Factor</p>
-                    </div>
-                    <div className="w-px h-8 bg-theme-border" />
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-theme-text-primary">
-                        {(selectedClub as any).dispersion ? `${Math.round((selectedClub as any).dispersion)}ft` : '12ft'}
-                      </p>
-                      <p className="text-xs text-theme-text-muted">Dispersion</p>
-                    </div>
-                  </div>
-                  
-                  {/* CTA */}
-                  <div className="flex gap-2">
-                    <Link to="/sessions">
-                      <Button variant="secondary" size="sm">
-                        Review Stats
-                      </Button>
-                    </Link>
-                    <Link to="/training">
-                      <Button size="sm" className="shadow-glow-sm">
-                        Practice This Club
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* No data hint - only shown when needed */}
-            {!hasData && (
-              <div className="px-6 pb-6 pt-0">
-                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-theme-accent-subtle border border-theme-accent/10">
-                  <svg className="w-5 h-5 text-theme-accent flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 16v-4M12 8h.01" />
-                  </svg>
-                  <p className="text-sm text-theme-text-muted">
-                    <span className="text-theme-accent font-medium">Demo data shown.</span>
-                    {' '}
-                    <Link to="/connectors" className="text-theme-accent hover:underline">
-                      Import a session
-                    </Link>
-                    {' '}to see your real club performance.
-                  </p>
-                </div>
-              </div>
-            )}
-          </Card>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          NEXT ACTION - Coach tip or Next Round
-      ═══════════════════════════════════════════════════════════════ */}
-      <section className="max-w-4xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* AI Coach Tip */}
-          {(latestReport?.next_best_move || latestReport?.prescription) && (
-            <Link 
-              to="/coach"
-              className="group p-5 rounded-2xl bg-theme-bg-surface/40 border border-theme-border hover:border-theme-accent/20 transition-all"
-            >
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-theme-accent-dim flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-theme-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                    <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-theme-accent animate-pulse" />
-                    <span className="text-xs font-medium text-theme-accent uppercase tracking-wider">Next Best Move</span>
-                  </div>
-                  <p className="text-sm text-theme-text-primary leading-relaxed line-clamp-2 group-hover:text-theme-accent transition-colors">
-                    {latestReport.next_best_move || latestReport.prescription}
-                  </p>
-                </div>
-                <svg className="w-5 h-5 text-theme-text-muted group-hover:text-theme-accent transition-colors flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
+                </CardGlass>
+              </motion.div>
             </Link>
-          )}
-
-          {/* Next Round */}
-          {nextTeeTime ? (
-            <Link 
-              to="/calendar"
-              className="group p-5 rounded-2xl bg-theme-bg-surface/40 border border-theme-border hover:border-theme-success/20 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-theme-success-dim flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-theme-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-theme-success font-medium uppercase tracking-wider mb-0.5">Next Round</p>
-                  <p className="text-sm font-medium text-theme-text-primary truncate group-hover:text-theme-success transition-colors">
-                    {nextTeeTime.course?.name || 'Golf Course'}
-                  </p>
-                  <p className="text-xs text-theme-text-muted">
-                    {new Date(nextTeeTime.tee_time).toLocaleDateString('en-US', {
-                      weekday: 'short', month: 'short', day: 'numeric',
-                    })} • {new Date(nextTeeTime.tee_time).toLocaleTimeString('en-US', {
-                      hour: '2-digit', minute: '2-digit', hour12: false,
-                    })}
-                  </p>
-                </div>
-                <Badge variant="success" size="sm">{daysUntilTeeTime}</Badge>
-              </div>
-            </Link>
-          ) : !latestReport?.next_best_move && (
-            <Link 
-              to="/calendar"
-              className="group p-5 rounded-2xl bg-theme-bg-surface/40 border border-theme-border border-dashed hover:border-theme-success/20 transition-all"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-theme-accent-subtle flex items-center justify-center">
-                  <svg className="w-5 h-5 text-theme-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-theme-text-muted group-hover:text-theme-text-primary transition-colors">
-                    Schedule your next round
-                  </p>
-                </div>
-                <svg className="w-5 h-5 text-theme-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-            </Link>
-          )}
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          PROGRESS STATS - Reduced visual weight
-      ═══════════════════════════════════════════════════════════════ */}
-      <section className="max-w-4xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* This Month Sessions */}
-          <div className="p-4 rounded-xl bg-theme-bg-surface/30 border border-theme-border">
-            <p className="text-xs text-theme-text-muted mb-1">Sessions</p>
-            <p className="text-2xl font-display font-bold text-theme-text-primary">{totalSessions || 0}</p>
-            <p className="text-[10px] text-theme-text-muted">this month</p>
-          </div>
-
-          {/* Total Shots */}
-          <div className="p-4 rounded-xl bg-theme-bg-surface/30 border border-theme-border">
-            <p className="text-xs text-theme-text-muted mb-1">Total Shots</p>
-            <p className="text-2xl font-display font-bold text-theme-text-primary">{totalShots.toLocaleString() || '0'}</p>
-            <p className="text-[10px] text-theme-text-muted">tracked</p>
-          </div>
-
-          {/* Day Streak */}
-          <div className="p-4 rounded-xl bg-theme-bg-surface/30 border border-theme-border">
-            <p className="text-xs text-theme-text-muted mb-1">Streak</p>
-            <div className="flex items-baseline gap-1">
-              <p className="text-2xl font-display font-bold text-theme-warning">7</p>
-              <svg className="w-4 h-4 text-theme-warning" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <p className="text-[10px] text-theme-text-muted">days</p>
-          </div>
-
-          {/* Goal Progress */}
-          <div className="p-4 rounded-xl bg-theme-bg-surface/30 border border-theme-border">
-            <p className="text-xs text-theme-text-muted mb-1">Goal Progress</p>
-            <p className="text-2xl font-display font-bold text-theme-accent">{progressToGoal || 60}%</p>
-            <p className="text-[10px] text-theme-text-muted">{weeksToGoal ? `~${weeksToGoal} weeks` : 'to target'}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          RECENT SESSIONS - Compact
-      ═══════════════════════════════════════════════════════════════ */}
-      {totalSessions > 0 && (
-        <section className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-theme-text-muted uppercase tracking-wider">Recent Sessions</h2>
-            <Link to="/sessions" className="text-xs text-theme-accent hover:underline">
-              View all →
-            </Link>
-          </div>
+          ))}
           
-          {sessionsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-6 h-6 border-2 border-theme-accent border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {sessionsData?.sessions?.slice(0, 3).map((session) => (
-                <Link
-                  key={session.id}
-                  to={`/sessions/${session.id}`}
-                  className="group p-4 rounded-xl bg-theme-bg-surface/30 border border-theme-border hover:border-theme-accent/20 hover:bg-theme-bg-surface/40 transition-all"
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <p className="text-sm font-medium text-theme-text-primary group-hover:text-theme-accent transition-colors truncate pr-2">
-                      {session.name || `${session.source} Session`}
-                    </p>
-                    <Badge variant="cyan" size="sm">{session.shot_count}</Badge>
-                  </div>
-                  <p className="text-xs text-theme-text-muted">{formatDate(session.session_date)}</p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+          <Link to="/my-bag" className="md:hidden flex items-center justify-center p-4 border border-dashed border-nordic-forest/20 dark:border-white/20 rounded-2xl text-nordic-forest/40 dark:text-white/40 hover:text-nordic-forest dark:hover:text-white hover:border-nordic-forest/40 transition-colors">
+             <span className="text-xs font-medium">+ View All</span>
+          </Link>
+        </div>
+      </section>
+
     </div>
   )
 }
