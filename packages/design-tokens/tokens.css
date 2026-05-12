@@ -1,0 +1,133 @@
+/* StrikeLab Design Tokens
+ * Source of truth: StrikelabDesign/primitives.jsx (SL_THEME_CSS)
+ * Dark-first; light is opt-in via [data-theme="light"] on :root or .sl-theme.
+ */
+
+:root,
+.sl-theme {
+  /* Base surfaces */
+  --bg: #0a0b0a;
+  --bg-2: #111312;
+  --surface: #15181680;
+  --surface-solid: #151816;
+  --surface-2: #1c1f1d;
+  --line: #25292680;
+  --line-strong: #2d322f;
+
+  /* Ink ramp */
+  --ink: #ede8de;
+  --ink-2: #b9b6ac;
+  --ink-3: #76746b;
+  --ink-4: #4a4842;
+
+  /* Signal */
+  --accent: oklch(0.88 0.18 125);
+  --accent-ink: #0a0b0a;
+  --accent-2: oklch(0.78 0.18 125);
+  --accent-fg: oklch(0.88 0.18 125);
+  --accent-fg-hover: oklch(0.93 0.15 125);
+  --warn: oklch(0.78 0.16 65);
+  --bad: oklch(0.68 0.20 28);
+  --good: var(--accent);
+
+  /* Type */
+  --font-sans: "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-serif: "Instrument Serif", "Times New Roman", serif;
+
+  /* Motion */
+  --motion-launch: cubic-bezier(0.2, 0.9, 0.3, 1);
+  --motion-settle: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-trace: cubic-bezier(0.65, 0, 0.35, 1);
+  --motion-micro: ease-out;
+  --dur-micro: 120ms;
+  --dur-launch: 240ms;
+  --dur-settle: 480ms;
+  --dur-trace: 900ms;
+
+  /* Shape */
+  --radius-panel: 2px;
+  --radius-pill: 999px;
+}
+
+:root[data-theme="light"],
+.sl-theme[data-mode="light"] {
+  --bg: #ede8de;
+  --bg-2: #e3ddd0;
+  --surface: #f5f1e780;
+  --surface-solid: #f5f1e7;
+  --surface-2: #ebe5d6;
+  --line: #c8c2b240;
+  --line-strong: #b6af9c;
+  --ink: #141614;
+  --ink-2: #4a4842;
+  --ink-3: #76746b;
+  --ink-4: #b6af9c;
+  --accent: oklch(0.88 0.18 125);
+  --accent-ink: #0a0b0a;
+  --accent-2: oklch(0.78 0.18 125);
+  --accent-fg: oklch(0.42 0.12 150);
+  --accent-fg-hover: oklch(0.36 0.11 150);
+  --warn: oklch(0.55 0.18 50);
+  --bad: oklch(0.55 0.20 28);
+}
+
+/* Utility classes mirrored from primitives.jsx */
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum", "zero", "ss01";
+}
+.serif {
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+.micro {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.micro-sm {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.display {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+.display em {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+.num {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum", "zero";
+  font-variant-numeric: tabular-nums;
+}
+hr.rule {
+  border: 0;
+  border-top: 1px solid var(--line-strong);
+  margin: 0;
+}
+.glow {
+  box-shadow:
+    0 0 0 1px var(--line-strong),
+    0 30px 80px -30px oklch(0.88 0.18 125 / 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

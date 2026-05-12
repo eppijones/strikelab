@@ -1,0 +1,15 @@
+# StrikeLab brand asset bay
+
+Drop real brand SVGs here using the brand id as the filename, e.g.
+  - taylormade.svg
+  - titleist.svg
+  - ping.svg
+
+The <BrandLogo> React component automatically loads `/brands/{id}.svg` at
+runtime. If the file is missing, the component falls back to a clean text
+wordmark in the brand color, so the UI never breaks.
+
+Recommended:
+  - SVG, single-color, current-color compatible (so dark/light themes match)
+  - viewBox sized so 24px height looks balanced
+  - Avoid embedded raster — keep it crisp on retina

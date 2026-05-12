@@ -1,0 +1,13 @@
+{
+  "name": "strikelab-monorepo",
+  "private": true,
+  "version": "0.2.0",
+  "description": "StrikeLab — A precision instrument for the serious player.",
+  "scripts": {
+    "dev": "pnpm --filter strikelab-web dev",
+    "build": "pnpm --filter strikelab-web build",
+    "typecheck": "pnpm --filter strikelab-web typecheck",
+    "lint": "pnpm --filter strikelab-web lint"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

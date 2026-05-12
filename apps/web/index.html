@@ -1,33 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#FAFAF9" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1A1918" media="(prefers-color-scheme: dark)" />
-    <meta name="description" content="StrikeLab Golf - Get Dialed In. Every session becomes a plan." />
-    
-    <!-- Preconnect for performance -->
+    <meta name="theme-color" content="#0a0b0a" />
+    <meta name="description" content="StrikeLab turns golf practice sessions, rounds, and device data into one plan: diagnose the fault, train with intent, and validate on course." />
+    <meta name="robots" content="index,follow" />
+    <meta name="application-name" content="StrikeLab" />
+    <meta name="apple-mobile-web-app-title" content="StrikeLab" />
+    <link rel="canonical" href="https://strikelab.golf/" />
+    <link rel="alternate" href="https://strikelab.golf/" hreflang="en" />
+    <link rel="alternate" href="https://strikelab.golf/" hreflang="no" />
+    <link rel="alternate" href="https://strikelab.golf/" hreflang="x-default" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="StrikeLab" />
+    <meta property="og:url" content="https://strikelab.golf/" />
+    <meta property="og:title" content="StrikeLab — Get Dialed In." />
+    <meta property="og:description" content="A Norway-first golf performance system for practice data, coach reports, Apple Watch rounds, and tee-time discovery." />
+    <meta property="og:image" content="https://strikelab.golf/StrikeLab_Logo_Transparent_Dark.svg" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="nb_NO" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="StrikeLab — Get Dialed In." />
+    <meta name="twitter:description" content="Diagnose the fault, train with intent, and validate the change on course." />
+    <meta name="twitter:image" content="https://strikelab.golf/StrikeLab_Logo_Transparent_Dark.svg" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
-    
-    <!-- Inter - Primary typeface with optical sizing -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
-    
-    <!-- JetBrains Mono - Monospace -->
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    
-    <title>StrikeLab Golf</title>
-    
-    <!-- Prevent FOUC -->
+
+    <!-- Geist + Geist Mono + Instrument Serif -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@300;400;500;600&display=swap" />
+
+    <title>StrikeLab — Get Dialed In.</title>
+
     <script>
-      (function() {
-        const theme = localStorage.getItem('strikelab-theme') || 
-          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.documentElement.classList.add(theme);
-      })();
+      (function () {
+        const theme = localStorage.getItem('strikelab-theme') || 'dark'
+        document.documentElement.dataset.theme = theme
+      })()
     </script>
   </head>
   <body>

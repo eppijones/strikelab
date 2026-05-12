@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>tee. — Print</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&family=Geist:wght@300..600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #E8E2D2; }
+  body {
+    font-family: 'Geist', -apple-system, system-ui, sans-serif;
+    color: #0E1410;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  ::-webkit-scrollbar { display: none; }
+
+  .page {
+    width: 100%;
+    min-height: 100vh;
+    padding: 48px 56px;
+    page-break-after: always;
+    break-after: page;
+    background: #E8E2D2;
+  }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+  .page-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(14,20,16,0.12);
+  }
+  .page-title {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 38px; font-weight: 400; letter-spacing: -1px;
+    margin: 0; color: #0E1410;
+  }
+  .page-title em { color: #2D4A2B; }
+  .page-meta {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 11px; color: #5A615C;
+    letter-spacing: 0.4px; text-transform: uppercase;
+  }
+  .page-sub {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 17px; font-style: italic; color: #2A332B;
+    margin: 8px 0 0; line-height: 1.4;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px 24px;
+    margin-top: 28px;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 36px 32px;
+    margin-top: 28px;
+  }
+  .frame-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    break-inside: avoid;
+  }
+  .frame-wrap .lbl {
+    font-family: 'Geist', sans-serif;
+    font-size: 11.5px; font-weight: 500;
+    letter-spacing: 0.4px; text-transform: uppercase;
+    color: #2A332B;
+  }
+  .frame-wrap .lbl-num {
+    color: #5A615C; font-family: 'Geist Mono', monospace;
+    margin-right: 6px; font-weight: 400;
+  }
+  .phone-shell {
+    width: 268px; height: 583px;
+    transform-origin: top center;
+  }
+  .phone-shell-lg {
+    width: 340px; height: 740px;
+  }
+  .phone-inner {
+    transform: scale(0.6667);
+    transform-origin: top left;
+    width: 402px; height: 874px;
+  }
+  .phone-inner-lg {
+    transform: scale(0.846);
+    transform-origin: top left;
+    width: 402px; height: 874px;
+  }
+
+  /* Notes page */
+  .notes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 32px;
+    margin-top: 24px;
+  }
+  .note {
+    padding-top: 14px;
+    border-top: 1px solid rgba(14,20,16,0.12);
+    break-inside: avoid;
+  }
+  .note .num {
+    font-family: 'Geist', sans-serif;
+    font-size: 10.5px; letter-spacing: 0.8px;
+    text-transform: uppercase; color: #5A615C;
+    margin-bottom: 6px;
+  }
+  .note h3 {
+    font-family: 'Newsreader', serif;
+    font-size: 19px; font-weight: 500;
+    letter-spacing: -0.3px; margin: 0; color: #0E1410;
+  }
+  .note p {
+    font-family: 'Geist', sans-serif;
+    font-size: 12.5px; color: #2A332B;
+    margin: 6px 0 0; line-height: 1.5;
+  }
+
+  .cover {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    padding: 80px 72px 56px;
+    background: #0E1410;
+    color: #FBFAF6;
+    page-break-after: always; break-after: page;
+  }
+  .cover-mark {
+    font-family: 'Newsreader', serif; font-size: 28px;
+    font-style: italic; font-weight: 500;
+    letter-spacing: -0.5px;
+  }
+  .cover-mark .dot { color: #5C7E4F; font-style: normal; }
+  .cover-h1 {
+    font-family: 'Newsreader', serif;
+    font-size: 110px; font-weight: 400;
+    letter-spacing: -4px; line-height: 0.92;
+    margin: auto 0 0;
+  }
+  .cover-h1 em { color: #E8B547; font-weight: 400; }
+  .cover-foot {
+    margin-top: 48px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-top: 1px solid rgba(251,250,246,0.18);
+    padding-top: 24px;
+  }
+  .cover-foot-meta {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11.5px; color: rgba(251,250,246,0.7);
+    letter-spacing: 0.6px; text-transform: uppercase;
+  }
+  .cover-blurb {
+    max-width: 480px;
+    font-family: 'Newsreader', serif;
+    font-size: 18px; font-style: italic;
+    color: rgba(251,250,246,0.9);
+    line-height: 1.4; margin: 0;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  @media print {
+    html, body { background: #E8E2D2; }
+    .page, .cover { page-break-after: always; break-after: page; }
+    body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="data.js"></script>
+<script type="text/babel" src="frames/ios-frame.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="screens-discover.jsx"></script>
+<script type="text/babel" src="screens-course.jsx"></script>
+<script type="text/babel" src="screens-window.jsx"></script>
+<script type="text/babel" src="screens-group-pay-pass.jsx"></script>
+
+<script type="text/babel">
+
+function Phone({ children, scale = 0.6667 }) {
+  // Render iOS frame at native size, scaled down via CSS transform
+  const W = 402, H = 874;
+  return (
+    <div style={{
+      width: W * scale, height: H * scale,
+      position: 'relative', overflow: 'hidden',
+    }}>
+      <div style={{
+        width: W, height: H,
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+      }}>
+        <IOSDevice width={W} height={H}>
+          {children}
+        </IOSDevice>
+      </div>
+    </div>
+  );
+}
+
+function FrameWrap({ num, label, children, scale }) {
+  return (
+    <div className="frame-wrap">
+      <Phone scale={scale}>{children}</Phone>
+      <div className="lbl">
+        <span className="lbl-num">{num}</span>{label}
+      </div>
+    </div>
+  );
+}
+
+function Cover() {
+  return (
+    <div className="cover">
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+        <div className="cover-mark">tee<span className="dot">.</span></div>
+        <div className="cover-foot-meta">Norge · 2026</div>
+      </div>
+      <h1 className="cover-h1">Tee&nbsp;time,<br/><em>like travel.</em></h1>
+      <div className="cover-foot">
+        <p className="cover-blurb">
+          A booking experience for golf in Norway — Vipps-first, bilingual, with the day rendered as a landscape rather than a list of times.
+        </p>
+        <div className="cover-foot-meta" style={{ textAlign:'right' }}>
+          Design system<br/>+ flow<br/>+ variants
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NotesPage() {
+  const items = [
+    { h: 'Course as place', p: 'Each course is presented as a place with its own landscape, not a row in a spreadsheet. Hero painting, signature hole, and live conditions let you pick a course the way you pick a restaurant.' },
+    { h: 'The Window', p: 'The day is rendered as a landscape — vertical sun gradient, wind ribbon, slot chips placed by hour. A "perfect window" is highlighted: sun + calm + availability. You don\'t pick a time, you pick a moment.' },
+    { h: 'Norway-first', p: 'Vipps by default. Real Norwegian clubs, sun times tuned for high latitude (golden hour at 19:50, sunset 21:12 in June), editorial type to match Nordic design tradition.' },
+    { h: 'Group as ritual', p: 'Four player slots, handicaps visible, pay together or split. Invite via link — gone is the friction of today\'s tee systems.' },
+    { h: 'The Pass', p: 'On gameday the booking becomes an editorial mobile pass: big time, countdown, weather at the exact tee time, pro-shop QR, Apple Wallet hand-off.' },
+    { h: 'Bilingual from day one', p: 'Norwegian and English are first-class peers, not retrofitted translations. Editorial copy was written in both languages with idiom intact, not just localized strings.' },
+  ];
+  return (
+    <section className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Design <em>notes</em>.</h1>
+          <p className="page-sub">Why it works this way.</p>
+        </div>
+        <div className="page-meta">07 / 07</div>
+      </div>
+      <div className="notes-grid">
+        {items.map((x, i) => (
+          <div key={i} className="note">
+            <div className="num">{String(i+1).padStart(2,'0')}</div>
+            <h3>{x.h}</h3>
+            <p>{x.p}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function App() {
+  const lang = 'en';
+  const langProps = { lang, setLang: () => {} };
+
+  return (
+    <>
+      <Cover/>
+
+      <section className="page">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">The <em>core flow</em>.</h1>
+            <p className="page-sub">From discover to first tee — six screens.</p>
+          </div>
+          <div className="page-meta">01 / 07</div>
+        </div>
+        <div className="grid">
+          <FrameWrap num="01" label="Discover">
+            <DiscoverScreen {...langProps}/>
+          </FrameWrap>
+          <FrameWrap num="02" label="Course">
+            <CourseScreen courseId="miklagard" {...langProps}/>
+          </FrameWrap>
+          <FrameWrap num="03" label="The Window">
+            <WindowScreen courseId="miklagard" {...langProps}/>
+          </FrameWrap>
+          <FrameWrap num="04" label="Group">
+            <GroupScreen courseId="miklagard" {...langProps}/>
+          </FrameWrap>
+          <FrameWrap num="05" label="Pay">
+            <PayScreen courseId="miklagard" {...langProps}/>
+          </FrameWrap>
+          <FrameWrap num="06" label="The Pass">
+            <PassScreen courseId="miklagard" {...langProps}/>
+          </FrameWrap>
+        </div>
+      </section>
+
+      <section className="page">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title"><em>Discover</em> — home.</h1>
+            <p className="page-sub">Editorial greeting, today's windows, course feed with live conditions.</p>
+          </div>
+          <div className="page-meta">02 / 07</div>
+        </div>
+        <div className="grid-2" style={{ justifyItems: 'center' }}>
+          <FrameWrap num="NO" label="Norsk" scale={0.846}>
+            <DiscoverScreen lang="no" setLang={()=>{}}/>
+          </FrameWrap>
+          <FrameWrap num="EN" label="English" scale={0.846}>
+            <DiscoverScreen lang="en" setLang={()=>{}}/>
+          </FrameWrap>
+        </div>
+      </section>
+
+      <section className="page">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">The <em>Window</em>.</h1>
+            <p className="page-sub">The day rendered as a landscape — sun, wind, and tee times in one view.</p>
+          </div>
+          <div className="page-meta">03 / 07</div>
+        </div>
+        <div className="grid-2" style={{ justifyItems: 'center' }}>
+          <FrameWrap num="NO" label="Vinduet" scale={0.846}>
+            <WindowScreen courseId="miklagard" lang="no" setLang={()=>{}}/>
+          </FrameWrap>
+          <FrameWrap num="EN" label="The Window" scale={0.846}>
+            <WindowScreen courseId="miklagard" lang="en" setLang={()=>{}}/>
+          </FrameWrap>
+        </div>
+      </section>
+
+      <section className="page">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title"><em>Group</em> & pay.</h1>
+            <p className="page-sub">Four slots, handicaps visible, Vipps-first checkout.</p>
+          </div>
+          <div className="page-meta">04 / 07</div>
+        </div>
+        <div className="grid-2" style={{ justifyItems: 'center' }}>
+          <FrameWrap num="04" label="Group" scale={0.846}>
+            <GroupScreen courseId="miklagard" lang="en" setLang={()=>{}}/>
+          </FrameWrap>
+          <FrameWrap num="05" label="Pay · Vipps" scale={0.846}>
+            <PayScreen courseId="miklagard" lang="en" setLang={()=>{}}/>
+          </FrameWrap>
+        </div>
+      </section>
+
+      <section className="page">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">The <em>Pass</em>.</h1>
+            <p className="page-sub">On gameday, the booking becomes an editorial mobile pass.</p>
+          </div>
+          <div className="page-meta">05 / 07</div>
+        </div>
+        <div className="grid-2" style={{ justifyItems: 'center' }}>
+          <FrameWrap num="NO" label="Passet" scale={0.846}>
+            <PassScreen courseId="miklagard" lang="no" setLang={()=>{}}/>
+          </FrameWrap>
+          <FrameWrap num="EN" label="The Pass" scale={0.846}>
+            <PassScreen courseId="miklagard" lang="en" setLang={()=>{}}/>
+          </FrameWrap>
+        </div>
+      </section>
+
+      <section className="page">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Course <em>variants</em>.</h1>
+            <p className="page-sub">Same app, different course DNA — coastal links, parkland, championship.</p>
+          </div>
+          <div className="page-meta">06 / 07</div>
+        </div>
+        <div className="grid">
+          <FrameWrap num="01" label="Larvik · coast">
+            <CourseScreen courseId="larvik" lang="en" setLang={()=>{}}/>
+          </FrameWrap>
+          <FrameWrap num="02" label="Losby · parkland">
+            <CourseScreen courseId="losby" lang="en" setLang={()=>{}}/>
+          </FrameWrap>
+          <FrameWrap num="03" label="Miklagard · championship">
+            <CourseScreen courseId="miklagard" lang="en" setLang={()=>{}}/>
+          </FrameWrap>
+        </div>
+      </section>
+
+      <NotesPage/>
+    </>
+  );
+}
+
+document.fonts.ready.then(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  setTimeout(() => { window.print(); }, 1200);
+});
+</script>
+</body>
+</html>

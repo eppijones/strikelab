@@ -1,0 +1,145 @@
+[
+  {
+    "id": "trackman",
+    "name": "TrackMan",
+    "description": "Premium dual-radar launch monitor with full ball + club delivery data.",
+    "status": "available",
+    "capabilities": "ball_flight,club_data,face_data,impact_location",
+    "color": "#FF6B00",
+    "logo_path": "/integrations/trackman.svg",
+    "website": "https://www.trackman.com",
+    "sort_order": 10
+  },
+  {
+    "id": "foresight",
+    "name": "Foresight Sports",
+    "description": "Camera-based launch monitors (GCQuad, GC3, Bushnell Launch Pro).",
+    "status": "available",
+    "capabilities": "ball_flight,club_data,face_data,impact_location",
+    "color": "#0EA5E9",
+    "logo_path": "/integrations/foresight.svg",
+    "website": "https://www.foresightsports.com",
+    "sort_order": 20
+  },
+  {
+    "id": "gspro",
+    "name": "GSPro",
+    "description": "Indoor sim platform with launch-monitor integrations and CSV export.",
+    "status": "available",
+    "capabilities": "ball_flight,club_data,sim_play",
+    "color": "#10B981",
+    "logo_path": "/integrations/gspro.svg",
+    "website": "https://gsprogolf.com",
+    "sort_order": 30
+  },
+  {
+    "id": "uneekor",
+    "name": "Uneekor",
+    "description": "Overhead vision-based launch monitor (Eye XO, QED).",
+    "status": "available",
+    "capabilities": "ball_flight,club_data,impact_location",
+    "color": "#6366F1",
+    "logo_path": "/integrations/uneekor.svg",
+    "website": "https://www.uneekor.com",
+    "sort_order": 40
+  },
+  {
+    "id": "rapsodo",
+    "name": "Rapsodo MLM2 Pro",
+    "description": "Camera + radar portable launch monitor with phone capture.",
+    "status": "available",
+    "capabilities": "ball_flight,basic_club_data",
+    "color": "#0F766E",
+    "logo_path": "/integrations/rapsodo.svg",
+    "website": "https://rapsodo.com",
+    "sort_order": 50
+  },
+  {
+    "id": "skytrak",
+    "name": "SkyTrak+",
+    "description": "Photometric launch monitor with sim software pairing.",
+    "status": "available",
+    "capabilities": "ball_flight,basic_club_data",
+    "color": "#2563EB",
+    "logo_path": "/integrations/skytrak.svg",
+    "website": "https://www.skytrakgolf.com",
+    "sort_order": 60
+  },
+  {
+    "id": "topgolf",
+    "name": "Topgolf",
+    "description": "Toptracer Range data exported from Topgolf venues.",
+    "status": "available",
+    "capabilities": "ball_flight,basic_metrics",
+    "color": "#F59E0B",
+    "logo_path": "/integrations/topgolf.svg",
+    "website": "https://www.topgolf.com",
+    "sort_order": 70
+  },
+  {
+    "id": "garmin_r10",
+    "name": "Garmin Approach R10",
+    "description": "Portable radar launch monitor + Garmin Golf app.",
+    "status": "available",
+    "capabilities": "ball_flight,basic_club_data",
+    "color": "#0050A0",
+    "logo_path": "/integrations/garmin.svg",
+    "website": "https://www.garmin.com/en-US/p/695474",
+    "sort_order": 80
+  },
+  {
+    "id": "flightscope",
+    "name": "FlightScope",
+    "description": "Mevo+ and X3 radar launch monitors with cloud session sync.",
+    "status": "available",
+    "capabilities": "ball_flight,club_data",
+    "color": "#7C3AED",
+    "logo_path": "/integrations/flightscope.svg",
+    "website": "https://flightscope.com",
+    "sort_order": 90
+  },
+  {
+    "id": "stack",
+    "name": "Stack System",
+    "description": "Speed training protocol and SuperSpeed-style program tracking.",
+    "status": "coming_soon",
+    "capabilities": "speed_training,protocol_tracking",
+    "color": "#A78BFA",
+    "logo_path": "/integrations/stack.svg",
+    "website": "https://thestacksystem.com",
+    "sort_order": 100
+  },
+  {
+    "id": "shotscope",
+    "name": "Shot Scope",
+    "description": "On-course shot tracking + GPS rounds via tagged clubs.",
+    "status": "coming_soon",
+    "capabilities": "round_tracking,gps_shots",
+    "color": "#16A34A",
+    "logo_path": "/integrations/shotscope.svg",
+    "website": "https://shotscope.com",
+    "sort_order": 110
+  },
+  {
+    "id": "arccos",
+    "name": "Arccos",
+    "description": "Club sensors + AI caddie + automatic round tracking.",
+    "status": "coming_soon",
+    "capabilities": "round_tracking,gps_shots,club_intelligence",
+    "color": "#1D4ED8",
+    "logo_path": "/integrations/arccos.svg",
+    "website": "https://www.arccosgolf.com",
+    "sort_order": 120
+  },
+  {
+    "id": "csv",
+    "name": "CSV / Excel Upload",
+    "description": "Universal fallback. Upload any launch-monitor export.",
+    "status": "available",
+    "capabilities": "ball_flight,club_data",
+    "color": "#A3A3A3",
+    "logo_path": "/integrations/csv.svg",
+    "website": "",
+    "sort_order": 999
+  }
+]

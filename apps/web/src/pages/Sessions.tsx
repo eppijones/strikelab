@@ -1,187 +1,184 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import { useSessions } from '@/api/sessions'
-import { 
-  Card, Button, Badge, PillButton,
-  FadeIn, StaggerContainer, StaggerItem
-} from '@/components/ui'
-import { Spotlight } from '@/components/ui/backgrounds'
-import { formatDate } from '@/lib/utils'
+import { useRangeSessionsList } from '@/api/rangeSessions'
+import type { RangeSessionApiListItem } from '@/api/rangeSessions'
+import { Panel, Tag } from '@/components/ui'
 
-type SessionFilter = 'all' | 'range' | 'simulator' | 'round'
+const SOURCES = ['ALL', 'TRACKMAN', 'FORESIGHT', 'TOPGOLF', 'GSPRO', 'CSV', 'CADDIE'] as const
+
+type SessionKind = 'connector' | 'range'
+
+interface UnifiedSessionRow {
+  kind: SessionKind
+  id: string
+  source: string
+  session_type: string
+  name?: string | null
+  session_date: string
+  shot_count: number
+  computed_stats?: { strike_score?: number }
+}
+
+function rangeToRow(r: RangeSessionApiListItem): UnifiedSessionRow {
+  const when = r.start_time ?? r.updated_at
+  const label =
+    r.location?.trim() ||
+    `Driving range · ${new Date(when).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`
+  return {
+    kind: 'range',
+    id: r.id,
+    source: 'caddie',
+    session_type: 'range',
+    name: label,
+    session_date: when,
+    shot_count: r.shot_count,
+  }
+}
 
 export default function Sessions() {
   const { t } = useTranslation()
-  const [filter, setFilter] = useState<SessionFilter>('all')
+  const [source, setSource] = useState<(typeof SOURCES)[number]>('ALL')
+  const { data, isLoading: loadingConnector } = useSessions({ limit: 50 })
+  const { data: rangeData, isLoading: loadingRange } = useRangeSessionsList()
+  const rangeList = rangeData?.sessions ?? []
+  const rangeLoadError = rangeData?.error ?? null
 
-  const { data, isLoading } = useSessions({
-    session_type: filter === 'all' ? undefined : filter,
-    limit: 50,
-  })
+  const sessions = data?.sessions || []
+
+  const merged = useMemo((): UnifiedSessionRow[] => {
+    const connectorRows: UnifiedSessionRow[] = sessions.map((s) => ({
+      kind: 'connector' as const,
+      id: s.id,
+      source: s.source,
+      session_type: s.session_type,
+      name: s.name,
+      session_date: s.session_date,
+      shot_count: s.shot_count ?? 0,
+      computed_stats: s.computed_stats,
+    }))
+    const rangeRows: UnifiedSessionRow[] = rangeList.map(rangeToRow)
+    return [...rangeRows, ...connectorRows].sort(
+      (a, b) => new Date(b.session_date).getTime() - new Date(a.session_date).getTime(),
+    )
+  }, [sessions, rangeList])
+
+  const filtered = useMemo(() => {
+    if (source === 'ALL') return merged
+    if (source === 'CADDIE') {
+      return merged.filter(
+        (r) => r.kind === 'range' || r.source.toUpperCase() === 'CADDIE',
+      )
+    }
+    return merged.filter((r) => r.kind === 'connector' && r.source.toUpperCase() === source)
+  }, [merged, source])
+
+  const isLoading = loadingConnector || loadingRange
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      {/* Header */}
-      <FadeIn>
-        <div className="relative">
-          <Spotlight className="left-0 top-0 -translate-y-1/2" size={400} />
-          
-          <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-theme-accent-subtle flex items-center justify-center">
-                  <svg className="w-5 h-5 text-theme-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
-                  </svg>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-semibold text-theme-text-primary">
-                    {t('sessions.title')}
-                  </h1>
-                  <p className="text-sm text-theme-text-muted">
-                    {data?.total || 0} sessions recorded
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <Link to="/connectors">
-              <Button variant="primary" leftIcon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-              }>
-                {t('sessions.newSession')}
-              </Button>
-            </Link>
-          </div>
+    <div className="space-y-6">
+      <header className="flex items-end justify-between border-b border-line-strong pb-4">
+        <div>
+          <div className="micro">{t('sessions.title').toUpperCase()}</div>
+          <h1 className="display text-[64px] mt-2">Sessions</h1>
+          <p className="text-body text-ink-2 mt-2">
+            Every range bucket, sim block, and on-course round is a measurement.
+          </p>
         </div>
-      </FadeIn>
-
-      {/* Filters */}
-      <FadeIn delay={0.1}>
-        <div className="flex flex-wrap gap-2">
-          {(['all', 'range', 'simulator', 'round'] as const).map((value) => (
-            <PillButton
-              key={value}
-              variant="secondary"
-              active={filter === value}
-              onClick={() => setFilter(value)}
+        <div className="flex border border-line-strong">
+          {SOURCES.map((s, i) => (
+            <button
+              key={s}
+              onClick={() => setSource(s)}
+              className={`mono text-[10px] uppercase tracking-micro px-3 py-2 ${
+                i < SOURCES.length - 1 ? 'border-r border-line-strong' : ''
+              } ${source === s ? 'ui-selected' : 'text-ink-3 hover:text-ink hover:bg-bg-2'}`}
             >
-              {t(`sessions.filters.${value}`)}
-            </PillButton>
+              {s}
+            </button>
           ))}
         </div>
-      </FadeIn>
+      </header>
 
-      {/* Sessions List */}
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="h-28 shimmer" />
+      {rangeLoadError ? (
+        <p className="text-warn mono text-[11px] max-w-3xl">
+          Caddie range sessions: {rangeLoadError}
+        </p>
+      ) : null}
+
+      <Panel title="ALL SESSIONS" right={<span className="micro">{filtered.length} ROWS</span>}>
+        <div
+          className="grid gap-3 items-center pb-2 border-b border-line-strong mb-2"
+          style={{ gridTemplateColumns: '60px 90px 1fr 80px 80px 100px 60px 16px' }}
+        >
+          {['#', 'DATE', 'SESSION', 'TYPE', 'SHOTS', 'SOURCE', 'STATS', ''].map((h) => (
+            <span key={h} className="mono text-[9px] text-ink-3 tracking-micro-tight">
+              {h}
+            </span>
           ))}
         </div>
-      ) : data?.sessions && data.sessions.length > 0 ? (
-        <StaggerContainer className="space-y-3" staggerDelay={0.05}>
-          {data.sessions.map((session) => (
-            <StaggerItem key={session.id}>
-              <Link to={`/sessions/${session.id}`}>
-                <motion.div 
-                  whileHover={{ y: -2 }}
-                  className="group"
-                >
-                  <Card variant="interactive" padding="md">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-theme-text-primary group-hover:text-theme-accent transition-colors truncate">
-                            {session.name || `${session.source} Session`}
-                          </h3>
-                          <Badge variant="accent" size="sm">{session.source}</Badge>
-                          {session.shot_count > 100 && (
-                            <Badge variant="success" size="sm">Pro</Badge>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-sm text-theme-text-muted mb-3">
-                          <span className="flex items-center gap-1.5">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-                            </svg>
-                            {formatDate(session.session_date)}
-                          </span>
-                          <span className="text-theme-border">•</span>
-                          <span>{session.shot_count} {t('sessions.shotCount', 'shots')}</span>
-                        </div>
-                        
-                        {session.computed_stats?.clubs_used && session.computed_stats.clubs_used.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {session.computed_stats.clubs_used.slice(0, 5).map((club) => (
-                              <span
-                                key={club}
-                                className="text-[10px] px-2 py-0.5 rounded-full bg-theme-bg-surface border border-theme-border text-theme-text-muted"
-                              >
-                                {club}
-                              </span>
-                            ))}
-                            {session.computed_stats.clubs_used.length > 5 && (
-                              <span className="text-[10px] text-theme-text-muted self-center">
-                                +{session.computed_stats.clubs_used.length - 5} more
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex flex-col items-end gap-2 ml-4">
-                        {session.computed_stats?.strike_score && (
-                          <div className="text-right">
-                            <p className="text-3xl font-semibold text-theme-accent">
-                              {Math.round(session.computed_stats.strike_score)}
-                            </p>
-                            <p className="text-[10px] text-theme-text-muted uppercase tracking-wider">
-                              {t('scores.strikeScore')}
-                            </p>
-                          </div>
-                        )}
-                        
-                        {/* Arrow indicator */}
-                        <svg 
-                          className="w-5 h-5 text-theme-text-muted group-hover:text-theme-accent group-hover:translate-x-1 transition-all" 
-                          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
+        {isLoading && <div className="py-8 text-center text-ink-3 mono text-[11px]">LOADING…</div>}
+        {!isLoading && filtered.length === 0 && (
+          <div className="py-12 text-center space-y-3">
+            <p className="text-body text-ink-3">No sessions match this filter.</p>
+            {source === 'CADDIE' ? (
+              <p className="text-body text-ink-3 text-[13px] max-w-md mx-auto">
+                Caddie driving-range data lives under <strong className="text-ink">Range Lab</strong> until it is synced
+                from the iPhone (signed in with the same account). Import a JSON export from the phone, or open Range
+                Lab after a sync.
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Link
+                to="/lab/range"
+                className="mono text-[11px] text-accent-fg uppercase tracking-micro inline-block border border-accent-fg px-4 py-2 hover:bg-bg-2"
+              >
+                Range Lab — import / view →
               </Link>
-            </StaggerItem>
-          ))}
-        </StaggerContainer>
-      ) : (
-        <FadeIn>
-          <Card className="text-center py-16">
-            <div className="w-16 h-16 rounded-2xl bg-theme-accent-subtle flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-theme-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
-              </svg>
+              <Link
+                to="/connectors"
+                className="mono text-[11px] text-accent-fg uppercase tracking-micro inline-block"
+              >
+                Connectors — import →
+              </Link>
             </div>
-            <p className="text-theme-text-primary text-lg font-medium mb-2">
-              {t('sessions.empty', 'No sessions yet')}
-            </p>
-            <p className="text-sm text-theme-text-muted mb-6 max-w-sm mx-auto">
-              {t('sessions.emptyDescription', 'Import your first session to start tracking your progress.')}
-            </p>
-            <Link to="/connectors">
-              <Button variant="primary">{t('connectors.importCSV')}</Button>
+          </div>
+        )}
+        {filtered.map((s, i) => {
+          const stats = s.computed_stats
+          const href = s.kind === 'range' ? `/lab/range/${encodeURIComponent(s.id)}` : `/sessions/${s.id}`
+          return (
+            <Link
+              key={`${s.kind}-${s.id}`}
+              to={href}
+              className="grid gap-3 items-center py-3 border-b border-line hover:bg-bg-2 transition-colors"
+              style={{ gridTemplateColumns: '60px 90px 1fr 80px 80px 100px 60px 16px' }}
+            >
+              <span className="mono text-[11px] text-ink-3">
+                {String(filtered.length - i).padStart(3, '0')}
+              </span>
+              <span className="mono text-[11px] text-ink-2">
+                {new Date(s.session_date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: '2-digit',
+                  year: '2-digit',
+                }).toUpperCase()}
+              </span>
+              <span className="text-[14px] text-ink">{s.name || '—'}</span>
+              <Tag>{s.session_type.toUpperCase()}</Tag>
+              <span className="num text-[13px] text-ink-2">{s.shot_count ?? 0}</span>
+              <span className="mono text-[10px] text-ink-3 tracking-micro-tight">
+                {s.source.toUpperCase()}
+              </span>
+              <span className="num text-[12px] text-ink-2">
+                {stats?.strike_score ? Math.round(stats.strike_score) : '—'}
+              </span>
+              <span className="text-ink-3">›</span>
             </Link>
-          </Card>
-        </FadeIn>
-      )}
+          )
+        })}
+      </Panel>
     </div>
   )
 }

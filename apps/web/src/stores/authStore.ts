@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export type Persona = 'beginner' | 'improver' | 'performance'
+
 interface User {
   id: string
   email: string
@@ -9,8 +11,10 @@ interface User {
   goalHandicap?: number
   dreamHandicap?: number
   practiceFrequency?: string
+  persona?: Persona
+  homeClubId?: string | null
   onboardingCompleted?: boolean
-  clearanceLevel: 1 | 2 | 3
+  clearanceLevel?: 1 | 2 | 3
   language: string
   units: string
 }
@@ -21,7 +25,7 @@ interface AuthState {
   refreshToken: string | null
   isAuthenticated: boolean
   setUser: (user: User | null) => void
-  setTokens: (accessToken: string, refreshToken: string) => void
+  setTokens: (accessToken: string, refreshToken?: string | null) => void
   logout: () => void
   updateUser: (updates: Partial<User>) => void
 }
@@ -36,7 +40,7 @@ export const useAuthStore = create<AuthState>()(
       
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       
-      setTokens: (accessToken, refreshToken) => set({ 
+      setTokens: (accessToken, refreshToken = null) => set({ 
         accessToken, 
         refreshToken,
         isAuthenticated: true,

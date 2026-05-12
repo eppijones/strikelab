@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { useUpdateProfile } from '@/api/auth'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { Card, CardHeader, CardTitle, CardContent, Button, Input, Badge } from '@/components/ui'
+import { Panel, Tag } from '@/components/ui'
 
 const PRACTICE_OPTIONS = [
-  { value: 'daily', label: 'Daily (7x/week)', description: 'Committed to daily practice' },
-  { value: '4-5x_week', label: '4-5 times/week', description: 'Serious commitment' },
-  { value: '2-3x_week', label: '2-3 times/week', description: 'Regular practice' },
-  { value: 'weekly', label: 'Once a week', description: 'Weekend golfer' },
-  { value: 'occasional', label: 'Occasional', description: 'When time allows' },
+  { value: 'daily', label: 'Daily (7x/week)' },
+  { value: '4-5x_week', label: '4-5x / week' },
+  { value: '2-3x_week', label: '2-3x / week' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'occasional', label: 'Occasional' },
 ]
 
 export default function Settings() {
@@ -18,364 +18,176 @@ export default function Settings() {
   const user = useAuthStore((state) => state.user)
   const { language, setLanguage, units, setUnits, theme, setTheme } = useSettingsStore()
   const updateProfile = useUpdateProfile()
-  
+
   const [displayName, setDisplayName] = useState(user?.displayName || '')
-  const [handicapIndex, setHandicapIndex] = useState(user?.handicapIndex?.toString() || '')
-  const [goalHandicap, setGoalHandicap] = useState(user?.goalHandicap?.toString() || '')
-  const [practiceFrequency, setPracticeFrequency] = useState(user?.practiceFrequency || '')
+  const [handicap, setHandicap] = useState(user?.handicapIndex?.toString() || '')
+  const [goal, setGoal] = useState(user?.goalHandicap?.toString() || '')
+  const [practice, setPractice] = useState(user?.practiceFrequency || '')
   const [saved, setSaved] = useState(false)
-  
+
   useEffect(() => {
     if (user) {
       setDisplayName(user.displayName)
-      setHandicapIndex(user.handicapIndex?.toString() || '')
-      setGoalHandicap(user.goalHandicap?.toString() || '')
-      setPracticeFrequency(user.practiceFrequency || '')
+      setHandicap(user.handicapIndex?.toString() || '')
+      setGoal(user.goalHandicap?.toString() || '')
+      setPractice(user.practiceFrequency || '')
     }
   }, [user])
-  
-  const handleSave = async () => {
-    try {
-      await updateProfile.mutateAsync({
-        display_name: displayName,
-        handicap_index: handicapIndex ? parseFloat(handicapIndex) : undefined,
-        goal_handicap: goalHandicap ? parseFloat(goalHandicap) : undefined,
-        practice_frequency: practiceFrequency || undefined,
-        language,
-        units,
-      })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    } catch (error) {
-      console.error('Failed to update profile:', error)
-    }
-  }
-  
-  // Calculate prediction
-  const weeksToGoal = () => {
-    if (!handicapIndex || !goalHandicap || !practiceFrequency) return null
-    const current = parseFloat(handicapIndex)
-    const goal = parseFloat(goalHandicap)
-    if (goal >= current) return null
-    
-    const diff = current - goal
-    const weeklyRate: Record<string, number> = {
-      'daily': 0.15,
-      '4-5x_week': 0.1,
-      '2-3x_week': 0.06,
-      'weekly': 0.03,
-      'occasional': 0.01,
-    }
-    return Math.ceil(diff / (weeklyRate[practiceFrequency] || 0.03))
+
+  async function save() {
+    await updateProfile.mutateAsync({
+      display_name: displayName,
+      handicap_index: handicap ? parseFloat(handicap) : undefined,
+      goal_handicap: goal ? parseFloat(goal) : undefined,
+      practice_frequency: practice || undefined,
+      language,
+      units,
+    })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-display font-bold text-theme-text-primary">
-          {t('settings.title', 'Settings')}
+    <div className="space-y-6">
+      <header className="border-b border-line-strong pb-6">
+        <div className="micro mb-3">SETTINGS</div>
+        <h1 className="display text-[64px] m-0">
+          {t('settings.title')}
         </h1>
-        <p className="text-theme-text-muted mt-1">
-          Manage your profile and preferences
-        </p>
-      </div>
-      
-      {/* Appearance Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-theme-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-            </svg>
-            Appearance
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="mt-4 space-y-4">
-          {/* Theme */}
-          <div>
-            <label className="block text-sm font-medium text-theme-text-primary mb-2">
-              Theme
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setTheme('midnight')}
-                className={`relative p-4 rounded-xl border text-center transition-all ${
-                  theme === 'midnight'
-                    ? 'bg-theme-accent-dim border-theme-accent'
-                    : 'bg-theme-bg-surface border-theme-border hover:border-theme-accent/30'
-                }`}
-              >
-                <div className="w-12 h-12 mx-auto mb-3 rounded-lg bg-[#1E3A2B] border border-white/10 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-[#6BA37D]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                </div>
-                <p className={`font-medium ${theme === 'midnight' ? 'text-theme-accent' : 'text-theme-text-primary'}`}>
-                  Midnight
-                </p>
-                <p className="text-xs text-theme-text-muted mt-1">Forest Green (Dark)</p>
-                {theme === 'midnight' && (
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-theme-accent flex items-center justify-center">
-                    <svg className="w-3 h-3 text-theme-text-inverted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
-              </button>
-              <button
-                onClick={() => setTheme('scandinavian')}
-                className={`relative p-4 rounded-xl border text-center transition-all ${
-                  theme === 'scandinavian'
-                    ? 'bg-theme-accent-dim border-theme-accent'
-                    : 'bg-theme-bg-surface border-theme-border hover:border-theme-accent/30'
-                }`}
-              >
-                <div className="w-12 h-12 mx-auto mb-3 rounded-lg bg-[#F2F0EB] border border-black/10 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-[#1E3A2B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                </div>
-                <p className={`font-medium ${theme === 'scandinavian' ? 'text-theme-accent' : 'text-theme-text-primary'}`}>
-                  Scandinavian
-                </p>
-                <p className="text-xs text-theme-text-muted mt-1">Paper & Ice (Light)</p>
-                {theme === 'scandinavian' && (
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-theme-accent flex items-center justify-center">
-                    <svg className="w-3 h-3 text-theme-text-inverted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
-              </button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </header>
 
-      {/* Profile Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-theme-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            Profile
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="mt-4 space-y-4">
-          <Input
-            label="Display Name"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Your name"
-          />
-          
-          <div className="p-4 rounded-xl bg-theme-bg-elevated border border-theme-border">
-            <p className="text-sm text-theme-text-muted mb-1">Email</p>
-            <p className="text-theme-text-primary">{user?.email}</p>
-            <p className="text-xs text-theme-text-muted mt-2">Email cannot be changed</p>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Golf Profile Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <span className="text-lg">⛳</span>
-            Golf Profile
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="mt-4 space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <Input
-              label="Current Handicap"
+      <div className="grid lg:grid-cols-2 gap-4">
+        <Panel title="PROFILE">
+          <Field label="DISPLAY NAME">
+            <input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full bg-bg-2 border border-line-strong text-ink px-4 py-3 mono text-[13px] focus:border-accent-fg focus:outline-none"
+            />
+          </Field>
+          <Field label="HANDICAP INDEX">
+            <input
+              value={handicap}
+              onChange={(e) => setHandicap(e.target.value)}
               type="number"
               step="0.1"
-              min="0"
-              max="54"
-              value={handicapIndex}
-              onChange={(e) => setHandicapIndex(e.target.value)}
-              placeholder="12.4"
+              className="w-full bg-bg-2 border border-line-strong text-ink px-4 py-3 mono text-[13px] focus:border-accent-fg focus:outline-none"
             />
-            
-            <Input
-              label="Goal Handicap"
+          </Field>
+          <Field label="GOAL HANDICAP">
+            <input
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
               type="number"
               step="0.1"
-              min="0"
-              max={handicapIndex ? parseFloat(handicapIndex) : 54}
-              value={goalHandicap}
-              onChange={(e) => setGoalHandicap(e.target.value)}
-              placeholder="8.0"
+              className="w-full bg-bg-2 border border-line-strong text-ink px-4 py-3 mono text-[13px] focus:border-accent-fg focus:outline-none"
             />
-          </div>
-          
-          {/* Practice Frequency */}
-          <div>
-            <label className="block text-sm font-medium text-theme-text-primary mb-2">
-              Practice Frequency
-            </label>
-            <div className="grid gap-2">
-              {PRACTICE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setPracticeFrequency(option.value)}
-                  className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-                    practiceFrequency === option.value
-                      ? 'bg-theme-accent-dim border-theme-accent'
-                      : 'bg-theme-bg-surface border-theme-border hover:border-theme-accent/30'
-                  }`}
-                >
-                  <div>
-                    <p className={`font-medium ${practiceFrequency === option.value ? 'text-theme-accent' : 'text-theme-text-primary'}`}>
-                      {option.label}
-                    </p>
-                    <p className="text-sm text-theme-text-muted">{option.description}</p>
-                  </div>
-                  {practiceFrequency === option.value && (
-                    <div className="w-5 h-5 rounded-full bg-theme-accent flex items-center justify-center">
-                      <svg className="w-3 h-3 text-theme-text-inverted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  )}
-                </button>
+          </Field>
+          <Field label="PRACTICE FREQUENCY">
+            <select
+              value={practice}
+              onChange={(e) => setPractice(e.target.value)}
+              className="w-full bg-bg-2 border border-line-strong text-ink px-4 py-3 mono text-[13px] focus:border-accent-fg focus:outline-none"
+            >
+              <option value="">Select…</option>
+              {PRACTICE_OPTIONS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
               ))}
-            </div>
+            </select>
+          </Field>
+          <div className="flex gap-3 mt-6">
+            <button
+              onClick={save}
+              disabled={updateProfile.isPending}
+              className="bg-accent text-accent-ink px-5 py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2 disabled:opacity-50"
+            >
+              Save →
+            </button>
+            {saved && <Tag tone="accent">SAVED</Tag>}
           </div>
-          
-          {/* Goal Prediction */}
-          {weeksToGoal() && (
-            <div className="p-4 rounded-xl bg-gradient-to-r from-theme-accent-dim to-emerald-500/10 border border-theme-accent/30">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🎯</span>
-                <div>
-                  <p className="text-theme-text-primary font-medium">
-                    Predicted to reach {goalHandicap} by{' '}
-                    <span className="text-theme-accent">
-                      {new Date(Date.now() + weeksToGoal()! * 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
-                        month: 'long', 
-                        year: 'numeric' 
-                      })}
-                    </span>
-                  </p>
-                  <p className="text-sm text-theme-text-muted">~{weeksToGoal()} weeks based on your practice frequency</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Preferences Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-theme-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Preferences
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="mt-4 space-y-4">
-          {/* Language */}
-          <div>
-            <label className="block text-sm font-medium text-theme-text-primary mb-2">
-              Language
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setLanguage('en')}
-                className={`flex-1 p-3 rounded-xl border text-center transition-all ${
-                  language === 'en'
-                    ? 'bg-theme-accent-dim border-theme-accent text-theme-accent'
-                    : 'bg-theme-bg-surface border-theme-border text-theme-text-muted hover:border-theme-accent/30'
-                }`}
-              >
-                <span className="text-2xl block mb-1">🇬🇧</span>
-                <span className="text-sm font-medium">English</span>
-              </button>
-              <button
-                onClick={() => setLanguage('no')}
-                className={`flex-1 p-3 rounded-xl border text-center transition-all ${
-                  language === 'no'
-                    ? 'bg-theme-accent-dim border-theme-accent text-theme-accent'
-                    : 'bg-theme-bg-surface border-theme-border text-theme-text-muted hover:border-theme-accent/30'
-                }`}
-              >
-                <span className="text-2xl block mb-1">🇳🇴</span>
-                <span className="text-sm font-medium">Norsk</span>
-              </button>
-            </div>
-          </div>
-          
-          {/* Units */}
-          <div>
-            <label className="block text-sm font-medium text-theme-text-primary mb-2">
-              Distance Units
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setUnits('yards')}
-                className={`flex-1 p-3 rounded-xl border text-center transition-all ${
-                  units === 'yards'
-                    ? 'bg-theme-accent-dim border-theme-accent text-theme-accent'
-                    : 'bg-theme-bg-surface border-theme-border text-theme-text-muted hover:border-theme-accent/30'
-                }`}
-              >
-                <span className="text-lg font-display font-bold block">YDS</span>
-                <span className="text-sm">Yards</span>
-              </button>
-              <button
-                onClick={() => setUnits('meters')}
-                className={`flex-1 p-3 rounded-xl border text-center transition-all ${
-                  units === 'meters'
-                    ? 'bg-theme-accent-dim border-theme-accent text-theme-accent'
-                    : 'bg-theme-bg-surface border-theme-border text-theme-text-muted hover:border-theme-accent/30'
-                }`}
-              >
-                <span className="text-lg font-display font-bold block">M</span>
-                <span className="text-sm">Meters</span>
-              </button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Save Button */}
-      <div className="flex items-center gap-4">
-        <Button 
-          onClick={handleSave} 
-          isLoading={updateProfile.isPending}
-          className="flex-1"
-        >
-          {saved ? '✓ Saved!' : 'Save Changes'}
-        </Button>
-        {saved && (
-          <Badge variant="success" className="animate-in fade-in">
-            Changes saved successfully
-          </Badge>
-        )}
+        </Panel>
+
+        <div className="space-y-4">
+          <Panel title="PREFERENCES">
+            <SegmentedRow
+              label="LANGUAGE"
+              value={language}
+              options={[
+                { v: 'en', l: 'EN' },
+                { v: 'no', l: 'NO' },
+              ]}
+              onChange={(v) => setLanguage(v as 'en' | 'no')}
+            />
+            <SegmentedRow
+              label="UNITS"
+              value={units}
+              options={[
+                { v: 'yards', l: 'YARDS' },
+                { v: 'meters', l: 'METERS' },
+              ]}
+              onChange={(v) => setUnits(v as 'yards' | 'meters')}
+            />
+            <SegmentedRow
+              label="THEME"
+              value={theme}
+              options={[
+                { v: 'dark', l: 'DARK' },
+                { v: 'light', l: 'LIGHT' },
+              ]}
+              onChange={(v) => setTheme(v as 'dark' | 'light')}
+            />
+          </Panel>
+
+          <Panel title="ACCOUNT">
+            <div className="micro mb-2">EMAIL</div>
+            <div className="mono text-[13px] text-ink mb-4">{user?.email}</div>
+            <div className="micro mb-2">USER ID</div>
+            <div className="mono text-[11px] text-ink-3 break-all">{user?.id}</div>
+          </Panel>
+        </div>
       </div>
-      
-      {/* Danger Zone */}
-      <Card className="border-red-500/30">
-        <CardHeader>
-          <CardTitle className="text-red-400">Danger Zone</CardTitle>
-        </CardHeader>
-        <CardContent className="mt-4">
-          <p className="text-muted text-sm mb-4">
-            Once you delete your account, there is no going back. Please be certain.
-          </p>
-          <Button variant="secondary" className="text-red-400 border-red-500/30 hover:bg-red-500/10">
-            Delete Account
-          </Button>
-        </CardContent>
-      </Card>
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-4 last:mb-0">
+      <label className="micro block mb-2">{label}</label>
+      {children}
+    </div>
+  )
+}
+
+function SegmentedRow<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: T
+  options: { v: T; l: string }[]
+  onChange: (v: T) => void
+}) {
+  return (
+    <div className="mb-5 last:mb-0">
+      <label className="micro block mb-2">{label}</label>
+      <div className="flex border border-line-strong">
+        {options.map((o, i) => (
+          <button
+            key={o.v}
+            onClick={() => onChange(o.v)}
+            className={`flex-1 py-2 mono text-[10px] uppercase tracking-micro ${
+              i < options.length - 1 ? 'border-r border-line-strong' : ''
+            } ${value === o.v ? 'ui-selected' : 'text-ink-3 hover:text-ink hover:bg-bg-2'}`}
+          >
+            {o.l}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

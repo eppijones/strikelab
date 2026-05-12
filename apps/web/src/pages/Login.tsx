@@ -1,164 +1,99 @@
-import { useState } from 'react'
+import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { motion } from 'framer-motion'
+import { useSignIn } from '@clerk/clerk-react'
 import { useLogin } from '@/api/auth'
-import { Button, Input, Card, FadeIn } from '@/components/ui'
-import { AuroraGlow, DotGrid, NoiseTexture } from '@/components/ui/backgrounds'
+import { Panel, SLLogo } from '@/components/ui'
 
 export default function Login() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const login = useLogin()
-
+  const { signIn, setActive, isLoaded } = useSignIn()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [err, setErr] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    setError('')
-
+    setErr(null)
     try {
+      if (signIn && isLoaded) {
+        const result = await signIn.create({
+          strategy: 'password',
+          identifier: email,
+          password,
+        })
+        if (result.status === 'complete' && result.createdSessionId) {
+          await setActive({ session: result.createdSessionId })
+          navigate('/')
+          return
+        }
+        throw new Error('Additional verification is required. Finish it in Clerk, then try again.')
+      }
       await login.mutateAsync({ email, password })
       navigate('/')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+    } catch (e: any) {
+      setErr(e?.message || 'Login failed')
     }
   }
 
   return (
-    <div className="min-h-screen bg-theme-bg-primary relative overflow-hidden flex items-center justify-center p-4">
-      {/* Background effects - Scandinavian subtle */}
-      <DotGrid opacity={0.3} animate={false} />
-      <AuroraGlow intensity="subtle" position="top" color="sage" />
-      <NoiseTexture opacity={0.02} />
+    <div className="min-h-screen bg-bg flex items-center justify-center px-4">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center">
+          <Link to="/marketing" className="inline-flex items-center gap-2 text-ink hover:text-accent-fg">
+            <SLLogo size={32} withWord wordSize={20} condensed />
+          </Link>
+          <div className="micro mt-4">BAY 01 / SECURE TERMINAL</div>
+          <h1 className="display text-[40px] mt-3">
+            Welcome <em>back.</em>
+          </h1>
+        </div>
 
-      <div className="w-full max-w-md relative">
-        {/* Logo & Branding */}
-        <FadeIn>
-          <div className="text-center mb-10">
-            <motion.div 
-              className="inline-flex items-center justify-center mb-6"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="w-14 h-14 rounded-2xl bg-theme-accent flex items-center justify-center">
-                <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M12 2v4m0 12v4M2 12h4m12 0h4" strokeLinecap="round" />
-                </svg>
-              </div>
-            </motion.div>
-            
-            <motion.h1 
-              className="text-3xl font-semibold text-theme-text-primary mb-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              Strike<span className="text-theme-accent">Lab</span>
-            </motion.h1>
-            
-            <motion.p 
-              className="text-theme-text-muted"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              {t('brand.tagline')}
-            </motion.p>
-          </div>
-        </FadeIn>
-
-        {/* Login Card */}
-        <FadeIn delay={0.3}>
-          <Card variant="elevated" padding="lg">
-            <div className="text-center mb-6">
-              <h2 className="text-xl font-semibold text-theme-text-primary">
-                {t('auth.welcomeBack', 'Welcome back')}
-              </h2>
-              <p className="text-sm text-theme-text-muted mt-1">
-                Sign in to continue to StrikeLab
-              </p>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <Input
-                label={t('auth.email')}
+        <Panel id="AUTH" title="SIGN IN">
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div>
+              <label className="micro block mb-2">{t('auth.email').toUpperCase()}</label>
+              <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
                 required
+                className="w-full bg-bg-2 border border-line-strong text-ink px-4 py-3 mono text-[13px] focus:border-accent-fg focus:outline-none"
+                placeholder="you@strikelab.golf"
               />
-
-              <Input
-                label={t('auth.password')}
+            </div>
+            <div>
+              <label className="micro block mb-2">{t('auth.password').toUpperCase()}</label>
+              <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
                 required
+                className="w-full bg-bg-2 border border-line-strong text-ink px-4 py-3 mono text-[13px] focus:border-accent-fg focus:outline-none"
+                placeholder="••••••••"
               />
-
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 text-sm text-theme-error bg-theme-error-dim border border-theme-error/20 rounded-xl px-4 py-3"
-                >
-                  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {error}
-                </motion.div>
-              )}
-
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                variant="primary"
-                isLoading={login.isPending}
-              >
-                {login.isPending ? t('auth.signingIn', 'Signing in...') : t('auth.login')}
-              </Button>
-            </form>
-
-            <div className="mt-6 pt-6 border-t border-theme-border text-center">
-              <p className="text-theme-text-muted text-sm">
-                {t('auth.noAccount')}{' '}
-                <Link to="/register" className="text-theme-accent hover:underline font-medium">
-                  {t('auth.register')}
-                </Link>
-              </p>
             </div>
-          </Card>
-        </FadeIn>
 
-        {/* Features hint */}
-        <FadeIn delay={0.6}>
-          <div className="mt-10 grid grid-cols-3 gap-4 text-center">
-            {[
-              { icon: '🎯', label: 'Track' },
-              { icon: '🧠', label: 'Analyze' },
-              { icon: '📈', label: 'Improve' },
-            ].map((item, i) => (
-              <motion.div
-                key={item.label}
-                className="p-4 rounded-xl bg-theme-bg-card border border-theme-border"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 + i * 0.1 }}
-              >
-                <span className="text-2xl mb-2 block">{item.icon}</span>
-                <span className="text-xs text-theme-text-muted font-medium">{item.label}</span>
-              </motion.div>
-            ))}
-          </div>
-        </FadeIn>
+            {err && <div className="mono text-[11px] text-bad">{err.toUpperCase()}</div>}
+
+            <button
+              type="submit"
+              disabled={login.isPending || (isLoaded && !signIn)}
+              className="w-full bg-accent text-accent-ink py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2 disabled:opacity-50"
+            >
+              {login.isPending ? t('auth.signingIn') : t('auth.login')}
+            </button>
+          </form>
+        </Panel>
+
+        <p className="text-center text-body text-ink-2">
+          {t('auth.noAccount')}{' '}
+          <Link to="/register" className="text-accent-fg mono uppercase tracking-micro text-[10px]">
+            Create →
+          </Link>
+        </p>
       </div>
     </div>
   )

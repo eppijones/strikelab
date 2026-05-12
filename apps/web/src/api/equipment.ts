@@ -75,7 +75,13 @@ export interface CreateClubData {
   shaft_brand?: string
   shaft_model?: string
   shaft_flex?: string
+  shaft_weight?: number
   loft?: number
+  lie?: number
+  length?: number
+  swing_weight?: string
+  notes?: string
+  sort_order?: number
 }
 
 export interface QuickAddClubData {
@@ -87,28 +93,28 @@ export interface QuickAddClubData {
 
 // API Functions
 async function fetchBags(): Promise<BagListItem[]> {
-  const response = await apiClient.get('/equipment/bags')
-  return response.data
+  return apiClient.get<any>('/equipment/bags')
+  // no-op: apiClient already returns parsed JSON
 }
 
 async function fetchBag(bagId: string): Promise<Bag> {
-  const response = await apiClient.get(`/equipment/bags/${bagId}`)
-  return response.data
+  return apiClient.get<any>(`/equipment/bags/${bagId}`)
+  // no-op: apiClient already returns parsed JSON
 }
 
 async function fetchMyBag(): Promise<Bag> {
-  const response = await apiClient.get('/equipment/my-bag')
-  return response.data
+  return apiClient.get<any>('/equipment/my-bag')
+  // no-op: apiClient already returns parsed JSON
 }
 
 async function createBag(data: CreateBagData): Promise<Bag> {
-  const response = await apiClient.post('/equipment/bags', data)
-  return response.data
+  return apiClient.post<any>('/equipment/bags', data)
+  // no-op: apiClient already returns parsed JSON
 }
 
 async function updateBag(bagId: string, data: Partial<CreateBagData>): Promise<Bag> {
-  const response = await apiClient.patch(`/equipment/bags/${bagId}`, data)
-  return response.data
+  return apiClient.patch<any>(`/equipment/bags/${bagId}`, data)
+  // no-op: apiClient already returns parsed JSON
 }
 
 async function deleteBag(bagId: string): Promise<void> {
@@ -116,18 +122,18 @@ async function deleteBag(bagId: string): Promise<void> {
 }
 
 async function addClub(bagId: string, data: CreateClubData): Promise<Club> {
-  const response = await apiClient.post(`/equipment/bags/${bagId}/clubs`, data)
-  return response.data
+  return apiClient.post<any>(`/equipment/bags/${bagId}/clubs`, data)
+  // no-op: apiClient already returns parsed JSON
 }
 
 async function quickAddClubs(bagId: string, clubs: QuickAddClubData[]): Promise<Club[]> {
-  const response = await apiClient.post(`/equipment/bags/${bagId}/quick-add`, clubs)
-  return response.data
+  return apiClient.post<any>(`/equipment/bags/${bagId}/quick-add`, clubs)
+  // no-op: apiClient already returns parsed JSON
 }
 
 async function updateClub(clubId: string, data: Partial<CreateClubData>): Promise<Club> {
-  const response = await apiClient.patch(`/equipment/clubs/${clubId}`, data)
-  return response.data
+  return apiClient.patch<any>(`/equipment/clubs/${clubId}`, data)
+  // no-op: apiClient already returns parsed JSON
 }
 
 async function deleteClub(clubId: string): Promise<void> {
@@ -135,8 +141,8 @@ async function deleteClub(clubId: string): Promise<void> {
 }
 
 async function fetchClubStats(): Promise<ClubStats[]> {
-  const response = await apiClient.get('/equipment/stats')
-  return response.data
+  return apiClient.get<any>('/equipment/stats')
+  // no-op: apiClient already returns parsed JSON
 }
 
 // React Query Hooks

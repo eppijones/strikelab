@@ -1,0 +1,16 @@
+{
+  "name": "@strikelab/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "StrikeLab design tokens (CSS vars + JSON twin) shared across web and native.",
+  "main": "tokens.json",
+  "exports": {
+    ".": "./tokens.json",
+    "./tokens.css": "./tokens.css",
+    "./tokens.json": "./tokens.json"
+  },
+  "files": [
+    "tokens.css",
+    "tokens.json"
+  ]
+}

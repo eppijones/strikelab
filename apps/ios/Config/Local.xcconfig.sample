@@ -1,0 +1,5 @@
+// Copy to Local.xcconfig (gitignored) and edit. Run:
+//   ifconfig | grep 'inet ' | grep -v 127.0.0.1
+// on your Mac to find the LAN IP your phone should hit.
+
+DEV_HOST = 192.168.1.42

@@ -27,7 +27,7 @@ export function NoiseTexture({
       style={{
         backgroundImage: noiseSvg,
         opacity,
-        mixBlendMode: blendModes[blend],
+        mixBlendMode: blendModes[blend] as React.CSSProperties['mixBlendMode'],
       }}
     />
   )

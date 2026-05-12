@@ -1,736 +1,319 @@
-import { useState, useMemo } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { 
-  ALL_COURSES, 
-  NORWEGIAN_COURSES, 
-  INTERNATIONAL_COURSES,
-  COURSE_COUNTRIES,
-  searchCourses,
-  type GolfCourse 
-} from '@/lib/golfCourses'
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input, Select } from '@/components/ui'
+import { Link } from 'react-router-dom'
 
-// Course Type Badge Colors
-const TYPE_COLORS: Record<string, string> = {
-  links: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  parkland: 'bg-green-500/20 text-green-400 border-green-500/30',
-  heathland: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  desert: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  mountain: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-  resort: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-}
+import {
+  useCourseRegions,
+  useCourses,
+  useImportCoursesCsv,
+  type Course,
+} from '@/api/courses'
+import { Panel, Tag } from '@/components/ui'
+import { CourseEditor } from '@/components/courses/CourseEditor'
 
-// Price Range Badge
-const PRICE_BADGES: Record<string, { label: string; color: string }> = {
-  budget: { label: '€', color: 'bg-green-500/20 text-green-400' },
-  moderate: { label: '€€', color: 'bg-yellow-500/20 text-yellow-400' },
-  premium: { label: '€€€', color: 'bg-orange-500/20 text-orange-400' },
-  luxury: { label: '€€€€', color: 'bg-purple-500/20 text-purple-400' },
-}
-
-// Course Card Component
-function CourseCard({ course, onClick }: { course: GolfCourse; onClick: () => void }) {
-  const country = COURSE_COUNTRIES.find(c => c.code === course.countryCode)
-  const priceInfo = PRICE_BADGES[course.priceRange]
-  
-  return (
-    <button
-      onClick={onClick}
-      className="w-full text-left group"
-    >
-      <Card variant="hover" className="overflow-hidden h-full">
-        {/* Header Image Placeholder with Course Type */}
-        <div className={`h-32 relative ${TYPE_COLORS[course.type]?.replace('text-', 'bg-').replace('-400', '-900/30') || 'bg-surface'}`}>
-          {/* Course Type Pattern */}
-          <div className="absolute inset-0 bg-precision-grid opacity-30" />
-          
-          {/* Country Flag */}
-          <div className="absolute top-3 left-3">
-            <span className="text-2xl drop-shadow-lg">{country?.flag}</span>
-          </div>
-          
-          {/* Price Badge */}
-          <div className="absolute top-3 right-3">
-            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${priceInfo.color}`}>
-              {priceInfo.label}
-            </span>
-          </div>
-          
-          {/* Course Type */}
-          <div className="absolute bottom-3 left-3">
-            <span className={`px-2 py-1 rounded-lg text-xs font-medium border ${TYPE_COLORS[course.type] || 'bg-surface text-muted border-border'}`}>
-              {course.type.charAt(0).toUpperCase() + course.type.slice(1)}
-            </span>
-          </div>
-          
-          {/* Holes Badge */}
-          <div className="absolute bottom-3 right-3">
-            <span className="px-2 py-1 rounded-lg text-xs font-medium bg-obsidian/50 backdrop-blur text-ice-white">
-              {course.holes} holes
-            </span>
-          </div>
-        </div>
-        
-        <CardContent className="p-4">
-          <h3 className="text-lg font-medium text-ice-white group-hover:text-cyan transition-colors line-clamp-1">
-            {course.name}
-          </h3>
-          <p className="text-sm text-muted mt-1">
-            {course.city}, {course.country}
-          </p>
-          
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            <div className="text-center p-2 rounded-lg bg-graphite">
-              <p className="text-lg font-display font-bold text-cyan">{course.par}</p>
-              <p className="text-xs text-muted">Par</p>
-            </div>
-            {course.courseRating && (
-              <div className="text-center p-2 rounded-lg bg-graphite">
-                <p className="text-lg font-display font-bold text-ice-white">{course.courseRating}</p>
-                <p className="text-xs text-muted">Rating</p>
-              </div>
-            )}
-            {course.slopeRating && (
-              <div className="text-center p-2 rounded-lg bg-graphite">
-                <p className="text-lg font-display font-bold text-ice-white">{course.slopeRating}</p>
-                <p className="text-xs text-muted">Slope</p>
-              </div>
-            )}
-          </div>
-          
-          {/* Facilities Preview */}
-          {course.facilities && course.facilities.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-3">
-              {course.facilities.slice(0, 3).map((facility) => (
-                <span 
-                  key={facility}
-                  className="px-2 py-0.5 rounded text-xs bg-surface text-muted border border-border"
-                >
-                  {facility.replace('_', ' ')}
-                </span>
-              ))}
-              {course.facilities.length > 3 && (
-                <span className="px-2 py-0.5 rounded text-xs bg-surface text-muted border border-border">
-                  +{course.facilities.length - 3}
-                </span>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </button>
-  )
-}
-
-// Shot Planner Component
-function ShotPlanner({ course, onBack }: { course: GolfCourse; onBack: () => void }) {
-  const [selectedHole, setSelectedHole] = useState(1)
-  const [plannedShots, setPlannedShots] = useState<Record<number, { club: string; target: string; notes: string }[]>>({})
-  const [currentClub, setCurrentClub] = useState('')
-  const [currentTarget, setCurrentTarget] = useState('')
-  const [currentNotes, setCurrentNotes] = useState('')
-  
-  const addShot = () => {
-    if (!currentClub) return
-    
-    const shot = { club: currentClub, target: currentTarget, notes: currentNotes }
-    setPlannedShots(prev => ({
-      ...prev,
-      [selectedHole]: [...(prev[selectedHole] || []), shot],
-    }))
-    setCurrentClub('')
-    setCurrentTarget('')
-    setCurrentNotes('')
-  }
-  
-  const removeShot = (holeNum: number, shotIndex: number) => {
-    setPlannedShots(prev => ({
-      ...prev,
-      [holeNum]: (prev[holeNum] || []).filter((_, i) => i !== shotIndex),
-    }))
-  }
-  
-  const holeData = course.holeData?.[selectedHole - 1]
-  const totalPlannedShots = Object.values(plannedShots).reduce((sum, shots) => sum + shots.length, 0)
-  
-  const CLUB_OPTIONS = [
-    'Driver', '3 Wood', '5 Wood', 'Hybrid',
-    '4 Iron', '5 Iron', '6 Iron', '7 Iron', '8 Iron', '9 Iron',
-    'PW', 'GW', 'SW', 'LW', 'Putter',
-  ]
-  
-  const TARGET_OPTIONS = [
-    'Center of fairway', 'Left side fairway', 'Right side fairway',
-    'Center of green', 'Front of green', 'Back of green', 'Left pin', 'Right pin',
-    'Layup area', 'Short of bunker', 'Over bunker',
-  ]
-  
-  return (
-    <div className="fixed inset-0 z-50 bg-obsidian overflow-y-auto">
-      {/* Header */}
-      <div className="sticky top-0 bg-graphite border-b border-border z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={onBack}
-                className="p-2 rounded-lg bg-surface hover:bg-surface/80 transition-colors"
-              >
-                <svg className="w-5 h-5 text-ice-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div>
-                <h1 className="text-xl font-display font-bold text-ice-white">{course.name}</h1>
-                <p className="text-sm text-muted">Shot Planner · Par {course.par}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge variant="cyan" size="lg">{totalPlannedShots} shots planned</Badge>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Hole Selector */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Holes</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="grid grid-cols-6 gap-2">
-                  {Array.from({ length: course.holes }, (_, i) => i + 1).map(hole => {
-                    const hasPlans = (plannedShots[hole] || []).length > 0
-                    return (
-                      <button
-                        key={hole}
-                        onClick={() => setSelectedHole(hole)}
-                        className={`aspect-square rounded-lg text-sm font-medium transition-all relative ${
-                          selectedHole === hole
-                            ? 'bg-cyan text-obsidian'
-                            : hasPlans
-                              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-surface text-muted hover:text-ice-white hover:bg-surface/80'
-                        }`}
-                      >
-                        {hole}
-                        {hasPlans && selectedHole !== hole && (
-                          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400" />
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-                
-                {/* Hole Info */}
-                <div className="mt-4 p-4 rounded-xl bg-graphite border border-border">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-display font-bold text-ice-white">Hole {selectedHole}</h3>
-                    {holeData && (
-                      <Badge variant="default">Par {holeData.par}</Badge>
-                    )}
-                  </div>
-                  
-                  {holeData ? (
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      {holeData.whiteTee && (
-                        <div>
-                          <span className="text-muted">White:</span>
-                          <span className="text-ice-white ml-2">{holeData.whiteTee}m</span>
-                        </div>
-                      )}
-                      {holeData.yellowTee && (
-                        <div>
-                          <span className="text-muted">Yellow:</span>
-                          <span className="text-ice-white ml-2">{holeData.yellowTee}m</span>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-muted">HCP:</span>
-                        <span className="text-ice-white ml-2">{holeData.handicap}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted">Hole data not available</p>
-                  )}
-                </div>
-                
-                {/* Quick Summary */}
-                <div className="mt-4 space-y-2">
-                  <h4 className="text-sm font-medium text-muted">All Planned Shots</h4>
-                  {Object.entries(plannedShots).map(([hole, shots]) => (
-                    shots.length > 0 && (
-                      <div key={hole} className="text-sm flex items-center justify-between">
-                        <span className="text-muted">Hole {hole}</span>
-                        <span className="text-ice-white">{shots.length} shot{shots.length !== 1 ? 's' : ''}</span>
-                      </div>
-                    )
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Shot Planning Area */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Current Hole Shots */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Hole {selectedHole} Strategy</CardTitle>
-                  {holeData && (
-                    <span className="text-lg font-display font-bold text-cyan">Par {holeData.par}</span>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Existing Shots */}
-                {(plannedShots[selectedHole] || []).length > 0 ? (
-                  <div className="space-y-2">
-                    {(plannedShots[selectedHole] || []).map((shot, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-graphite border border-border"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-cyan/20 text-cyan flex items-center justify-center text-sm font-bold">
-                          {idx + 1}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-ice-white font-medium">{shot.club}</p>
-                          <p className="text-sm text-muted">{shot.target || 'No target specified'}</p>
-                          {shot.notes && (
-                            <p className="text-xs text-muted/60 mt-1">📝 {shot.notes}</p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => removeShot(selectedHole, idx)}
-                          className="p-2 text-muted hover:text-red-400 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <span className="text-4xl block mb-2">🏌️</span>
-                    <p className="text-muted">No shots planned yet</p>
-                    <p className="text-sm text-muted/60">Add your strategy below</p>
-                  </div>
-                )}
-                
-                {/* Add Shot Form */}
-                <div className="p-4 rounded-xl bg-graphite border border-border space-y-3">
-                  <h4 className="text-sm font-medium text-ice-white">Add Shot</h4>
-                  
-                  <div className="grid md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-muted mb-1">Club</label>
-                      <select
-                        value={currentClub}
-                        onChange={(e) => setCurrentClub(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-ice-white text-sm focus:border-cyan focus:outline-none"
-                      >
-                        <option value="">Select club...</option>
-                        {CLUB_OPTIONS.map(club => (
-                          <option key={club} value={club}>{club}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-muted mb-1">Target</label>
-                      <select
-                        value={currentTarget}
-                        onChange={(e) => setCurrentTarget(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-ice-white text-sm focus:border-cyan focus:outline-none"
-                      >
-                        <option value="">Select target...</option>
-                        {TARGET_OPTIONS.map(target => (
-                          <option key={target} value={target}>{target}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs text-muted mb-1">Notes (optional)</label>
-                    <input
-                      type="text"
-                      value={currentNotes}
-                      onChange={(e) => setCurrentNotes(e.target.value)}
-                      placeholder="e.g., Avoid water on left"
-                      className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-ice-white text-sm placeholder:text-muted/50 focus:border-cyan focus:outline-none"
-                    />
-                  </div>
-                  
-                  <Button onClick={addShot} disabled={!currentClub} className="w-full">
-                    Add Shot to Strategy
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Strategy Tips */}
-            <Card className="bg-gradient-to-r from-cyan/5 to-emerald-500/5 border-cyan/20">
-              <CardContent className="py-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">💡</span>
-                  <div>
-                    <p className="text-ice-white font-medium">Course Strategy Tip</p>
-                    <p className="text-sm text-muted mt-1">
-                      {holeData?.par === 3 
-                        ? "Par 3: Focus on hitting the green. Check wind direction and club up if needed."
-                        : holeData?.par === 5
-                          ? "Par 5: Consider your layup position for the best angle into the green."
-                          : "Par 4: Find the fairway first. Position yourself for a comfortable approach distance."}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Course Detail Modal
-function CourseDetailModal({ course, onClose, onOpenPlanner }: { course: GolfCourse; onClose: () => void; onOpenPlanner: () => void }) {
-  const { t } = useTranslation()
-  const country = COURSE_COUNTRIES.find(c => c.code === course.countryCode)
-  const priceInfo = PRICE_BADGES[course.priceRange]
-  
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian/80 backdrop-blur-sm overflow-y-auto">
-      <div className="w-full max-w-3xl bg-surface rounded-2xl border border-border shadow-2xl my-8">
-        {/* Hero Header */}
-        <div className={`h-48 relative rounded-t-2xl overflow-hidden ${TYPE_COLORS[course.type]?.replace('text-', 'bg-').replace('-400', '-900/30') || 'bg-graphite'}`}>
-          <div className="absolute inset-0 bg-precision-grid opacity-20" />
-          <div className="absolute inset-0 bg-gradient-to-t from-surface to-transparent" />
-          
-          {/* Close Button */}
-          <button 
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-obsidian/50 backdrop-blur hover:bg-obsidian transition-colors"
-          >
-            <svg className="w-5 h-5 text-ice-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          
-          {/* Country & Price */}
-          <div className="absolute top-4 left-4 flex items-center gap-2">
-            <span className="text-3xl drop-shadow-lg">{country?.flag}</span>
-            <span className={`px-3 py-1 rounded-lg text-sm font-bold ${priceInfo.color}`}>
-              {priceInfo.label}
-            </span>
-          </div>
-          
-          {/* Course Info */}
-          <div className="absolute bottom-4 left-4 right-4">
-            <div className="flex items-end justify-between">
-              <div>
-                <span className={`inline-block px-3 py-1 rounded-lg text-sm font-medium border mb-2 ${TYPE_COLORS[course.type]}`}>
-                  {course.type.charAt(0).toUpperCase() + course.type.slice(1)} Course
-                </span>
-                <h2 className="text-2xl font-display font-bold text-ice-white">{course.name}</h2>
-                <p className="text-muted">{course.city}, {course.region && `${course.region}, `}{course.country}</p>
-              </div>
-              {course.established && (
-                <div className="text-right">
-                  <p className="text-xs text-muted">Est.</p>
-                  <p className="text-xl font-display font-bold text-ice-white">{course.established}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Description */}
-          {course.description && (
-            <p className="text-ice-white leading-relaxed">{course.description}</p>
-          )}
-          
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-graphite border border-border text-center">
-              <p className="text-3xl font-display font-bold text-cyan">{course.par}</p>
-              <p className="text-sm text-muted">Par</p>
-            </div>
-            <div className="p-4 rounded-xl bg-graphite border border-border text-center">
-              <p className="text-3xl font-display font-bold text-ice-white">{course.holes}</p>
-              <p className="text-sm text-muted">Holes</p>
-            </div>
-            {course.courseRating && (
-              <div className="p-4 rounded-xl bg-graphite border border-border text-center">
-                <p className="text-3xl font-display font-bold text-ice-white">{course.courseRating}</p>
-                <p className="text-sm text-muted">Course Rating</p>
-              </div>
-            )}
-            {course.slopeRating && (
-              <div className="p-4 rounded-xl bg-graphite border border-border text-center">
-                <p className="text-3xl font-display font-bold text-ice-white">{course.slopeRating}</p>
-                <p className="text-sm text-muted">Slope</p>
-              </div>
-            )}
-          </div>
-          
-          {/* Length & Designer */}
-          <div className="grid md:grid-cols-2 gap-4">
-            {course.length && (
-              <div className="p-4 rounded-xl bg-graphite border border-border">
-                <p className="text-sm text-muted mb-1">Course Length</p>
-                <p className="text-xl font-medium text-ice-white">
-                  {course.length.toLocaleString()}m / {course.lengthYards?.toLocaleString() || Math.round(course.length * 1.0936).toLocaleString()} yards
-                </p>
-              </div>
-            )}
-            {course.designer && (
-              <div className="p-4 rounded-xl bg-graphite border border-border">
-                <p className="text-sm text-muted mb-1">Course Designer</p>
-                <p className="text-xl font-medium text-ice-white">{course.designer}</p>
-              </div>
-            )}
-          </div>
-          
-          {/* Facilities */}
-          {course.facilities && course.facilities.length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium text-muted mb-3">Facilities</h4>
-              <div className="flex flex-wrap gap-2">
-                {course.facilities.map((facility) => (
-                  <span
-                    key={facility}
-                    className="px-3 py-1.5 rounded-lg text-sm bg-surface border border-border text-ice-white capitalize"
-                  >
-                    {facility.replace(/_/g, ' ')}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Contact & Links */}
-          <div className="flex flex-wrap gap-3 pt-4 border-t border-border">
-            {/* Shot Planner Button */}
-            <button
-              onClick={onOpenPlanner}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-              </svg>
-              Plan Shots
-            </button>
-            {course.website && (
-              <a
-                href={course.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-cyan text-obsidian font-medium hover:bg-cyan/90 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                </svg>
-                Visit Website
-              </a>
-            )}
-            {course.phone && (
-              <a
-                href={`tel:${course.phone}`}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface border border-border text-ice-white hover:border-cyan/30 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                {course.phone}
-              </a>
-            )}
-            <Button variant="secondary" onClick={onClose}>
-              Close
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+type Tab = 'browse' | 'mine'
 
 export default function Courses() {
-  const { t } = useTranslation()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCountry, setSelectedCountry] = useState<string | 'all'>('all')
-  const [selectedType, setSelectedType] = useState<string | 'all'>('all')
-  const [selectedCourse, setSelectedCourse] = useState<GolfCourse | null>(null)
-  const [showPlanner, setShowPlanner] = useState(false)
-  
-  // Filter courses
-  const filteredCourses = useMemo(() => {
-    let courses = searchQuery ? searchCourses(searchQuery) : ALL_COURSES
-    
-    if (selectedCountry !== 'all') {
-      courses = courses.filter(c => c.countryCode === selectedCountry)
+  useTranslation()
+  const [tab, setTab] = useState<Tab>('browse')
+  const [q, setQ] = useState('')
+  const [country, setCountry] = useState<string>('')
+  const [region, setRegion] = useState<string>('')
+  const [type, setType] = useState<string>('')
+  const [drivingRangeOnly, setDrivingRangeOnly] = useState(false)
+  const [holesFilter, setHolesFilter] = useState<string>('')
+
+  // The /regions endpoint defaults to Norway. When the user picks another
+  // country the region picker is hidden, but if the data is needed for that
+  // country we just pass the code through.
+  const regionsCountry = country || 'NO'
+  const regionsQuery = useCourseRegions(regionsCountry)
+  const regions = regionsQuery.data ?? []
+
+  const browse = useCourses({
+    q,
+    country_code: country || undefined,
+    region: region || undefined,
+    course_type: type || undefined,
+    has_driving_range: drivingRangeOnly || undefined,
+    holes_count: holesFilter ? Number(holesFilter) : undefined,
+    limit: 200,
+  })
+  const mine = useCourses({ mine: true, limit: 200 })
+
+  const data = tab === 'browse' ? browse : mine
+  const courses = data.data ?? []
+
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editing, setEditing] = useState<Course | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const importCsv = useImportCoursesCsv()
+  const [importMessage, setImportMessage] = useState<string | null>(null)
+
+  const startCreate = () => {
+    setEditing(null)
+    setEditorOpen(true)
+  }
+
+  const handleFile = async (file: File) => {
+    setImportMessage(null)
+    try {
+      const result = await importCsv.mutateAsync(file)
+      setImportMessage(
+        `Imported ${result.imported} courses${
+          result.skipped ? `, skipped ${result.skipped}` : ''
+        }.`
+      )
+    } catch (e) {
+      setImportMessage(e instanceof Error ? e.message : 'Import failed')
     }
-    
-    if (selectedType !== 'all') {
-      courses = courses.filter(c => c.type === selectedType)
-    }
-    
-    return courses
-  }, [searchQuery, selectedCountry, selectedType])
-  
-  // Stats
-  const norwegianCount = NORWEGIAN_COURSES.length
-  const internationalCount = INTERNATIONAL_COURSES.length
-  
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-display font-bold text-ice-white">
-          {t('courses.title', 'Golf Courses')}
-        </h1>
-        <p className="text-muted mt-1">
-          {ALL_COURSES.length} courses · {norwegianCount} in Norway · {internationalCount} international
-        </p>
-      </div>
-      
-      {/* Featured Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card padding="md" className="text-center">
-          <p className="text-3xl font-display font-bold text-cyan">{norwegianCount}</p>
-          <p className="text-sm text-muted">🇳🇴 Norwegian</p>
-        </Card>
-        <Card padding="md" className="text-center">
-          <p className="text-3xl font-display font-bold text-ice-white">{internationalCount}</p>
-          <p className="text-sm text-muted">🌍 International</p>
-        </Card>
-        <Card padding="md" className="text-center">
-          <p className="text-3xl font-display font-bold text-ice-white">
-            {ALL_COURSES.filter(c => c.type === 'links').length}
+      <header className="border-b border-line-strong pb-6 flex items-end justify-between gap-6 flex-wrap">
+        <div>
+          <div className="micro mb-3">PLAY › COURSES</div>
+          <h1 className="display text-[64px] m-0">
+            The <em>library.</em>
+          </h1>
+          <p className="text-body text-ink-2 mt-3 max-w-2xl">
+            Verified slope, course rating, and hole layouts. Add a course manually,
+            upload a CSV, or favorite catalog courses to plan rounds.
           </p>
-          <p className="text-sm text-muted">Links Courses</p>
-        </Card>
-        <Card padding="md" className="text-center">
-          <p className="text-3xl font-display font-bold text-ice-white">
-            {ALL_COURSES.filter(c => c.priceRange === 'luxury').length}
-          </p>
-          <p className="text-sm text-muted">Bucket List</p>
-        </Card>
-      </div>
-      
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Search courses, cities, countries..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <div className="flex gap-4">
-              <Select
-                value={selectedCountry}
-                onChange={(e) => setSelectedCountry(e.target.value)}
-                className="w-40"
-              >
-                <option value="all">All Countries</option>
-                {COURSE_COUNTRIES.map(country => (
-                  <option key={country.code} value={country.code}>
-                    {country.flag} {country.name}
-                  </option>
-                ))}
-              </Select>
-              <Select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="w-36"
-              >
-                <option value="all">All Types</option>
-                <option value="links">Links</option>
-                <option value="parkland">Parkland</option>
-                <option value="heathland">Heathland</option>
-                <option value="desert">Desert</option>
-                <option value="mountain">Mountain</option>
-                <option value="resort">Resort</option>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Results Count */}
-      <div className="flex items-center justify-between">
-        <p className="text-muted">
-          Showing {filteredCourses.length} course{filteredCourses.length !== 1 ? 's' : ''}
-        </p>
-        {(searchQuery || selectedCountry !== 'all' || selectedType !== 'all') && (
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => {
-              setSearchQuery('')
-              setSelectedCountry('all')
-              setSelectedType('all')
-            }}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={startCreate}
+            className="bg-accent text-accent-ink px-4 py-2.5 mono text-[11px] uppercase tracking-micro hover:bg-accent-2"
           >
-            Clear Filters
-          </Button>
+            + ADD COURSE
+          </button>
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={importCsv.isPending}
+            className="bg-transparent text-ink border border-line-strong px-4 py-2.5 mono text-[11px] uppercase tracking-micro hover:border-accent-fg hover:text-accent-fg disabled:opacity-50"
+          >
+            {importCsv.isPending ? 'UPLOADING…' : 'IMPORT CSV'}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,.txt"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleFile(f)
+              e.currentTarget.value = ''
+            }}
+          />
+        </div>
+      </header>
+
+      {importMessage && (
+        <div className="border border-line-strong px-4 py-2.5 mono text-[11px] text-accent-fg">
+          {importMessage}
+        </div>
+      )}
+
+      <div className="flex border border-line-strong w-fit">
+        {([['browse', 'BROWSE CATALOG'], ['mine', 'MY COURSES']] as const).map(
+          ([id, label], i) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`mono text-[10px] uppercase tracking-micro px-4 py-2 transition-colors ${
+                i === 0 ? 'border-r border-line-strong' : ''
+              } ${tab === id ? 'ui-selected' : 'text-ink-3 hover:text-ink hover:bg-bg-2'}`}
+            >
+              {label}
+            </button>
+          )
         )}
       </div>
-      
-      {/* Courses Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredCourses.map((course) => (
-          <CourseCard 
-            key={course.id} 
-            course={course}
-            onClick={() => setSelectedCourse(course)}
+
+      <Panel id="SRCH" title="FILTERS">
+        <div className="grid lg:grid-cols-3 gap-3">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by name, city, region…"
+            className="bg-bg-2 border border-line-strong text-ink px-4 py-2.5 mono text-[12px] focus:border-accent-fg focus:outline-none"
           />
-        ))}
-      </div>
-      
-      {/* Empty State */}
-      {filteredCourses.length === 0 && (
-        <Card className="py-12 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-surface flex items-center justify-center">
-            <svg className="w-8 h-8 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
+          <select
+            value={country}
+            onChange={(e) => {
+              setCountry(e.target.value)
+              setRegion('')
+            }}
+            className="bg-bg-2 border border-line-strong text-ink px-4 py-2.5 mono text-[12px] focus:border-accent-fg focus:outline-none"
+          >
+            <option value="">ANY COUNTRY</option>
+            <option value="NO">Norway</option>
+            <option value="GB">United Kingdom</option>
+            <option value="US">United States</option>
+            <option value="IE">Ireland</option>
+            <option value="ES">Spain</option>
+            <option value="SE">Sweden</option>
+            <option value="AE">United Arab Emirates</option>
+          </select>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="bg-bg-2 border border-line-strong text-ink px-4 py-2.5 mono text-[12px] focus:border-accent-fg focus:outline-none"
+          >
+            <option value="">ANY TYPE</option>
+            <option value="parkland">Parkland</option>
+            <option value="links">Links</option>
+            <option value="heathland">Heathland</option>
+            <option value="desert">Desert</option>
+            <option value="mountain">Mountain</option>
+            <option value="resort">Resort</option>
+            <option value="range">Driving Range</option>
+          </select>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-3 mt-3">
+          {(country === 'NO' || country === '') && regions.length > 0 ? (
+            <select
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              className="bg-bg-2 border border-line-strong text-ink px-4 py-2.5 mono text-[12px] focus:border-accent-fg focus:outline-none"
+            >
+              <option value="">ANY REGION (NO)</option>
+              {regions.map((r) => (
+                <option key={r.region} value={r.region}>
+                  {r.region.toUpperCase()} · {r.count}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div />
+          )}
+
+          <select
+            value={holesFilter}
+            onChange={(e) => setHolesFilter(e.target.value)}
+            className="bg-bg-2 border border-line-strong text-ink px-4 py-2.5 mono text-[12px] focus:border-accent-fg focus:outline-none"
+          >
+            <option value="">ANY HOLE COUNT</option>
+            <option value="9">9 holes</option>
+            <option value="18">18 holes</option>
+            <option value="27">27 holes</option>
+          </select>
+
+          <label className="flex items-center gap-3 border border-line-strong px-4 py-2.5 mono text-[11px] uppercase tracking-micro text-ink-2 cursor-pointer hover:border-accent-fg">
+            <input
+              type="checkbox"
+              checked={drivingRangeOnly}
+              onChange={(e) => setDrivingRangeOnly(e.target.checked)}
+              className="accent-accent"
+            />
+            DRIVING RANGE ONLY
+          </label>
+        </div>
+      </Panel>
+
+      <Panel
+        id="LIST"
+        title={tab === 'browse' ? 'CATALOG' : 'YOUR COURSES'}
+        right={
+          <span className="micro">
+            {courses.length} {courses.length === 1 ? 'COURSE' : 'COURSES'}
+          </span>
+        }
+      >
+        {data.isLoading && (
+          <div className="mono text-[11px] text-ink-3">SEARCHING…</div>
+        )}
+        {!data.isLoading && courses.length === 0 && (
+          <div className="py-12 text-center">
+            <div className="display text-[24px]">
+              {tab === 'mine' ? 'No courses yet.' : 'No courses match.'}
+            </div>
+            {tab === 'mine' && (
+              <button
+                onClick={startCreate}
+                className="mt-5 bg-accent text-accent-ink px-5 py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2"
+              >
+                ADD A COURSE →
+              </button>
+            )}
           </div>
-          <p className="text-ice-white font-medium mb-2">No courses found</p>
-          <p className="text-muted">Try adjusting your search or filters</p>
-        </Card>
-      )}
-      
-      {/* Course Detail Modal */}
-      {selectedCourse && !showPlanner && (
-        <CourseDetailModal 
-          course={selectedCourse} 
-          onClose={() => setSelectedCourse(null)}
-          onOpenPlanner={() => setShowPlanner(true)}
-        />
-      )}
-      
-      {/* Shot Planner */}
-      {selectedCourse && showPlanner && (
-        <ShotPlanner
-          course={selectedCourse}
-          onBack={() => setShowPlanner(false)}
-        />
-      )}
+        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {courses.map((c) => (
+            <Link
+              key={c.id}
+              to={`/courses/${c.id}`}
+              className="border border-line-strong p-4 rounded-panel transition-colors hover:border-accent-fg hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-fg block"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <div className="text-[16px] text-ink">{c.name}</div>
+                <div className="flex gap-1.5 flex-wrap justify-end">
+                  {c.is_verified && <Tag tone="accent">VERIFIED</Tag>}
+                  {c.holes_count != null && <Tag>{c.holes_count}H</Tag>}
+                  {c.par != null && <Tag>PAR {c.par}</Tag>}
+                </div>
+              </div>
+              <div className="mono text-[11px] text-ink-3 mt-2 uppercase tracking-micro-tight">
+                {[c.city, c.region, c.country].filter(Boolean).join(' · ') ||
+                  '—'}
+                {c.course_type ? ` · ${c.course_type}` : ''}
+              </div>
+              {(c.has_driving_range ||
+                c.has_practice_area ||
+                c.has_putting_green ||
+                c.has_par3_course ||
+                c.has_simulator) && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {c.has_driving_range && <Tag>RANGE</Tag>}
+                  {c.has_practice_area && <Tag>SHORT GAME</Tag>}
+                  {c.has_putting_green && <Tag>PUTTING</Tag>}
+                  {c.has_par3_course && <Tag>PAR-3</Tag>}
+                  {c.has_simulator && <Tag tone="accent">SIM</Tag>}
+                </div>
+              )}
+              {(c.slope_rating || c.course_rating || c.total_yards) && (
+                <div className="mono text-[11px] text-ink-2 mt-3 flex gap-3">
+                  {c.course_rating != null && (
+                    <span>CR {c.course_rating.toFixed(1)}</span>
+                  )}
+                  {c.slope_rating != null && <span>SLOPE {c.slope_rating}</span>}
+                  {c.total_yards != null && <span>{c.total_yards} YDS</span>}
+                </div>
+              )}
+            </Link>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel id="CSV" title="CSV TEMPLATE">
+        <div className="grid lg:grid-cols-[1fr_auto] gap-4 items-center">
+          <div>
+            <div className="display text-[20px] m-0">
+              Bring your <em>own</em> course list.
+            </div>
+            <p className="text-body text-ink-2 mt-2">
+              Headers (case-insensitive):
+              <span className="mono text-ink ml-2 text-[11px]">
+                name, city, region, country, country_code, course_type, par,
+                holes_count, slope_rating, course_rating, total_yards,
+                total_meters, latitude, longitude, has_driving_range,
+                has_practice_area, has_putting_green, has_par3_course,
+                has_simulator, website, phone, email, designer, established,
+                ngf_club_id, osm_id
+              </span>
+            </p>
+          </div>
+        </div>
+      </Panel>
+
+      <CourseEditor
+        open={editorOpen}
+        course={editing}
+        onClose={() => setEditorOpen(false)}
+      />
     </div>
   )
 }

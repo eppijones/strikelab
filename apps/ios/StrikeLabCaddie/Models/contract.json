@@ -1,0 +1,1040 @@
+{
+  "RoundCreate": {
+    "$defs": {
+      "RoundHole": {
+        "properties": {
+          "fairway_hit": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Fairway Hit"
+          },
+          "green_in_regulation": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Green In Regulation"
+          },
+          "gross_strokes": {
+            "default": 0,
+            "title": "Gross Strokes",
+            "type": "integer"
+          },
+          "handicap_index": {
+            "title": "Handicap Index",
+            "type": "integer"
+          },
+          "hole_number": {
+            "title": "Hole Number",
+            "type": "integer"
+          },
+          "net_strokes": {
+            "default": 0,
+            "title": "Net Strokes",
+            "type": "integer"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "par": {
+            "title": "Par",
+            "type": "integer"
+          },
+          "putts": {
+            "default": 0,
+            "title": "Putts",
+            "type": "integer"
+          },
+          "strokes_received": {
+            "default": 0,
+            "title": "Strokes Received",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hole_number",
+          "par",
+          "handicap_index"
+        ],
+        "title": "RoundHole",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "course_handicap": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Handicap"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "course_name": {
+        "title": "Course Name",
+        "type": "string"
+      },
+      "date": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Date"
+      },
+      "holes": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/RoundHole"
+        },
+        "title": "Holes",
+        "type": "array"
+      },
+      "player_handicap_index": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Player Handicap Index"
+      },
+      "selected_tee": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Selected Tee"
+      },
+      "total_par": {
+        "default": 72,
+        "title": "Total Par",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "course_name"
+    ],
+    "title": "RoundCreate",
+    "type": "object"
+  },
+  "RoundHole": {
+    "properties": {
+      "fairway_hit": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Fairway Hit"
+      },
+      "green_in_regulation": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Green In Regulation"
+      },
+      "gross_strokes": {
+        "default": 0,
+        "title": "Gross Strokes",
+        "type": "integer"
+      },
+      "handicap_index": {
+        "title": "Handicap Index",
+        "type": "integer"
+      },
+      "hole_number": {
+        "title": "Hole Number",
+        "type": "integer"
+      },
+      "net_strokes": {
+        "default": 0,
+        "title": "Net Strokes",
+        "type": "integer"
+      },
+      "notes": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Notes"
+      },
+      "par": {
+        "title": "Par",
+        "type": "integer"
+      },
+      "putts": {
+        "default": 0,
+        "title": "Putts",
+        "type": "integer"
+      },
+      "strokes_received": {
+        "default": 0,
+        "title": "Strokes Received",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "hole_number",
+      "par",
+      "handicap_index"
+    ],
+    "title": "RoundHole",
+    "type": "object"
+  },
+  "RoundResponse": {
+    "properties": {
+      "course_handicap": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Course Handicap"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Course Id"
+      },
+      "course_name": {
+        "title": "Course Name",
+        "type": "string"
+      },
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "current_hole_number": {
+        "title": "Current Hole Number",
+        "type": "integer"
+      },
+      "date": {
+        "format": "date-time",
+        "title": "Date",
+        "type": "string"
+      },
+      "holes": {
+        "anyOf": [
+          {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Holes"
+      },
+      "id": {
+        "format": "uuid",
+        "title": "Id",
+        "type": "string"
+      },
+      "is_complete": {
+        "title": "Is Complete",
+        "type": "boolean"
+      },
+      "player_handicap_index": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Player Handicap Index"
+      },
+      "selected_tee": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Selected Tee"
+      },
+      "total_gross": {
+        "title": "Total Gross",
+        "type": "integer"
+      },
+      "total_net": {
+        "title": "Total Net",
+        "type": "integer"
+      },
+      "total_par": {
+        "title": "Total Par",
+        "type": "integer"
+      },
+      "updated_at": {
+        "format": "date-time",
+        "title": "Updated At",
+        "type": "string"
+      },
+      "user_id": {
+        "format": "uuid",
+        "title": "User Id",
+        "type": "string"
+      },
+      "version": {
+        "default": 1,
+        "title": "Version",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "id",
+      "user_id",
+      "course_id",
+      "course_name",
+      "date",
+      "selected_tee",
+      "is_complete",
+      "current_hole_number",
+      "total_par",
+      "total_gross",
+      "total_net",
+      "holes",
+      "player_handicap_index",
+      "course_handicap",
+      "created_at",
+      "updated_at"
+    ],
+    "title": "RoundResponse",
+    "type": "object"
+  },
+  "RoundShotCreate": {
+    "properties": {
+      "biometric_data": {
+        "anyOf": [
+          {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Biometric Data"
+      },
+      "club": {
+        "title": "Club",
+        "type": "string"
+      },
+      "confidence": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Confidence"
+      },
+      "distance_meters": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Distance Meters"
+      },
+      "distance_yards": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Distance Yards"
+      },
+      "end_lat": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "End Lat"
+      },
+      "end_lon": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "End Lon"
+      },
+      "heart_rate_at_shot": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Heart Rate At Shot"
+      },
+      "heart_rate_variability": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Heart Rate Variability"
+      },
+      "hole_number": {
+        "title": "Hole Number",
+        "type": "integer"
+      },
+      "is_distance_manual": {
+        "default": false,
+        "title": "Is Distance Manual",
+        "type": "boolean"
+      },
+      "is_manual": {
+        "default": false,
+        "title": "Is Manual",
+        "type": "boolean"
+      },
+      "lie_type": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Lie Type"
+      },
+      "miss_direction": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Miss Direction"
+      },
+      "motion_data": {
+        "anyOf": [
+          {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Motion Data"
+      },
+      "outcome": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Outcome"
+      },
+      "shot_context": {
+        "anyOf": [
+          {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Shot Context"
+      },
+      "shot_number": {
+        "title": "Shot Number",
+        "type": "integer"
+      },
+      "start_lat": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Start Lat"
+      },
+      "start_lon": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Start Lon"
+      },
+      "timestamp": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Timestamp"
+      },
+      "weather": {
+        "anyOf": [
+          {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Weather"
+      }
+    },
+    "required": [
+      "hole_number",
+      "shot_number",
+      "club"
+    ],
+    "title": "RoundShotCreate",
+    "type": "object"
+  },
+  "RoundShotResponse": {
+    "properties": {
+      "biometric_data": {
+        "anyOf": [
+          {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Biometric Data"
+      },
+      "club": {
+        "title": "Club",
+        "type": "string"
+      },
+      "confidence": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Confidence"
+      },
+      "created_at": {
+        "format": "date-time",
+        "title": "Created At",
+        "type": "string"
+      },
+      "distance_meters": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Distance Meters"
+      },
+      "distance_yards": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Distance Yards"
+      },
+      "end_lat": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "End Lat"
+      },
+      "end_lon": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "End Lon"
+      },
+      "heart_rate_at_shot": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Heart Rate At Shot"
+      },
+      "heart_rate_variability": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Heart Rate Variability"
+      },
+      "hole_number": {
+        "title": "Hole Number",
+        "type": "integer"
+      },
+      "id": {
+        "format": "uuid",
+        "title": "Id",
+        "type": "string"
+      },
+      "is_distance_manual": {
+        "default": false,
+        "title": "Is Distance Manual",
+        "type": "boolean"
+      },
+      "is_manual": {
+        "default": false,
+        "title": "Is Manual",
+        "type": "boolean"
+      },
+      "lie_type": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Lie Type"
+      },
+      "miss_direction": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Miss Direction"
+      },
+      "motion_data": {
+        "anyOf": [
+          {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Motion Data"
+      },
+      "outcome": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Outcome"
+      },
+      "round_id": {
+        "format": "uuid",
+        "title": "Round Id",
+        "type": "string"
+      },
+      "shot_context": {
+        "anyOf": [
+          {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Shot Context"
+      },
+      "shot_number": {
+        "title": "Shot Number",
+        "type": "integer"
+      },
+      "start_lat": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Start Lat"
+      },
+      "start_lon": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Start Lon"
+      },
+      "timestamp": {
+        "anyOf": [
+          {
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Timestamp"
+      },
+      "weather": {
+        "anyOf": [
+          {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Weather"
+      }
+    },
+    "required": [
+      "hole_number",
+      "shot_number",
+      "club",
+      "id",
+      "round_id",
+      "created_at"
+    ],
+    "title": "RoundShotResponse",
+    "type": "object"
+  },
+  "RoundUpdate": {
+    "$defs": {
+      "RoundHole": {
+        "properties": {
+          "fairway_hit": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Fairway Hit"
+          },
+          "green_in_regulation": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Green In Regulation"
+          },
+          "gross_strokes": {
+            "default": 0,
+            "title": "Gross Strokes",
+            "type": "integer"
+          },
+          "handicap_index": {
+            "title": "Handicap Index",
+            "type": "integer"
+          },
+          "hole_number": {
+            "title": "Hole Number",
+            "type": "integer"
+          },
+          "net_strokes": {
+            "default": 0,
+            "title": "Net Strokes",
+            "type": "integer"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notes"
+          },
+          "par": {
+            "title": "Par",
+            "type": "integer"
+          },
+          "putts": {
+            "default": 0,
+            "title": "Putts",
+            "type": "integer"
+          },
+          "strokes_received": {
+            "default": 0,
+            "title": "Strokes Received",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hole_number",
+          "par",
+          "handicap_index"
+        ],
+        "title": "RoundHole",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "current_hole_number": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Current Hole Number"
+      },
+      "holes": {
+        "anyOf": [
+          {
+            "items": {
+              "$ref": "#/$defs/RoundHole"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Holes"
+      },
+      "is_complete": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Is Complete"
+      },
+      "total_gross": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Total Gross"
+      },
+      "total_net": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Total Net"
+      }
+    },
+    "title": "RoundUpdate",
+    "type": "object"
+  }
+}

@@ -1,3 +1,4 @@
+import { performTokenRefresh } from '@/api/authFetch'
 import { useAuthStore } from '@/stores/authStore'
 import { API_URL } from '@/lib/constants'
 
@@ -19,15 +20,15 @@ class ApiClient {
     const { skipAuth, ...fetchOptions } = options
     const url = `${this.baseUrl}${endpoint}`
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...fetchOptions.headers,
+      ...(fetchOptions.headers as Record<string, string> | undefined),
     }
 
     if (!skipAuth) {
       const token = useAuthStore.getState().accessToken
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+        headers.Authorization = `Bearer ${token}`
       }
     }
 
@@ -36,13 +37,12 @@ class ApiClient {
       headers,
     })
 
-    if (response.status === 401) {
-      // Try to refresh token
-      const refreshed = await this.refreshToken()
+    if (response.status === 401 && useAuthStore.getState().refreshToken) {
+      const refreshed = await performTokenRefresh()
       if (refreshed) {
         // Retry the request
         const newToken = useAuthStore.getState().accessToken
-        headers['Authorization'] = `Bearer ${newToken}`
+        headers.Authorization = `Bearer ${newToken}`
         const retryResponse = await fetch(url, {
           ...fetchOptions,
           headers,
@@ -64,28 +64,7 @@ class ApiClient {
 
     // Handle empty responses
     const text = await response.text()
-    return text ? JSON.parse(text) : null
-  }
-
-  private async refreshToken(): Promise<boolean> {
-    const refreshToken = useAuthStore.getState().refreshToken
-    if (!refreshToken) return false
-
-    try {
-      const response = await fetch(`${this.baseUrl}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      })
-
-      if (!response.ok) return false
-
-      const data = await response.json()
-      useAuthStore.getState().setTokens(data.access_token, data.refresh_token)
-      return true
-    } catch {
-      return false
-    }
+    return (text ? JSON.parse(text) : null) as T
   }
 
   async get<T>(endpoint: string, options?: RequestOptions): Promise<T> {
@@ -147,9 +126,9 @@ class ApiClient {
     }
 
     const token = useAuthStore.getState().accessToken
-    const headers: HeadersInit = {}
+    const headers: Record<string, string> = {}
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`
+      headers.Authorization = `Bearer ${token}`
     }
 
     const response = await fetch(`${this.baseUrl}${endpoint}`, {

@@ -1,0 +1,15 @@
+_archive/
+StrikeLabResearch/
+StrikelabDesign/
+apps/ios/
+apps/watch/
+apps/web/node_modules/
+apps/web/dist/
+apps/api/venv/
+apps/api/.env*
+apps/web/.env*
+**/.DS_Store
+**/__pycache__/
+**/*.pyc
+**/DerivedData/
+**/xcuserdata/

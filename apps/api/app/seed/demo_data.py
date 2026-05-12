@@ -16,10 +16,11 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal, engine, Base
 from app.models import (
     User, Session as SessionModel, Shot, SessionLogTemplate, SessionLog,
-    CoachReport, Course, Drill
+    CoachReport, Drill
 )
 from app.services.auth import hash_password
 from app.seed.templates import get_templates
+from app.seed.catalog import seed_catalog
 
 
 def seed_database():
@@ -32,11 +33,18 @@ def seed_database():
     
     try:
         print("Seeding database...")
-        
+
+        # Always seed the catalog (idempotent — brands, club_models, connectors, courses).
+        catalog_results = seed_catalog(db)
+        print(
+            "Catalog upserted: "
+            + ", ".join(f"{k}={v}" for k, v in catalog_results.items())
+        )
+
         # Check if already seeded
         existing_user = db.query(User).filter(User.email == "demo@strikelab.golf").first()
         if existing_user:
-            print("Database already seeded. Skipping.")
+            print("Demo user exists; catalog is up to date. Skipping demo content.")
             return
         
         # Create demo user
@@ -184,38 +192,8 @@ def seed_database():
         db.add(coach_report)
         print("Created demo coach report")
         
-        # Create demo courses
-        courses = [
-            {
-                "name": "Oslo Golf Club",
-                "city": "Oslo",
-                "country": "Norway",
-                "par": 72,
-                "slope_rating": 131,
-                "course_rating": 72.5,
-            },
-            {
-                "name": "Bogstad GK",
-                "city": "Oslo",
-                "country": "Norway",
-                "par": 72,
-                "slope_rating": 128,
-                "course_rating": 71.8,
-            },
-            {
-                "name": "Holtsmark GK",
-                "city": "Drammen",
-                "country": "Norway",
-                "par": 72,
-                "slope_rating": 125,
-                "course_rating": 70.2,
-            },
-        ]
-        
-        for course_data in courses:
-            course = Course(**course_data)
-            db.add(course)
-        print(f"Created {len(courses)} demo courses")
+        # Courses are now seeded via app.seed.catalog (called above).
+        # Skip the legacy in-line course seed to avoid duplicates.
         
         # Create demo drills
         drills = [

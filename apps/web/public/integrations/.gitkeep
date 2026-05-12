@@ -1,0 +1,10 @@
+# StrikeLab integration asset bay
+
+Drop integration logos here using the connector id, e.g.
+  - trackman.svg
+  - foresight.svg
+  - gspro.svg
+  - garmin.svg
+
+The <ConnectorLogo> component falls back to a clean wordmark in the
+connector's brand color when the asset is missing.

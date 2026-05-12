@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { apiClient } from './client'
-import { useAuthStore } from '@/stores/authStore'
+import { useAuthStore, type Persona } from '@/stores/authStore'
 
 interface LoginRequest {
   email: string
@@ -13,6 +13,8 @@ interface RegisterRequest {
   display_name: string
   language?: string
   units?: string
+  persona?: Persona
+  home_club_id?: string | null
 }
 
 interface AuthResponse {
@@ -27,11 +29,17 @@ interface AuthResponse {
     goal_handicap?: number
     dream_handicap?: number
     practice_frequency?: string
+    persona?: Persona
+    home_club_id?: string | null
     onboarding_completed?: boolean
     language: string
     units: string
     created_at: string
   }
+}
+
+export function mapApiUser(u: AuthResponse['user']) {
+  return mapUser(u)
 }
 
 interface InviteRequest {
@@ -56,6 +64,23 @@ interface Friend {
   status: string
 }
 
+function mapUser(u: AuthResponse['user']) {
+  return {
+    id: u.id,
+    email: u.email,
+    displayName: u.display_name,
+    handicapIndex: u.handicap_index,
+    goalHandicap: u.goal_handicap,
+    dreamHandicap: u.dream_handicap,
+    practiceFrequency: u.practice_frequency,
+    persona: u.persona,
+    homeClubId: u.home_club_id ?? null,
+    onboardingCompleted: u.onboarding_completed,
+    language: u.language,
+    units: u.units,
+  }
+}
+
 export function useLogin() {
   const { setUser, setTokens } = useAuthStore()
 
@@ -70,18 +95,7 @@ export function useLogin() {
     },
     onSuccess: (data) => {
       setTokens(data.access_token, data.refresh_token)
-      setUser({
-        id: data.user.id,
-        email: data.user.email,
-        displayName: data.user.display_name,
-        handicapIndex: data.user.handicap_index,
-        goalHandicap: data.user.goal_handicap,
-        dreamHandicap: data.user.dream_handicap,
-        practiceFrequency: data.user.practice_frequency,
-        onboardingCompleted: data.user.onboarding_completed,
-        language: data.user.language,
-        units: data.user.units,
-      })
+      setUser(mapUser(data.user))
     },
   })
 }
@@ -100,18 +114,7 @@ export function useRegister() {
     },
     onSuccess: (data) => {
       setTokens(data.access_token, data.refresh_token)
-      setUser({
-        id: data.user.id,
-        email: data.user.email,
-        displayName: data.user.display_name,
-        handicapIndex: data.user.handicap_index,
-        goalHandicap: data.user.goal_handicap,
-        dreamHandicap: data.user.dream_handicap,
-        practiceFrequency: data.user.practice_frequency,
-        onboardingCompleted: data.user.onboarding_completed,
-        language: data.user.language,
-        units: data.user.units,
-      })
+      setUser(mapUser(data.user))
     },
   })
 }
@@ -153,12 +156,36 @@ export function useFriends() {
   })
 }
 
+interface CompareSide {
+  id: string
+  display_name: string
+  handicap?: number | null
+  driver_carry?: number | null
+  seven_iron_carry?: number | null
+}
+
+export interface FriendCompareResponse {
+  user: CompareSide
+  friend: CompareSide
+}
+
+export function useFriendCompare(friendId: string | null) {
+  return useQuery({
+    queryKey: ['friend-compare', friendId],
+    queryFn: () =>
+      apiClient.get<FriendCompareResponse>(`/friends/compare/${friendId}`),
+    enabled: !!friendId,
+  })
+}
+
 export interface ProfileUpdate {
   display_name?: string
   handicap_index?: number
   goal_handicap?: number
   dream_handicap?: number
   practice_frequency?: string
+  persona?: Persona
+  home_club_id?: string | null
   onboarding_completed?: boolean
   language?: string
   units?: string
@@ -173,16 +200,7 @@ export function useUpdateProfile() {
       return response
     },
     onSuccess: (data) => {
-      updateUser({
-        displayName: data.display_name,
-        handicapIndex: data.handicap_index,
-        goalHandicap: data.goal_handicap,
-        dreamHandicap: data.dream_handicap,
-        practiceFrequency: data.practice_frequency,
-        onboardingCompleted: data.onboarding_completed,
-        language: data.language,
-        units: data.units,
-      })
+      updateUser(mapUser(data))
     },
   })
 }

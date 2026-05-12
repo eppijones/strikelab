@@ -10,6 +10,8 @@ class UserCreate(BaseModel):
     display_name: str
     language: str = "en"
     units: str = "yards"
+    persona: Optional[str] = None
+    home_club_id: Optional[UUID] = None
 
 
 class UserLogin(BaseModel):
@@ -25,6 +27,8 @@ class UserResponse(BaseModel):
     goal_handicap: Optional[float] = None
     dream_handicap: Optional[float] = None
     practice_frequency: Optional[str] = None
+    persona: Optional[str] = None
+    home_club_id: Optional[UUID] = None
     onboarding_completed: bool = False
     language: str
     units: str
@@ -37,8 +41,14 @@ class UserResponse(BaseModel):
 class UserUpdate(BaseModel):
     display_name: Optional[str] = None
     handicap_index: Optional[float] = None
+    goal_handicap: Optional[float] = None
+    dream_handicap: Optional[float] = None
+    practice_frequency: Optional[str] = None
+    persona: Optional[str] = None
+    home_club_id: Optional[UUID] = None
     language: Optional[str] = None
     units: Optional[str] = None
+    onboarding_completed: Optional[bool] = None
 
 
 class Token(BaseModel):

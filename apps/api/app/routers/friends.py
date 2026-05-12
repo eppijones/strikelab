@@ -4,10 +4,43 @@ from uuid import UUID
 
 from app.database import get_db
 from app.models.user import User, FriendLink
+from app.models.equipment import ClubStats
 from app.schemas.user import FriendResponse
 from app.services.auth import get_current_user
 
 router = APIRouter()
+
+
+def _player_compare_payload(db: Session, user: User) -> dict:
+    """Public-comparison payload for a single user. Real numbers only —
+    if a stat isn't computed yet, the field is `None` so the client can
+    render an honest empty cell instead of a fabricated number.
+    """
+    driver = (
+        db.query(ClubStats)
+        .filter(
+            ClubStats.user_id == user.id,
+            ClubStats.club_label.ilike("%driver%"),
+        )
+        .order_by(ClubStats.last_updated.desc())
+        .first()
+    )
+    seven = (
+        db.query(ClubStats)
+        .filter(
+            ClubStats.user_id == user.id,
+            ClubStats.club_label.in_(["7i", "7 Iron", "7iron", "7-Iron"]),
+        )
+        .order_by(ClubStats.last_updated.desc())
+        .first()
+    )
+    return {
+        "id": str(user.id),
+        "display_name": user.display_name,
+        "handicap": user.handicap_index,
+        "driver_carry": driver.avg_carry if driver else None,
+        "seven_iron_carry": seven.avg_carry if seven else None,
+    }
 
 
 @router.get("", response_model=list[FriendResponse])
@@ -63,33 +96,27 @@ def compare_with_friend(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Verify friendship
+    """Side-by-side compare for the Home and Friends pages.
+
+    Returns real data only — handicap from the user record and
+    average carry pulled from `club_stats`. Fields are `None` when
+    the corresponding stat hasn't been computed yet, so the UI can
+    render an empty cell instead of a fabricated number.
+    """
     friend_link = db.query(FriendLink).filter(
         FriendLink.user_id == current_user.id,
         FriendLink.friend_id == friend_id,
-        FriendLink.status == "accepted"
+        FriendLink.status == "accepted",
     ).first()
-    
+
     if not friend_link:
         raise HTTPException(status_code=404, detail="Friend not found")
-    
+
     friend = db.query(User).filter(User.id == friend_id).first()
-    
-    # Get comparison metrics (stub)
-    # In real implementation, would aggregate from MetricSnapshots
+    if not friend:
+        raise HTTPException(status_code=404, detail="Friend not found")
+
     return {
-        "user": {
-            "display_name": current_user.display_name,
-            "handicap": current_user.handicap_index,
-            "strike_score": 78,  # Stub data
-            "driver_carry": 245,
-            "seven_iron_carry": 165,
-        },
-        "friend": {
-            "display_name": friend.display_name,
-            "handicap": friend.handicap_index,
-            "strike_score": 82,  # Stub data
-            "driver_carry": 252,
-            "seven_iron_carry": 172,
-        },
+        "user": _player_compare_payload(db, current_user),
+        "friend": _player_compare_payload(db, friend),
     }

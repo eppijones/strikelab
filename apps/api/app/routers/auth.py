@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import secrets
@@ -9,6 +9,7 @@ from app.schemas.user import (
     UserCreate,
     UserLogin,
     UserResponse,
+    UserUpdate,
     Token,
     TokenRefresh,
     InviteCreate,
@@ -26,8 +27,25 @@ from app.services.auth import (
 router = APIRouter()
 
 
+def _language_from_accept_header(accept: str | None, fallback: str = "en") -> str:
+    """Pick a sane default language from the Accept-Language header.
+
+    Anything that resolves to Norwegian (nb / nn / no) → `no`. Otherwise
+    fall back to English. Used at registration time so a Norwegian
+    visitor doesn't have to flip a setting before reading the app.
+    """
+    if not accept:
+        return fallback
+    primary = accept.split(",", 1)[0].strip().lower()
+    if primary.startswith("nb") or primary.startswith("nn") or primary.startswith("no"):
+        return "no"
+    if primary.startswith("en"):
+        return "en"
+    return fallback
+
+
 @router.post("/register", response_model=Token)
-def register(data: UserCreate, db: Session = Depends(get_db)):
+def register(data: UserCreate, request: Request, db: Session = Depends(get_db)):
     # Check if email exists
     existing = db.query(User).filter(User.email == data.email).first()
     if existing:
@@ -35,14 +53,23 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
-    
+
+    # Geo-default language: if the client didn't explicitly pass `language`
+    # (or passed the schema default "en"), peek at Accept-Language so a
+    # Norwegian visitor lands in Norwegian without flipping a switch.
+    language = data.language
+    if language == "en":
+        language = _language_from_accept_header(request.headers.get("accept-language"), "en")
+
     # Create user
     user = User(
         email=data.email,
         password_hash=hash_password(data.password),
         display_name=data.display_name,
-        language=data.language,
+        language=language,
         units=data.units,
+        persona=data.persona or "improver",
+        home_club_id=data.home_club_id,
     )
     db.add(user)
     db.commit()
@@ -179,21 +206,17 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 @router.patch("/me", response_model=UserResponse)
 def update_me(
-    data: dict,
+    data: UserUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Update current user's profile."""
-    allowed_fields = {
-        "display_name", "handicap_index", "language", "units",
-        "goal_handicap", "dream_handicap", "practice_frequency", "onboarding_completed"
-    }
-    
-    for key, value in data.items():
-        if key in allowed_fields and hasattr(current_user, key):
+    payload = data.model_dump(exclude_unset=True)
+    for key, value in payload.items():
+        if hasattr(current_user, key):
             setattr(current_user, key, value)
-    
+
     db.commit()
     db.refresh(current_user)
-    
+
     return UserResponse.model_validate(current_user)

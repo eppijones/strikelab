@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>tee. — Norway's golf booking, reimagined</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&family=Geist:wght@300..600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #E8E2D2; }
+  body {
+    font-family: 'Geist', -apple-system, system-ui, sans-serif;
+    color: #0E1410;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  ::-webkit-scrollbar { display: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="data.js"></script>
+<script type="text/babel" src="frames/ios-frame.jsx"></script>
+<script type="text/babel" src="frames/design-canvas.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="screens-discover.jsx"></script>
+<script type="text/babel" src="screens-course.jsx"></script>
+<script type="text/babel" src="screens-window.jsx"></script>
+<script type="text/babel" src="screens-group-pay-pass.jsx"></script>
+
+<script type="text/babel">
+
+// ─────────────────────────────────────────────────────────────
+// Wrap each screen in an iOS device with the canvas + a simple
+// shared lang state so the user can flip every screen between
+// Norwegian and English at once.
+// ─────────────────────────────────────────────────────────────
+
+function Phone({ children }) {
+  return (
+    <div style={{ position:'relative' }}>
+      <IOSDevice width={402} height={874}>
+        {children}
+      </IOSDevice>
+    </div>
+  );
+}
+
+function App() {
+  const [lang, setLang] = React.useState('no');
+  const t = (k) => TEE_DATA.i18n[lang][k] || k;
+
+  const langProps = { lang, setLang };
+
+  return (
+    <DesignCanvas>
+
+      <DCSection id="hero" title="tee."
+        subtitle={lang==='no'
+          ? 'Bestillingsopplevelsen for golf i Norge — gjenoppfunnet.'
+          : "Norway's golf booking experience, reimagined."}>
+      </DCSection>
+
+      <DCSection id="flow"
+        title={lang==='no' ? 'Hovedflyten' : 'The core flow'}
+        subtitle={lang==='no'
+          ? 'Fra oppdag til avspark — fem skjermer.'
+          : 'From discover to first tee — five screens.'}>
+
+        <DCArtboard id="discover" label={lang==='no'?'1 · Oppdag':'1 · Discover'} width={402} height={874}>
+          <Phone><DiscoverScreen {...langProps}/></Phone>
+        </DCArtboard>
+
+        <DCArtboard id="course" label={lang==='no'?'2 · Banen':'2 · Course'} width={402} height={874}>
+          <Phone><CourseScreen courseId="miklagard" {...langProps}/></Phone>
+        </DCArtboard>
+
+        <DCArtboard id="window" label={lang==='no'?'3 · Vinduet':'3 · The Window'} width={402} height={874}>
+          <Phone><WindowScreen courseId="miklagard" {...langProps}/></Phone>
+        </DCArtboard>
+
+        <DCArtboard id="group" label={lang==='no'?'4 · Gruppen':'4 · Group'} width={402} height={874}>
+          <Phone><GroupScreen courseId="miklagard" {...langProps}/></Phone>
+        </DCArtboard>
+
+        <DCArtboard id="pay" label={lang==='no'?'5 · Betal':'5 · Pay'} width={402} height={874}>
+          <Phone><PayScreen courseId="miklagard" {...langProps}/></Phone>
+        </DCArtboard>
+
+        <DCArtboard id="pass" label={lang==='no'?'6 · Passet':'6 · The Pass'} width={402} height={874}>
+          <Phone><PassScreen courseId="miklagard" {...langProps}/></Phone>
+        </DCArtboard>
+
+      </DCSection>
+
+      <DCSection id="alt-courses"
+        title={lang==='no'?'Bane-varianter':'Course variants'}
+        subtitle={lang==='no'
+          ? 'Samme app, ulik bane-DNA — kysten, parkland, innlandet.'
+          : 'Same app, different course DNA — coastal, parkland, inland.'}>
+
+        <DCArtboard id="course-larvik" label={lang==='no'?'Larvik · kyst':'Larvik · coast'} width={402} height={874}>
+          <Phone><CourseScreen courseId="larvik" {...langProps}/></Phone>
+        </DCArtboard>
+
+        <DCArtboard id="course-losby" label={lang==='no'?'Losby · parkland':'Losby · parkland'} width={402} height={874}>
+          <Phone><CourseScreen courseId="losby" {...langProps}/></Phone>
+        </DCArtboard>
+
+        <DCArtboard id="window-larvik" label={lang==='no'?'Vinduet · Larvik':'Window · Larvik'} width={402} height={874}>
+          <Phone><WindowScreen courseId="larvik" {...langProps}/></Phone>
+        </DCArtboard>
+
+      </DCSection>
+
+      <DCSection id="readme"
+        title={lang==='no' ? 'Designnotater' : 'Design notes'}
+        subtitle={lang==='no' ? 'Hvorfor det er bygget slik.' : 'Why it works this way.'}>
+        <DCArtboard id="notes" label={lang==='no'?'Tese':'Thesis'} width={520} height={620}>
+          <DesignNotes lang={lang} setLang={setLang}/>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+function DesignNotes({ lang, setLang }) {
+  const t = (k) => TEE_DATA.i18n[lang][k] || k;
+  const items = lang === 'no' ? [
+    { h: 'Banen som sted', p: 'Hver bane vises som et sted med eget landskap, ikke som en rad i et regneark. Hero-bildet, signaturhullet og forholdene gjør at man kan velge bane på samme måte som man velger restaurant.' },
+    { h: 'Vinduet', p: 'Dagen vises som et landskap. Vertikal sol-gradient + vindlinje + slot-chips. Et "perfekt vindu" er fremhevet — kombinasjon av sol, vind, og ledige plasser. Du velger ikke et tidspunkt, du velger et øyeblikk.' },
+    { h: 'Norsk først', p: 'Vipps som standard. Norske klubbnavn, soltider for høy nordlig breddegrad, og redaksjonell typografi som matcher den nordiske design-tradisjonen.' },
+    { h: 'Gruppe som ritual', p: 'Fire spiller-plasser, hcp synlig, betal samlet eller hver for seg. Inviter via lenke — fjerner friksjonen som finnes i dagens systemer.' },
+    { h: 'Passet', p: 'På spilledagen blir bestillingen et editorial pass: stor tid, nedtelling, vær på akkurat det tidspunktet, QR for proshop, Apple Wallet.' },
+  ] : [
+    { h: 'Course as place', p: 'Each course is presented as a place with its own landscape, not a row in a spreadsheet. Hero photography, signature hole, and live conditions let you pick a course the way you pick a restaurant.' },
+    { h: 'The Window', p: 'The day is rendered as a landscape — vertical sun gradient, wind ribbon, slot chips placed by hour. A "perfect window" is highlighted: sun + calm + availability. You don\'t pick a time, you pick a moment.' },
+    { h: 'Norway-first', p: 'Vipps by default. Real Norwegian clubs, sun times tuned for high latitude (golden hour at 19:50, sunset 21:12 in June), editorial type to match Nordic design tradition.' },
+    { h: 'Group as ritual', p: 'Four player slots, handicaps visible, pay together or split. Invite via link — gone is the friction of today\'s tee systems.' },
+    { h: 'The Pass', p: 'On gameday the booking becomes an editorial mobile pass: big time, countdown, weather at the exact tee time, pro-shop QR, Apple Wallet.' },
+  ];
+  return (
+    <div style={{
+      width: '100%', height: '100%', overflow:'auto',
+      background: TEE.paper, padding: 28,
+      fontFamily: FONT_UI, color: TEE.ink,
+    }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 24 }}>
+        <BrandMark size={26}/>
+        <LangToggle lang={lang} setLang={setLang}/>
+      </div>
+      <h1 style={{
+        fontFamily: FONT_DISPLAY, fontSize: 36, fontWeight: 400,
+        letterSpacing: -1, lineHeight: 1, margin: 0,
+      }}>
+        {lang==='no'
+          ? <>Tee-tid, <span style={{ fontStyle:'italic', color: TEE.moss }}>som reise</span>.</>
+          : <>Tee time, <span style={{ fontStyle:'italic', color: TEE.moss }}>like travel</span>.</>}
+      </h1>
+      <p style={{ fontFamily: FONT_DISPLAY, fontSize: 16, color: TEE.ink2, lineHeight: 1.45, marginTop: 14, fontStyle:'italic' }}>
+        {lang==='no'
+          ? '"Vi behandler tee-tid som en flyplass-bestilling. Det burde behandles som en restaurantkveld."'
+          : '"We treat tee time like an airport booking. It should feel like dinner at a restaurant."'}
+      </p>
+      <div style={{
+        marginTop: 26, display:'grid', gap: 18, gridTemplateColumns:'1fr',
+      }}>
+        {items.map((x, i) => (
+          <div key={i} style={{
+            paddingTop: 14, borderTop: `1px solid ${TEE.hairline2}`,
+          }}>
+            <div style={{ fontFamily: FONT_UI, fontSize: 10.5, letterSpacing: 0.8, textTransform:'uppercase', color: TEE.graphite, marginBottom: 6 }}>
+              {String(i+1).padStart(2,'0')}
+            </div>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 19, fontWeight: 500, letterSpacing: -0.3, color: TEE.ink }}>{x.h}</div>
+            <div style={{ fontFamily: FONT_UI, fontSize: 13, color: TEE.ink2, marginTop: 6, lineHeight: 1.5 }}>{x.p}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

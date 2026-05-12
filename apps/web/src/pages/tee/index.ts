@@ -1,0 +1,7 @@
+export { default as TeeDiscover } from './Discover'
+export { default as TeeCourseHero } from './CourseHero'
+export { default as TeeSheet } from './TeeSheet'
+export { default as TeeGroup } from './Group'
+export { default as TeePay } from './Pay'
+export { default as TeePass } from './Pass'
+export { default as TeePreferences } from './Preferences'

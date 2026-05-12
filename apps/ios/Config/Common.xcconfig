@@ -1,0 +1,19 @@
+// Common build settings shared by Debug + Release.
+// Pull in Local.xcconfig (gitignored) for per-developer overrides
+// such as DEV_HOST. See apps/ios/Config/Local.xcconfig.sample.
+#include? "Local.xcconfig"
+
+// `//` is parsed as a comment delimiter inside xcconfig values, so
+// embed the URL scheme with the `$()` placeholder trick.
+URL_SCHEME_HTTP  = http:/$()/
+URL_SCHEME_HTTPS = https:/$()/
+
+// Default LAN host for iOS device dev. Override per-developer in
+// Local.xcconfig (e.g. DEV_HOST = 192.168.1.42) when running the
+// FastAPI backend on your Mac and pointing the iPhone at it over
+// Wi-Fi. `localhost` only works in the simulator.
+DEV_HOST = localhost
+
+// Public Clerk key for the StrikeLab mobile app. Override in
+// Local.xcconfig if the Clerk instance changes.
+CLERK_PUBLISHABLE_KEY = pk_test_c291Z2h0LW1pbm5vdy04Ni5jbGVyay5hY2NvdW50cy5kZXYk

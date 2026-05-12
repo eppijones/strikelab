@@ -67,3 +67,21 @@ media/
 
 # Alembic
 alembic/versions/__pycache__/
+
+# StrikeLab archive (kept locally for reference, not for the repo)
+_archive/
+
+# Xcode
+*.xcuserstate
+DerivedData/
+xcuserdata/
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+.swiftpm/
+
+# Per-developer xcconfig overrides (DEV_HOST, etc.)
+apps/ios/Config/Local.xcconfig
+
+# pnpm
+.pnpm-debug.log*
+
+.vercel

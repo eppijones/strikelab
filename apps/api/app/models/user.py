@@ -11,15 +11,31 @@ class User(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=False)
+    clerk_user_id = Column(String(128), unique=True, nullable=True, index=True)
+    password_hash = Column(String(255), nullable=True)
     display_name = Column(String(100), nullable=False)
     handicap_index = Column(Float, nullable=True)
     goal_handicap = Column(Float, nullable=True)  # Season target handicap
     dream_handicap = Column(Float, nullable=True)  # Long-term milestone goal (e.g., scratch)
     practice_frequency = Column(String(20), nullable=True)  # daily, weekly, 2-3x_week, occasional
+    # Persona drives the entire UX: beginner = lean, improver = balanced,
+    # performance = full cockpit. Defaults to `improver` so existing
+    # users who haven't picked one still see a useful, non-empty home.
+    persona = Column(String(20), nullable=True, default="improver")
+    # Home club is the player's primary course. Drives onboarding,
+    # nav eyebrow ("Alenda GC · Live"), and Phase 3 white-labeled
+    # clubhouse skinning.
+    home_club_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=True)
     onboarding_completed = Column(Boolean, default=False)
     language = Column(String(5), default="en")
     units = Column(String(10), default="yards")  # yards or meters
+
+    # Norway / WHS — populated by manual entry today, partnership-fed later.
+    ngf_member_id = Column(String(40), nullable=True)
+    whs_handicap = Column(Float, nullable=True)
+    home_lat = Column(Float, nullable=True)
+    home_lon = Column(Float, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -46,6 +62,12 @@ class User(Base):
     
     # Equipment
     bags = relationship("UserBag", back_populates="user", cascade="all, delete-orphan")
+
+    range_sessions = relationship(
+        "RangeSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class FriendLink(Base):

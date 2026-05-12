@@ -26,13 +26,23 @@ export function AICoachOverlay({ isOpen, onClose, context }: AICoachOverlayProps
 
   const handleSend = () => {
     if (!inputValue.trim()) return
-    const newMessages = [...messages, { role: 'user', content: inputValue }]
+    const newMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [
+      ...messages,
+      { role: 'user', content: inputValue },
+    ]
     setMessages(newMessages)
     setInputValue('')
-    
+
     // Simple mock response
     setTimeout(() => {
-      setMessages([...newMessages, { role: 'assistant', content: "I'm analyzing that for you. Based on your strike pattern, focusing on your tempo might yield the quickest results." }])
+      setMessages([
+        ...newMessages,
+        {
+          role: 'assistant',
+          content:
+            "I'm analyzing that for you. Based on your strike pattern, focusing on your tempo might yield the quickest results.",
+        },
+      ])
     }, 1000)
   }
 
