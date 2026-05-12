@@ -12,24 +12,55 @@ export default function Login() {
   const { signIn, setActive, isLoaded } = useSignIn()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
+  const [needsVerification, setNeedsVerification] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+
+  async function completeSignIn(result: { status: string | null; createdSessionId: string | null }) {
+    if (result.status === 'complete' && result.createdSessionId && setActive) {
+      await setActive({ session: result.createdSessionId })
+      navigate('/')
+      return true
+    }
+    return false
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setErr(null)
     try {
       if (signIn && isLoaded) {
+        if (needsVerification) {
+          const result = await signIn.attemptSecondFactor({
+            strategy: 'email_code',
+            code: verificationCode,
+          })
+          if (await completeSignIn(result)) return
+          throw new Error('Verification failed. Check the code and try again.')
+        }
+
         const result = await signIn.create({
           strategy: 'password',
           identifier: email,
           password,
         })
-        if (result.status === 'complete' && result.createdSessionId) {
-          await setActive({ session: result.createdSessionId })
-          navigate('/')
-          return
+        if (await completeSignIn(result)) return
+
+        if (result.status === 'needs_second_factor') {
+          const emailFactor = result.supportedSecondFactors?.find(
+            (factor) => factor.strategy === 'email_code'
+          )
+          if (emailFactor?.strategy === 'email_code') {
+            await signIn.prepareSecondFactor({
+              strategy: 'email_code',
+              emailAddressId: emailFactor.emailAddressId,
+            })
+            setNeedsVerification(true)
+            setErr('Check your email for a verification code.')
+            return
+          }
         }
-        throw new Error('Additional verification is required. Finish it in Clerk, then try again.')
+        throw new Error('Additional verification is required, but no email-code factor was available.')
       }
       await login.mutateAsync({ email, password })
       navigate('/')
@@ -53,7 +84,7 @@ export default function Login() {
 
         <Panel id="AUTH" title="SIGN IN">
           <form onSubmit={onSubmit} className="space-y-4">
-            <div>
+            {!needsVerification && <div>
               <label className="micro block mb-2">{t('auth.email').toUpperCase()}</label>
               <input
                 type="email"
@@ -63,8 +94,8 @@ export default function Login() {
                 className="w-full bg-bg-2 border border-line-strong text-ink px-4 py-3 mono text-[13px] focus:border-accent-fg focus:outline-none"
                 placeholder="you@strikelab.golf"
               />
-            </div>
-            <div>
+            </div>}
+            {!needsVerification && <div>
               <label className="micro block mb-2">{t('auth.password').toUpperCase()}</label>
               <input
                 type="password"
@@ -74,7 +105,20 @@ export default function Login() {
                 className="w-full bg-bg-2 border border-line-strong text-ink px-4 py-3 mono text-[13px] focus:border-accent-fg focus:outline-none"
                 placeholder="••••••••"
               />
-            </div>
+            </div>}
+            {needsVerification && (
+              <div>
+                <label className="micro block mb-2">VERIFICATION CODE</label>
+                <input
+                  type="text"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  required
+                  className="w-full bg-bg-2 border border-line-strong text-ink px-4 py-3 mono text-[13px] focus:border-accent-fg focus:outline-none"
+                  placeholder="123456"
+                />
+              </div>
+            )}
 
             {err && <div className="mono text-[11px] text-bad">{err.toUpperCase()}</div>}
 
@@ -83,7 +127,7 @@ export default function Login() {
               disabled={login.isPending || (isLoaded && !signIn)}
               className="w-full bg-accent text-accent-ink py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2 disabled:opacity-50"
             >
-              {login.isPending ? t('auth.signingIn') : t('auth.login')}
+              {login.isPending ? t('auth.signingIn') : needsVerification ? 'VERIFY' : t('auth.login')}
             </button>
           </form>
         </Panel>
