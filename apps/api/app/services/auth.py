@@ -135,6 +135,99 @@ def _display_name_from_clerk_claims(payload: dict, email: str | None) -> str:
     return email.split("@", 1)[0] if email else "StrikeLab Player"
 
 
+def _clerk_user_profile(clerk_user_id: str) -> dict:
+    if not settings.clerk_secret_key:
+        return {}
+    try:
+        response = httpx.get(
+            f"https://api.clerk.com/v1/users/{clerk_user_id}",
+            headers={"Authorization": f"Bearer {settings.clerk_secret_key}"},
+            timeout=5.0,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _email_from_clerk_profile(profile: dict) -> str | None:
+    primary_id = profile.get("primary_email_address_id")
+    addresses = profile.get("email_addresses")
+    if not isinstance(addresses, list):
+        return None
+
+    primary_address = None
+    fallback_address = None
+    for address in addresses:
+        if not isinstance(address, dict):
+            continue
+        email = address.get("email_address")
+        if not isinstance(email, str) or not email:
+            continue
+        fallback_address = fallback_address or email.lower()
+        if address.get("id") == primary_id:
+            primary_address = email.lower()
+
+    return primary_address or fallback_address
+
+
+def _display_name_from_clerk_profile(profile: dict, email: str | None) -> str:
+    first_name = profile.get("first_name")
+    last_name = profile.get("last_name")
+    full_name = " ".join(
+        part.strip() for part in (first_name, last_name) if isinstance(part, str) and part.strip()
+    )
+    if full_name:
+        return full_name
+
+    username = profile.get("username")
+    if isinstance(username, str) and username.strip():
+        return username.strip()
+
+    return email.split("@", 1)[0] if email else "StrikeLab Player"
+
+
+def _is_clerk_placeholder(value: str | None, clerk_user_id: str) -> bool:
+    if not value:
+        return True
+    normalized = value.strip().lower()
+    return normalized == clerk_user_id.lower() or normalized.startswith("user_")
+
+
+def _sync_clerk_profile(user: User, payload: dict, db: Session) -> User:
+    clerk_user_id = str(payload.get("sub"))
+    profile = _clerk_user_profile(clerk_user_id)
+    profile_email = _email_from_clerk_profile(profile)
+    token_email = _email_from_clerk_claims(payload)
+    email = profile_email or token_email
+    display_name = (
+        _display_name_from_clerk_profile(profile, email)
+        if profile
+        else _display_name_from_clerk_claims(payload, email)
+    )
+
+    changed = False
+    if email and (
+        not user.email
+        or user.email.endswith("@clerk.strikelab.local")
+        or user.email.startswith("user_")
+    ):
+        existing = db.query(User).filter(User.email == email, User.id != user.id).first()
+        if existing is None:
+            user.email = email
+            changed = True
+
+    if _is_clerk_placeholder(user.display_name, clerk_user_id) and display_name:
+        user.display_name = display_name
+        changed = True
+
+    if changed:
+        db.commit()
+        db.refresh(user)
+    return user
+
+
 def _get_or_create_clerk_user(payload: dict, db: Session) -> User:
     clerk_user_id = payload.get("sub")
     if not clerk_user_id:
@@ -142,9 +235,14 @@ def _get_or_create_clerk_user(payload: dict, db: Session) -> User:
 
     user = db.query(User).filter(User.clerk_user_id == str(clerk_user_id)).first()
     if user:
-        return user
+        return _sync_clerk_profile(user, payload, db)
 
-    email = _email_from_clerk_claims(payload) or f"{clerk_user_id}@clerk.strikelab.local"
+    profile = _clerk_user_profile(str(clerk_user_id))
+    email = (
+        _email_from_clerk_profile(profile)
+        or _email_from_clerk_claims(payload)
+        or f"{clerk_user_id}@clerk.strikelab.local"
+    )
     user = db.query(User).filter(User.email == email).first()
     if user:
         user.clerk_user_id = str(clerk_user_id)
@@ -153,7 +251,11 @@ def _get_or_create_clerk_user(payload: dict, db: Session) -> User:
             email=email,
             clerk_user_id=str(clerk_user_id),
             password_hash=None,
-            display_name=_display_name_from_clerk_claims(payload, email),
+            display_name=(
+                _display_name_from_clerk_profile(profile, email)
+                if profile
+                else _display_name_from_clerk_claims(payload, email)
+            ),
             persona="improver",
         )
         db.add(user)
