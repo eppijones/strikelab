@@ -19,6 +19,7 @@ struct ActiveRoundHomeView: View {
     @State private var showScorecard = false
     @State private var showShots = false
     @State private var showEndRoundAlert = false
+    @State private var showExtendRoundAlert = false
     @State private var summaryRound: Round?
     @State private var clockTick = Date()
 
@@ -64,6 +65,14 @@ struct ActiveRoundHomeView: View {
         } message: {
             Text("This saves your scorecard, shots, GPS-backed round data, and queues the export sync.")
         }
+        .alert("Extend to 18 holes?", isPresented: $showExtendRoundAlert) {
+            Button("Play back 9") {
+                extendCurrentRoundTo18()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Your current 9-hole scorecard stays intact and the round continues as a full 18.")
+        }
         .fullScreenCover(item: $summaryRound) { snapshot in
             NavigationStack {
                 RoundSummaryView(round: snapshot, onClose: {
@@ -72,7 +81,7 @@ struct ActiveRoundHomeView: View {
                 .environmentObject(persistenceManager)
             }
         }
-        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now in
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { now in
             clockTick = now
         }
     }
@@ -81,9 +90,12 @@ struct ActiveRoundHomeView: View {
     private func content(for round: Round) -> some View {
         ScrollView {
             VStack(spacing: 14) {
-                heroCard(round: round)
+                StrikeLabLogoLockup(subtitle: "Live round")
                     .padding(.top, 4)
+                heroCard(round: round)
+                captureHealthCard(round: round)
                 resumeCard(round: round)
+                extendRoundCard(round: round)
                 holeStrip(round: round)
                 quickLinks
                 Spacer(minLength: 30)
@@ -112,7 +124,7 @@ struct ActiveRoundHomeView: View {
                     Text(round.formattedOverUnder)
                         .font(Theme.statFont(20))
                         .foregroundColor(scoreColor(for: round))
-                    Text("\(round.holesCompleted)/\(round.holes.count) holes")
+                    Text("\(round.holesCompleted)/\(round.playFormat.totalHoles) holes")
                         .font(Theme.labelFont(11))
                         .foregroundColor(Theme.ink3)
                 }
@@ -130,7 +142,7 @@ struct ActiveRoundHomeView: View {
                     tint: Theme.warn
                 )
                 divider
-                miniStat(label: "TIME", value: round.formattedElapsed, tint: Theme.ink2)
+                miniStat(label: "TIME", value: liveElapsed(for: round), tint: Theme.accent)
             }
         }
         .frame(maxWidth: .infinity)
@@ -158,6 +170,55 @@ struct ActiveRoundHomeView: View {
 
     private var divider: some View {
         Rectangle().fill(Theme.line).frame(width: 1, height: 24)
+    }
+
+    private func captureHealthCard(round: Round) -> some View {
+        let shots = round.shots.count
+        let planned = round.plannedShots.count
+        let hr = round.shots.filter { $0.heartRate != nil }.count
+        let motion = round.shots.filter { $0.motion != nil }.count
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Capture live", systemImage: connectivityManager.isWatchReachable ? "applewatch.radiowaves.left.and.right" : "applewatch.slash")
+                    .font(Theme.labelFont(12))
+                    .tracking(1.2)
+                    .foregroundColor(connectivityManager.isWatchReachable ? Theme.accent : Theme.warn)
+                Spacer()
+                Text(connectivityManager.isWatchReachable ? "WATCH CONNECTED" : "CHECK WATCH")
+                    .font(Theme.labelFont(10))
+                    .tracking(1.2)
+                    .foregroundColor(Theme.ink3)
+            }
+            HStack(spacing: 0) {
+                miniStat(label: "SHOTS", value: "\(shots)", tint: Theme.accent)
+                divider
+                miniStat(label: "HR", value: "\(hr)")
+                divider
+                miniStat(label: "MOTION", value: "\(motion)")
+                divider
+                miniStat(label: "PLAN", value: "\(planned)", tint: Theme.warn)
+            }
+            Text("Every confirmed watch swing is saved as a shot row with club, hole, GPS and biometric context when available.")
+                .font(Theme.bodyFont(12))
+                .foregroundColor(Theme.ink3)
+        }
+        .padding(16)
+        .glassCard(padding: 0)
+    }
+
+    private func liveElapsed(for round: Round) -> String {
+        let _ = clockTick
+        let total = max(0, Int((round.completedAt ?? clockTick).timeIntervalSince(round.date)))
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 {
+            return "\(hours)h \(String(format: "%02d", minutes))m"
+        }
+        if minutes > 0 {
+            return "\(minutes)m"
+        }
+        return "\(seconds)s"
     }
 
     // MARK: - Resume
@@ -191,6 +252,41 @@ struct ActiveRoundHomeView: View {
             .background(Theme.accent)
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func extendRoundCard(round: Round) -> some View {
+        if round.playFormat == .front9 {
+            Button {
+                showExtendRoundAlert = true
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "plus.circle")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(Theme.accent)
+                        .frame(width: 28)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Extend to 18 holes")
+                            .font(Theme.labelFont(14))
+                            .tracking(1.0)
+                            .foregroundColor(Theme.ink)
+                        Text("Keep the front 9 and continue on hole 10")
+                            .font(Theme.labelFont(11))
+                            .foregroundColor(Theme.ink3)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Theme.ink3)
+                }
+                .padding()
+                .glassCard(padding: 0)
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     // MARK: - Hole strip
@@ -277,7 +373,7 @@ struct ActiveRoundHomeView: View {
             Button {
                 showShots = true
             } label: {
-                quickLinkRow(icon: "scope", title: "Shots", sub: "Per-hole shot history")
+                quickLinkRow(icon: "scope", title: "Shot log", sub: "Clubs, GPS, HR and motion")
             }
             .buttonStyle(.plain)
         }
@@ -335,6 +431,16 @@ struct ActiveRoundHomeView: View {
                     }
                 }
         }
+    }
+
+    private func extendCurrentRoundTo18() {
+        guard var round = persistenceManager.currentRound else { return }
+        round.extendFrontNineToFull18()
+        persistenceManager.currentRound = round
+        connectivityManager.sendCurrentHole(round.currentHoleNumber)
+        connectivityManager.sendRoundConfig(round)
+        RoundLiveSync.syncNow(round: round, persistence: persistenceManager)
+        resumeFromHole = round.currentHoleNumber
     }
 }
 

@@ -97,30 +97,30 @@ struct ScorecardExportView: View {
     
     private var scorecardTable: some View {
         VStack(spacing: 0) {
-            // Column headers
             tableHeaderRow
-            
-            // Front 9
-            ForEach(0..<9, id: \.self) { index in
-                holeRow(hole: round.holes[index])
+
+            ForEach(Array(scorecardSections.enumerated()), id: \.offset) { _, section in
+                ForEach(section.holes) { hole in
+                    holeRow(hole: hole)
+                }
+                subtotalRow(holes: section.holes, label: section.label)
             }
-            
-            // Front 9 subtotal
-            subtotalRow(holes: Array(round.holes.prefix(9)), label: "OUT")
-            
-            // Back 9
-            ForEach(9..<18, id: \.self) { index in
-                holeRow(hole: round.holes[index])
-            }
-            
-            // Back 9 subtotal
-            subtotalRow(holes: Array(round.holes.suffix(9)), label: "IN")
-            
-            // Total
+
             totalRow
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    private var scorecardSections: [(label: String, holes: [RoundHole])] {
+        switch round.playFormat {
+        case .full18:
+            return [("OUT", Array(round.holes.prefix(9))), ("IN", Array(round.holes.suffix(9)))]
+        case .front9:
+            return [("OUT", Array(round.holes.prefix(9)))]
+        case .back9:
+            return [("IN", Array(round.holes.suffix(9)))]
+        }
     }
     
     private var tableHeaderRow: some View {
@@ -237,7 +237,7 @@ struct ScorecardExportView: View {
                 .font(.system(size: 10, weight: .bold))
                 .frame(width: 40, alignment: .leading)
             
-            Text("\(round.course.totalPar)")
+            Text("\(round.playedHoles.reduce(0) { $0 + $1.par })")
                 .font(.system(size: 10, weight: .semibold))
                 .frame(width: 30)
             
@@ -350,7 +350,7 @@ struct ScorecardExportView: View {
 struct ScorecardExportLandscapeView: View {
     let round: Round
     
-    private let cardWidth: CGFloat = 900
+    private var cardWidth: CGFloat { round.playFormat == .full18 ? 900 : 560 }
     private let cardHeight: CGFloat = 500
     
     var body: some View {
@@ -425,55 +425,53 @@ struct ScorecardExportLandscapeView: View {
     
     private var landscapeScorecardTable: some View {
         VStack(spacing: 0) {
-            // Hole numbers
-            landscapeRowBuilder(label: "HOLE", values: (1...18).map { "\($0)" }, isHeader: true)
+            landscapeRowBuilder(label: "HOLE", isHeader: true) { "\($0.holeNumber)" }
             
-            // Par
             landscapeRowBuilder(
                 label: "PAR",
-                values: round.holes.map { "\($0.par)" },
-                front9Total: "\(round.holes.prefix(9).reduce(0) { $0 + $1.par })",
-                back9Total: "\(round.holes.suffix(9).reduce(0) { $0 + $1.par })",
-                grandTotal: "\(round.course.totalPar)"
-            )
+                sectionTotal: { "\($0.reduce(0) { $0 + $1.par })" },
+                grandTotal: "\(round.playedHoles.reduce(0) { $0 + $1.par })"
+            ) { "\($0.par)" }
             
-            // HI
             landscapeRowBuilder(
                 label: "HI",
-                values: round.holes.map { "\($0.handicapIndex)" },
                 isSubtle: true
-            )
+            ) { "\($0.handicapIndex)" }
             
-            // Strokes received
             landscapeRowBuilder(
                 label: "+",
-                values: round.holes.map { $0.strokesReceived > 0 ? "\($0.strokesReceived)" : "-" },
-                front9Total: "\(round.holes.prefix(9).reduce(0) { $0 + $1.strokesReceived })",
-                back9Total: "\(round.holes.suffix(9).reduce(0) { $0 + $1.strokesReceived })",
+                sectionTotal: { "\($0.reduce(0) { $0 + $1.strokesReceived })" },
                 grandTotal: "\(round.courseHandicap ?? 0)",
                 isSubtle: true,
                 subtleColor: Theme.champagne
-            )
+            ) { $0.strokesReceived > 0 ? "\($0.strokesReceived)" : "-" }
             
-            // Gross scores with color coding
             landscapeGrossRow
-            
-            // Net scores
             landscapeNetRow
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
     }
+
+    private var scorecardSections: [(label: String, holes: [RoundHole])] {
+        switch round.playFormat {
+        case .full18:
+            return [("OUT", Array(round.holes.prefix(9))), ("IN", Array(round.holes.suffix(9)))]
+        case .front9:
+            return [("OUT", Array(round.holes.prefix(9)))]
+        case .back9:
+            return [("IN", Array(round.holes.suffix(9)))]
+        }
+    }
     
     private func landscapeRowBuilder(
         label: String,
-        values: [String],
-        front9Total: String = "",
-        back9Total: String = "",
+        sectionTotal: (([RoundHole]) -> String)? = nil,
         grandTotal: String = "",
         isHeader: Bool = false,
         isSubtle: Bool = false,
-        subtleColor: Color = Theme.nordicForest.opacity(0.5)
+        subtleColor: Color = Theme.nordicForest.opacity(0.5),
+        value: @escaping (RoundHole) -> String
     ) -> some View {
         HStack(spacing: 0) {
             Text(label)
@@ -481,160 +479,109 @@ struct ScorecardExportLandscapeView: View {
                 .frame(width: 45, alignment: .leading)
                 .foregroundColor(isSubtle ? subtleColor : Theme.nordicForest)
             
-            ForEach(0..<9, id: \.self) { i in
-                Text(values[i])
-                    .font(.system(size: isHeader ? 10 : 9, weight: isHeader ? .bold : .regular))
+            ForEach(Array(scorecardSections.enumerated()), id: \.offset) { _, section in
+                ForEach(section.holes) { hole in
+                    Text(value(hole))
+                        .font(.system(size: isHeader ? 10 : 9, weight: isHeader ? .bold : .regular))
+                        .frame(width: 38)
+                        .foregroundColor(isSubtle ? subtleColor : Theme.nordicForest)
+                }
+
+                Text(sectionTotal?(section.holes) ?? section.label)
+                    .font(.system(size: 10, weight: .semibold))
                     .frame(width: 38)
-                    .foregroundColor(isSubtle ? subtleColor : Theme.nordicForest)
+                    .foregroundColor(Theme.nordicForest)
+                    .background(Theme.champagne.opacity(0.15))
             }
-            
-            Text(front9Total)
-                .font(.system(size: 10, weight: .semibold))
-                .frame(width: 38)
-                .foregroundColor(Theme.nordicForest)
-                .background(Theme.champagne.opacity(0.15))
-            
-            ForEach(9..<18, id: \.self) { i in
-                Text(values[i])
-                    .font(.system(size: isHeader ? 10 : 9, weight: isHeader ? .bold : .regular))
-                    .frame(width: 38)
-                    .foregroundColor(isSubtle ? subtleColor : Theme.nordicForest)
+
+            if round.playFormat == .full18 {
+                Text(grandTotal)
+                    .font(.system(size: 10, weight: .bold))
+                    .frame(width: 42)
+                    .foregroundColor(Theme.nordicForest)
+                    .background(Theme.nordicForest.opacity(0.1))
             }
-            
-            Text(back9Total)
-                .font(.system(size: 10, weight: .semibold))
-                .frame(width: 38)
-                .foregroundColor(Theme.nordicForest)
-                .background(Theme.champagne.opacity(0.15))
-            
-            Text(grandTotal)
-                .font(.system(size: 10, weight: .bold))
-                .frame(width: 42)
-                .foregroundColor(Theme.nordicForest)
-                .background(Theme.nordicForest.opacity(0.1))
         }
         .padding(.vertical, 4)
         .background(isHeader ? Theme.champagne.opacity(0.2) : Color.clear)
     }
     
     private var landscapeGrossRow: some View {
-        let front9Gross = round.holes.prefix(9).compactMap { $0.grossStrokes }.reduce(0, +)
-        let back9Gross = round.holes.suffix(9).compactMap { $0.grossStrokes }.reduce(0, +)
-        
-        return HStack(spacing: 0) {
+        HStack(spacing: 0) {
             Text("GROSS")
                 .font(.system(size: 9, weight: .semibold))
                 .frame(width: 45, alignment: .leading)
                 .foregroundColor(Theme.nordicForest)
             
-            ForEach(0..<9, id: \.self) { i in
-                let hole = round.holes[i]
-                if let gross = hole.grossStrokes {
-                    Text("\(gross)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .frame(width: 38)
-                        .foregroundColor(scoreColor(strokes: gross, par: hole.par))
-                } else {
-                    Text("-")
-                        .font(.system(size: 11))
-                        .frame(width: 38)
-                        .foregroundColor(Theme.neutral)
+            ForEach(Array(scorecardSections.enumerated()), id: \.offset) { _, section in
+                ForEach(section.holes) { hole in
+                    if let gross = hole.grossStrokes {
+                        Text("\(gross)")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .frame(width: 38)
+                            .foregroundColor(scoreColor(strokes: gross, par: hole.par))
+                    } else {
+                        Text("-")
+                            .font(.system(size: 11))
+                            .frame(width: 38)
+                            .foregroundColor(Theme.neutral)
+                    }
                 }
+
+                Text("\(section.holes.compactMap { $0.grossStrokes }.reduce(0, +))")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .frame(width: 38)
+                    .foregroundColor(Theme.nordicForest)
+                    .background(Theme.champagne.opacity(0.15))
             }
-            
-            Text("\(front9Gross)")
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .frame(width: 38)
-                .foregroundColor(Theme.nordicForest)
-                .background(Theme.champagne.opacity(0.15))
-            
-            ForEach(9..<18, id: \.self) { i in
-                let hole = round.holes[i]
-                if let gross = hole.grossStrokes {
-                    Text("\(gross)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .frame(width: 38)
-                        .foregroundColor(scoreColor(strokes: gross, par: hole.par))
-                } else {
-                    Text("-")
-                        .font(.system(size: 11))
-                        .frame(width: 38)
-                        .foregroundColor(Theme.neutral)
-                }
+
+            if round.playFormat == .full18 {
+                Text("\(round.grossTotal)")
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .frame(width: 42)
+                    .foregroundColor(Theme.nordicForest)
+                    .background(Theme.nordicForest.opacity(0.1))
             }
-            
-            Text("\(back9Gross)")
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .frame(width: 38)
-                .foregroundColor(Theme.nordicForest)
-                .background(Theme.champagne.opacity(0.15))
-            
-            Text("\(round.grossTotal)")
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .frame(width: 42)
-                .foregroundColor(Theme.nordicForest)
-                .background(Theme.nordicForest.opacity(0.1))
         }
         .padding(.vertical, 5)
     }
     
     private var landscapeNetRow: some View {
-        let front9Net = round.holes.prefix(9).compactMap { $0.netStrokes }.reduce(0, +)
-        let back9Net = round.holes.suffix(9).compactMap { $0.netStrokes }.reduce(0, +)
-        
-        return HStack(spacing: 0) {
+        HStack(spacing: 0) {
             Text("NET")
                 .font(.system(size: 9, weight: .semibold))
                 .frame(width: 45, alignment: .leading)
                 .foregroundColor(Theme.nordicSage)
             
-            ForEach(0..<9, id: \.self) { i in
-                let hole = round.holes[i]
-                if let net = hole.netStrokes {
-                    Text("\(net)")
-                        .font(.system(size: 10, design: .monospaced))
-                        .frame(width: 38)
-                        .foregroundColor(Theme.nordicSage)
-                } else {
-                    Text("-")
-                        .font(.system(size: 10))
-                        .frame(width: 38)
-                        .foregroundColor(Theme.neutral)
+            ForEach(Array(scorecardSections.enumerated()), id: \.offset) { _, section in
+                ForEach(section.holes) { hole in
+                    if let net = hole.netStrokes {
+                        Text("\(net)")
+                            .font(.system(size: 10, design: .monospaced))
+                            .frame(width: 38)
+                            .foregroundColor(Theme.nordicSage)
+                    } else {
+                        Text("-")
+                            .font(.system(size: 10))
+                            .frame(width: 38)
+                            .foregroundColor(Theme.neutral)
+                    }
                 }
+
+                Text("\(section.holes.compactMap { $0.netStrokes }.reduce(0, +))")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .frame(width: 38)
+                    .foregroundColor(Theme.nordicSage)
+                    .background(Theme.champagne.opacity(0.15))
             }
-            
-            Text("\(front9Net)")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .frame(width: 38)
-                .foregroundColor(Theme.nordicSage)
-                .background(Theme.champagne.opacity(0.15))
-            
-            ForEach(9..<18, id: \.self) { i in
-                let hole = round.holes[i]
-                if let net = hole.netStrokes {
-                    Text("\(net)")
-                        .font(.system(size: 10, design: .monospaced))
-                        .frame(width: 38)
-                        .foregroundColor(Theme.nordicSage)
-                } else {
-                    Text("-")
-                        .font(.system(size: 10))
-                        .frame(width: 38)
-                        .foregroundColor(Theme.neutral)
-                }
+
+            if round.playFormat == .full18 {
+                Text("\(round.netTotal)")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .frame(width: 42)
+                    .foregroundColor(Theme.nordicSage)
+                    .background(Theme.nordicForest.opacity(0.1))
             }
-            
-            Text("\(back9Net)")
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .frame(width: 38)
-                .foregroundColor(Theme.nordicSage)
-                .background(Theme.champagne.opacity(0.15))
-            
-            Text("\(round.netTotal)")
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                .frame(width: 42)
-                .foregroundColor(Theme.nordicSage)
-                .background(Theme.nordicForest.opacity(0.1))
         }
         .padding(.vertical, 5)
         .background(Theme.nordicSage.opacity(0.08))

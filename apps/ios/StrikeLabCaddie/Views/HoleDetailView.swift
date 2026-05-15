@@ -158,12 +158,35 @@ struct HoleDetailView: View {
         ))
         let phrase = rec.watchCommitPhrase(distanceYards: Int(yards.rounded()))
         let warn = rec.warnings.first
+        let calculator = locationManager.currentLocation.map {
+            HoleDistanceCalculator(
+                currentLocation: Coordinate(from: $0.coordinate),
+                holeLayout: layout
+            )
+        }
+        let front = calculator?.distanceToFront.map { Int($0.rounded()) }
+        let back = calculator?.distanceToBack.map { Int($0.rounded()) }
+        let hazardNote = calculator?.nearestHazard.map {
+            "\($0.hazard.displayName) \(Int($0.distance.rounded())) \(unitsManager.unitLabel)"
+        }
+        let windMph = weatherManager.currentConditions.map { $0.windSpeed * 2.23694 }
+        let source = layout.hasGPSData ? "OpenStreetMap + StrikeLab" : "StrikeLab course cache"
+        let confidence = layout.hasGPSData
+            ? min(0.95, 0.7 + Double(layout.hazards.count) * 0.03)
+            : 0.45
         connectivityManager.sendCaddieAdvice(
             holeNumber: hole,
             distanceYards: Int(yards.rounded()),
             club: rec.club,
             commitPhrase: phrase,
-            warning: warn
+            warning: warn,
+            frontYards: front,
+            backYards: back,
+            playsLikeYards: Int(rec.adjustedDistance.rounded()),
+            hazardNote: hazardNote,
+            source: source,
+            confidence: confidence,
+            windMph: windMph
         )
     }
 

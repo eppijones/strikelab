@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from './client'
 import { API_URL } from '@/lib/constants'
 
@@ -45,6 +45,17 @@ export interface RoundShot {
   } | null
 }
 
+export interface PlannedRoundShot {
+  id: string
+  hole_number: number
+  order: number
+  club: string
+  target_position: Record<string, unknown>
+  start_position?: Record<string, unknown> | null
+  expected_distance?: number | null
+  notes?: string | null
+}
+
 export interface Round {
   id: string
   user_id: string
@@ -54,11 +65,13 @@ export interface Round {
   selected_tee?: string | null
   is_complete: boolean
   current_hole_number: number
+  play_format?: 'full18' | 'front9' | 'back9'
   total_gross: number
   total_net: number
   total_par: number
   holes: RoundHole[]
   shots?: RoundShot[]
+  planned_shots?: PlannedRoundShot[] | null
 }
 
 export function roundShotAudioUrl(roundId: string, shotId: string): string {
@@ -79,5 +92,17 @@ export function useRound(id: string) {
     queryFn: () => apiClient.get<Round>(`/rounds/${id}`),
     enabled: !!id,
     refetchOnWindowFocus: true,
+  })
+}
+
+export function useUpdateRoundPlan(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (plannedShots: PlannedRoundShot[]) =>
+      apiClient.patch<Round>(`/rounds/${id}`, { planned_shots: plannedShots }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['round', id] })
+      qc.invalidateQueries({ queryKey: ['rounds'] })
+    },
   })
 }

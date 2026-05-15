@@ -13,9 +13,23 @@ import Combine
 /// Search result from Golf Course API
 struct APISearchResult: Codable, Identifiable {
     let id: Int
+    let courseId: UUID?
+    let publicCourse: PublicCourse?
     let club_name: String
     let course_name: String
     let location: APILocation?
+
+    var isProviderBacked: Bool {
+        if let publicCourse {
+            return publicCourse.golfcourseapiId != nil
+        }
+        return id > 0
+    }
+
+    var importKey: String {
+        if isProviderBacked { return "provider:\(id)" }
+        return "course:\(courseId?.uuidString ?? displayName)"
+    }
     
     var displayName: String {
         if club_name == course_name {
@@ -25,7 +39,19 @@ struct APISearchResult: Codable, Identifiable {
     }
     
     var locationString: String {
-        location?.address ?? "Location unknown"
+        if let address = location?.address, !address.isEmpty {
+            return address
+        }
+        let parts = [
+            location?.city,
+            location?.state,
+            location?.country
+        ]
+        .compactMap { value -> String? in
+            guard let value, !value.isEmpty else { return nil }
+            return value
+        }
+        return parts.isEmpty ? "Location unknown" : parts.joined(separator: ", ")
     }
 }
 
@@ -42,10 +68,19 @@ struct APILocation: Codable {
 /// Full course details from API
 struct APICourseDetails: Codable {
     let id: Int
+    let sourceCourseId: UUID?
     let club_name: String
     let course_name: String
     let location: APILocation?
     let tees: APITees?
+}
+
+private struct StrikeLabProviderSearchResponse: Codable {
+    let provider: String
+    let query: String
+    let count: Int
+    let courses: [PublicCourse]
+    let note: String?
 }
 
 /// Tee data organized by gender
@@ -104,8 +139,7 @@ struct APISearchResponse: Codable {
 class GolfCourseAPIManager: ObservableObject {
     
     // API Configuration
-    private let apiKey = "WDMUPN5IAT2HO72N5GDQVYS4GY"
-    private let baseURL = "https://api.golfcourseapi.com/v1"
+    private let api = TeeAPIClient.shared
     
     // Published state
     @Published var searchResults: [APISearchResult] = []
@@ -138,15 +172,8 @@ class GolfCourseAPIManager: ObservableObject {
         // Simple check - in production use NWPathMonitor
         Task {
             do {
-                let url = URL(string: "https://api.golfcourseapi.com/v1/search?search_query=test")!
-                var request = URLRequest(url: url)
-                request.setValue("Key \(apiKey)", forHTTPHeaderField: "Authorization")
-                request.timeoutInterval = 5
-                
-                let (_, response) = try await URLSession.shared.data(for: request)
-                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
-                    isOfflineMode = false
-                }
+                _ = try await api.golfCourseAPIStatus()
+                isOfflineMode = false
             } catch {
                 isOfflineMode = true
             }
@@ -200,34 +227,26 @@ class GolfCourseAPIManager: ObservableObject {
     
     /// Search for courses by name
     func searchCourses(query: String) async throws -> [APISearchResult] {
-        let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        let urlString = "\(baseURL)/search?search_query=\(encodedQuery)"
-        
-        guard let url = URL(string: urlString) else {
-            throw APIError.invalidURL
+        async let catalog = try? api.publicCoursesSearch(query: query, countryCode: "NO")
+        async let provider = try api.golfCourseAPISearch(query: query)
+
+        let catalogResults = (await catalog ?? []).map { APISearchResult(publicCourse: $0) }
+        let providerResults = try await provider.courses.map { APISearchResult(publicCourse: $0) }
+        return Self.mergeSearchResults(catalogResults + providerResults)
+    }
+
+    private static func mergeSearchResults(_ results: [APISearchResult]) -> [APISearchResult] {
+        var merged: [APISearchResult] = []
+        var seen = Set<String>()
+        for result in results {
+            let key = result.publicCourse?.golfcourseapiId.map { "provider:\($0)" }
+                ?? result.courseId.map { "course:\($0.uuidString)" }
+                ?? result.displayName.lowercased()
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            merged.append(result)
         }
-        
-        var request = URLRequest(url: url)
-        request.setValue("Key \(apiKey)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 15
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-        
-        switch httpResponse.statusCode {
-        case 200:
-            let decoded = try JSONDecoder().decode(APISearchResponse.self, from: data)
-            return decoded.courses
-        case 401:
-            throw APIError.unauthorized
-        case 429:
-            throw APIError.rateLimited
-        default:
-            throw APIError.serverError(httpResponse.statusCode)
-        }
+        return merged
     }
     
     // MARK: - Course Details
@@ -257,41 +276,12 @@ class GolfCourseAPIManager: ObservableObject {
         isLoadingDetails = true
         defer { isLoadingDetails = false }
         
-        let urlString = "\(baseURL)/courses/\(id)"
-        
-        guard let url = URL(string: urlString) else {
-            throw APIError.invalidURL
-        }
-        
-        var request = URLRequest(url: url)
-        request.setValue("Key \(apiKey)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 15
-        
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw APIError.invalidResponse
-            }
-            
-            switch httpResponse.statusCode {
-            case 200:
-                let decoded = try JSONDecoder().decode(APICourseDetails.self, from: data)
-                
-                // Cache in session and on disk
-                sessionCache[id] = decoded
-                persistenceManager?.cacheCourseDetails(decoded)
-                
-                return decoded
-            case 401:
-                throw APIError.unauthorized
-            case 404:
-                throw APIError.notFound
-            case 429:
-                throw APIError.rateLimited
-            default:
-                throw APIError.serverError(httpResponse.statusCode)
-            }
+            let publicCourse = try await api.golfCourseAPIImport(providerId: id)
+            let decoded = APICourseDetails(publicCourse: publicCourse)
+            sessionCache[id] = decoded
+            persistenceManager?.cacheCourseDetails(decoded)
+            return decoded
         } catch let error as URLError where error.code == .notConnectedToInternet || error.code == .timedOut {
             // Network error - try cache as fallback
             if let cached = persistenceManager?.getCachedCourseDetails(id: id) {
@@ -302,6 +292,19 @@ class GolfCourseAPIManager: ObservableObject {
             }
             throw APIError.offline
         }
+    }
+
+    func getCourseDetails(for result: APISearchResult) async throws -> APICourseDetails {
+        if let publicCourse = result.publicCourse, !result.isProviderBacked {
+            return APICourseDetails(publicCourse: publicCourse)
+        }
+        if result.isProviderBacked, result.id > 0 {
+            return try await getCourseDetails(id: result.id)
+        }
+        if let publicCourse = result.publicCourse {
+            return APICourseDetails(publicCourse: publicCourse)
+        }
+        throw APIError.notFound
     }
     
     /// Force refresh course details from API (bypass cache)
@@ -360,6 +363,7 @@ class GolfCourseAPIManager: ObservableObject {
         let locationString = locationParts.isEmpty ? "Unknown Location" : locationParts.joined(separator: ", ")
         
         return Course(
+            id: details.sourceCourseId ?? UUID(),
             name: details.course_name.isEmpty ? details.club_name : details.course_name,
             location: locationString,
             holes: holes,
@@ -404,6 +408,72 @@ class GolfCourseAPIManager: ObservableObject {
     func clearRecentSearches() {
         recentSearches = []
         UserDefaults.standard.removeObject(forKey: "recentCourseSearches")
+    }
+}
+
+private extension APISearchResult {
+    init(publicCourse: PublicCourse) {
+        self.id = publicCourse.apiImportId
+        self.courseId = publicCourse.id
+        self.publicCourse = publicCourse
+        self.club_name = publicCourse.name
+        self.course_name = publicCourse.name
+        self.location = APILocation(
+            address: nil,
+            city: publicCourse.city,
+            state: publicCourse.region,
+            country: publicCourse.country,
+            latitude: publicCourse.latitude,
+            longitude: publicCourse.longitude
+        )
+    }
+}
+
+private extension APICourseDetails {
+    init(publicCourse: PublicCourse) {
+        let holes = publicCourse.holes?.map {
+            APIHole(par: $0.par, yardage: $0.yards, handicap: $0.handicap)
+        }
+        let tee = APITeeBox(
+            tee_name: "Club",
+            course_rating: publicCourse.courseRating,
+            slope_rating: publicCourse.slopeRating,
+            bogey_rating: nil,
+            total_yards: nil,
+            total_meters: publicCourse.totalMeters,
+            number_of_holes: publicCourse.holesCount,
+            par_total: publicCourse.par,
+            front_course_rating: nil,
+            front_slope_rating: nil,
+            back_course_rating: nil,
+            back_slope_rating: nil,
+            holes: holes
+        )
+        self.id = publicCourse.apiImportId
+        self.sourceCourseId = publicCourse.id
+        self.club_name = publicCourse.name
+        self.course_name = publicCourse.name
+        self.location = APILocation(
+            address: nil,
+            city: publicCourse.city,
+            state: publicCourse.region,
+            country: publicCourse.country,
+            latitude: publicCourse.latitude,
+            longitude: publicCourse.longitude
+        )
+        self.tees = APITees(male: [tee], female: nil)
+    }
+}
+
+private extension PublicCourse {
+    var apiImportId: Int {
+        if let providerId = Int(golfcourseapiId ?? "") {
+            return providerId
+        }
+
+        let scalars = id.uuidString.unicodeScalars
+        let hash = scalars.reduce(5381) { (($0 << 5) &+ $0) &+ Int($1.value) }
+        return max(1, abs(hash % Int(Int32.max)))
     }
 }
 

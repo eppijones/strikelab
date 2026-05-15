@@ -78,3 +78,34 @@ def audio_response_from_metadata(audio: dict | None, kind: str, user_id: UUID, p
         if isinstance(url, str) and url.startswith("https://"):
             return RedirectResponse(url)
     return file_audio_response(kind, user_id, parent_id, shot_id)
+
+
+def delete_user_media(user_id: UUID) -> None:
+    """Best-effort removal of filesystem-backed media for account deletion.
+
+    Vercel Blob URLs are public object URLs without a stored pathname in the
+    current schema, so production Blob deletion should be completed by object
+    lifecycle policy or a future media index. The local filesystem backend can
+    be removed deterministically by user directory.
+    """
+    settings = get_settings()
+    if settings.media_storage.lower() != "filesystem":
+        return
+
+    root = Path(settings.media_root)
+    for kind in ("range-sessions", "rounds"):
+        user_dir = root / kind / str(user_id)
+        if not user_dir.exists():
+            continue
+        for path in sorted(user_dir.rglob("*"), reverse=True):
+            if path.is_file():
+                path.unlink(missing_ok=True)
+            elif path.is_dir():
+                try:
+                    path.rmdir()
+                except OSError:
+                    pass
+        try:
+            user_dir.rmdir()
+        except OSError:
+            pass

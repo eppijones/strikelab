@@ -27,6 +27,12 @@ class PersistenceManager: ObservableObject {
     @Published var courses: [Course] = [] {
         didSet { saveCourses() }
     }
+
+    @Published private(set) var hiddenRoundSetupCourseIds: Set<UUID> = [] {
+        didSet { saveHiddenRoundSetupCourseIds() }
+    }
+
+    @Published private(set) var publicCoursePackages: [UUID: PublicCoursePackage] = [:]
     
     @Published var practiceSessions: [PracticeSession] = [] {
         didSet { savePracticeSessions() }
@@ -331,8 +337,16 @@ class PersistenceManager: ObservableObject {
         documentsDirectory.appendingPathComponent("liveRangeSession.json")
     }
     
-    private var courseCacheURL: URL {
-        documentsDirectory.appendingPathComponent("courseCache.json")
+    private var publicCoursePackageCacheURL: URL {
+        documentsDirectory.appendingPathComponent("publicCoursePackages.json")
+    }
+
+    private var apiCourseDetailsCacheURL: URL {
+        documentsDirectory.appendingPathComponent("apiCourseDetailsCache.json")
+    }
+
+    private var hiddenRoundSetupCourseIdsURL: URL {
+        documentsDirectory.appendingPathComponent("hiddenRoundSetupCourseIds.json")
     }
     
     // MARK: - Initialization
@@ -345,6 +359,8 @@ class PersistenceManager: ObservableObject {
         loadCurrentRound()
         loadSavedRounds()
         loadCourses()
+        loadHiddenRoundSetupCourseIds()
+        loadPublicCoursePackages()
         loadPracticeSessions()
         loadPinnedReferences()
         recoverLiveRangeSessionIfAny()
@@ -540,6 +556,61 @@ class PersistenceManager: ObservableObject {
             print("Failed to save courses: \(error)")
         }
     }
+
+    private func loadHiddenRoundSetupCourseIds() {
+        guard let data = try? Data(contentsOf: hiddenRoundSetupCourseIdsURL),
+              let loaded = try? JSONDecoder().decode(Set<UUID>.self, from: data) else {
+            return
+        }
+        hiddenRoundSetupCourseIds = loaded
+    }
+
+    private func saveHiddenRoundSetupCourseIds() {
+        do {
+            let data = try JSONEncoder().encode(hiddenRoundSetupCourseIds)
+            try data.write(to: hiddenRoundSetupCourseIdsURL, options: [.atomic])
+        } catch {
+            print("Failed to save hidden setup courses: \(error)")
+        }
+    }
+
+    // MARK: - Public course package cache
+
+    private func loadPublicCoursePackages() {
+        guard let data = try? Data(contentsOf: publicCoursePackageCacheURL),
+              let loaded = try? JSONDecoder().decode([UUID: PublicCoursePackage].self, from: data) else {
+            return
+        }
+        publicCoursePackages = loaded
+    }
+
+    private func savePublicCoursePackages() {
+        do {
+            let data = try JSONEncoder().encode(publicCoursePackages)
+            try data.write(to: publicCoursePackageCacheURL, options: [.atomic])
+        } catch {
+            print("Failed to save public course cache: \(error)")
+        }
+    }
+
+    func cachePublicCoursePackage(_ package: PublicCoursePackage) {
+        publicCoursePackages[package.id] = package
+        savePublicCoursePackages()
+        mergePublicPackageIntoLocalCourses(package)
+    }
+
+    func publicCoursePackage(for courseId: UUID) -> PublicCoursePackage? {
+        publicCoursePackages[courseId]
+    }
+
+    private func mergePublicPackageIntoLocalCourses(_ package: PublicCoursePackage) {
+        let local = package.toLocalCourse(existing: courses.first { $0.id == package.id })
+        if let idx = courses.firstIndex(where: { $0.id == local.id }) {
+            courses[idx] = local
+        } else if !courses.contains(where: { $0.name == local.name }) {
+            courses.append(local)
+        }
+    }
     
     // MARK: - Practice Sessions Persistence
     
@@ -650,7 +721,7 @@ class PersistenceManager: ObservableObject {
     
     /// Load course cache from disk
     private func loadCourseCache() {
-        guard let data = try? Data(contentsOf: courseCacheURL),
+        guard let data = try? Data(contentsOf: apiCourseDetailsCacheURL),
               let loaded = try? JSONDecoder().decode([Int: APICourseDetails].self, from: data) else {
             return
         }
@@ -661,7 +732,7 @@ class PersistenceManager: ObservableObject {
     private func saveCourseCache() {
         do {
             let data = try JSONEncoder().encode(courseCache)
-            try data.write(to: courseCacheURL)
+            try data.write(to: apiCourseDetailsCacheURL, options: [.atomic])
         } catch {
             print("Failed to save course cache: \(error)")
         }
@@ -713,15 +784,30 @@ class PersistenceManager: ObservableObject {
     // MARK: - Round Management
     
     /// Start a new round
-    func startNewRound(course: Course, tee: Tee?, playFormat: PlayFormat = .full18) {
+    func startNewRound(
+        course: Course,
+        tee: Tee?,
+        playFormat: PlayFormat = .full18,
+        groupPlayers: [GroupPlayer] = []
+    ) {
         var round = Round(
             course: course,
             selectedTee: tee,
             player: player
         )
         round.playFormat = playFormat
+        round.recalculateStrokeAllocation()
+        round.groupPlayers = groupPlayers.map { guest in
+            var updated = guest
+            updated.recalculateStrokeAllocation(course: course, format: playFormat)
+            return updated
+        }
         // Start at the first hole of the chosen format (Front 9 → 1, Back 9 → 10).
         round.currentHoleNumber = playFormat.holeRange.lowerBound
+        if let index = round.holes.firstIndex(where: { $0.holeNumber == round.currentHoleNumber }) {
+            round.holes[index].grossStrokes = round.holes[index].par
+            round.holes[index].recalculateNet()
+        }
         currentRound = round
     }
     
@@ -782,13 +868,42 @@ class PersistenceManager: ObservableObject {
     func course(byID id: UUID) -> Course? {
         courses.first { $0.id == id }
     }
+
+    func isHiddenFromRoundSetup(_ course: Course) -> Bool {
+        hiddenRoundSetupCourseIds.contains(course.id)
+    }
+
+    func hideCourseFromRoundSetup(_ course: Course) {
+        hiddenRoundSetupCourseIds.insert(course.id)
+    }
+
+    func showCourseInRoundSetup(_ course: Course) {
+        hiddenRoundSetupCourseIds.remove(course.id)
+    }
     
     // MARK: - Shot Management
     
     /// Add a shot to the current round
     func addShot(_ shot: Shot) {
-        currentRound?.addShot(shot)
-        learnFromShot(shot)
+        upsertShot(shot)
+    }
+
+    /// Insert or enrich a round shot by UUID. WatchConnectivity can deliver
+    /// the same event via sendMessage and transferUserInfo; enhanced payloads
+    /// may also arrive later, so the merge must be idempotent.
+    func upsertShot(_ shot: Shot) {
+        guard var round = currentRound else { return }
+        var incoming = shot
+        if incoming.holeNumber == nil {
+            incoming.holeNumber = round.currentHoleNumber
+        }
+        if let idx = round.shots.firstIndex(where: { $0.id == incoming.id }) {
+            round.shots[idx] = Self.mergeRoundShots(existing: round.shots[idx], incoming: incoming)
+        } else {
+            round.shots.append(incoming)
+        }
+        currentRound = round
+        learnFromShot(incoming)
     }
 
     /// Refine the player's per-club distance averages from real played
@@ -844,22 +959,51 @@ class PersistenceManager: ObservableObject {
     func addShotFromEvent(_ event: ShotEvent) {
         var shot = event.toShot()
         shot.holeNumber = currentRound?.currentHoleNumber
-        currentRound?.addShot(shot)
+        upsertShot(shot)
     }
     
     /// Undo the last shot
     func undoLastShot() -> Shot? {
-        currentRound?.undoLastShot()
+        guard var round = currentRound else { return nil }
+        let removed = round.undoLastShot()
+        currentRound = round
+        return removed
     }
     
     /// Delete a specific shot by ID
     func deleteShot(_ shot: Shot) {
-        currentRound?.shots.removeAll { $0.id == shot.id }
+        deleteShot(withID: shot.id)
     }
     
     /// Delete a shot by ID
     func deleteShot(withID id: UUID) {
-        currentRound?.shots.removeAll { $0.id == id }
+        guard var round = currentRound else { return }
+        round.shots.removeAll { $0.id == id }
+        currentRound = round
+    }
+}
+
+private extension PersistenceManager {
+    static func mergeRoundShots(existing: Shot, incoming: Shot) -> Shot {
+        var out = existing
+        out.timestamp = min(existing.timestamp, incoming.timestamp)
+        out.club = incoming.club
+        out.startLocation = incoming.startLocation ?? existing.startLocation
+        out.endLocation = incoming.endLocation ?? existing.endLocation
+        out.distanceMeters = incoming.distanceMeters ?? existing.distanceMeters
+        out.distanceYards = incoming.distanceYards ?? existing.distanceYards
+        out.holeNumber = incoming.holeNumber ?? existing.holeNumber
+        out.confidence = incoming.confidence ?? existing.confidence
+        out.isManual = existing.isManual && incoming.isManual
+        out.motion = incoming.motion ?? existing.motion
+        out.heartRate = incoming.heartRate ?? existing.heartRate
+        if out.distanceMeters == nil,
+           let start = out.startLocation,
+           let end = out.endLocation {
+            out.distanceMeters = start.distance(to: end)
+            out.distanceYards = (out.distanceMeters ?? 0) * 1.09361
+        }
+        return out
     }
 }
 

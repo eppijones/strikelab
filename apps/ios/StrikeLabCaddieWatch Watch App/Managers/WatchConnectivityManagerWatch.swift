@@ -27,6 +27,8 @@ class WatchConnectivityManagerWatch: NSObject, ObservableObject {
     @Published var courseName: String?
     @Published var connectionError: String?
     @Published var roundStartedAt: Date?
+    @Published var roundElapsedSeconds: TimeInterval?
+    @Published var roundElapsedSyncedAt: Date?
 
     /// Next upcoming StrikeLab Tee booking — pushed from the iPhone via
     /// WCSession application context whenever the user books a round.
@@ -64,6 +66,10 @@ class WatchConnectivityManagerWatch: NSObject, ObservableObject {
     /// them yet — UI should render "—" or a sensible fallback.
     @Published var caddieFrontYards: Int? = nil
     @Published var caddieBackYards: Int? = nil
+    @Published var caddiePlaysLikeYards: Int? = nil
+    @Published var caddieHazardNote: String = ""
+    @Published var caddieSource: String = ""
+    @Published var caddieConfidence: Double? = nil
     @Published var caddieWindMph: Double? = nil
     @Published var caddieWindDirectionDeg: Double? = nil
 
@@ -76,6 +82,10 @@ class WatchConnectivityManagerWatch: NSObject, ObservableObject {
     /// Per-hole authoritative state mirrored from the phone. Indexed by
     /// hole number minus one. Resets every time a new round starts.
     @Published var holes: [WatchHoleState] = WatchHoleState.defaultEighteen()
+
+    /// Guest scorecards mirrored from the phone. These are gross/net score
+    /// rows only; no watch shots, HR or motion attach to guests.
+    @Published var groupPlayers: [WatchGroupPlayer] = []
 
     /// Play format (Full 18 / Front 9 / Back 9) — pushed from the phone.
     @Published var playFormat: WatchPlayFormat = .full18
@@ -864,6 +874,27 @@ class WatchConnectivityManagerWatch: NSObject, ObservableObject {
             session.transferUserInfo(message)
         }
     }
+
+    func setGuestScore(playerId: String, holeNumber: Int, grossStrokes: Int) {
+        guard let session = session else { return }
+        if let playerIndex = groupPlayers.firstIndex(where: { $0.id == playerId }),
+           let holeIndex = groupPlayers[playerIndex].holes.firstIndex(where: { $0.holeNumber == holeNumber }) {
+            groupPlayers[playerIndex].holes[holeIndex].grossStrokes = grossStrokes
+        }
+        let message: [String: Any] = [
+            "guestScoreUpdate": true,
+            "playerId": playerId,
+            "holeNumber": holeNumber,
+            "grossStrokes": grossStrokes
+        ]
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                print("Guest score update send failed: \(error)")
+            }
+        } else {
+            session.transferUserInfo(message)
+        }
+    }
 }
 
 // MARK: - WCSessionDelegate
@@ -885,6 +916,7 @@ extension WatchConnectivityManagerWatch: WCSessionDelegate {
                 flushPendingEnhancedShots()
             }
         }
+
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
@@ -968,6 +1000,9 @@ extension WatchConnectivityManagerWatch: WCSessionDelegate {
         if let v = ctx["pressureWarnings"] as? Bool {
             WatchSettings.shared.applyPressureWarnings(v)
         }
+        if let v = ctx["showHeartRateOnWatch"] as? Bool {
+            WatchSettings.shared.applyShowHeartRateOnWatch(v)
+        }
         if let v = ctx["anonymousSharing"] as? Bool {
             WatchSettings.shared.applyAnonymousDataSharing(v)
         }
@@ -984,6 +1019,13 @@ extension WatchConnectivityManagerWatch: WCSessionDelegate {
             playFormat = parsed
         } else {
             playFormat = .full18
+        }
+
+        if let guestData = ctx["groupPlayers"] as? Data,
+           let parsedGuests = try? JSONDecoder().decode([WatchGroupPlayer].self, from: guestData) {
+            groupPlayers = parsedGuests
+        } else if !ctx.keys.contains("groupPlayers") {
+            groupPlayers = []
         }
 
         // Per-club calibration models (Phase 4) — refresh whenever
@@ -1034,6 +1076,11 @@ extension WatchConnectivityManagerWatch: WCSessionDelegate {
         // any time it recomputes).
         if let v = ctx["caddieFrontYards"] as? Int { caddieFrontYards = v }
         if let v = ctx["caddieBackYards"] as? Int { caddieBackYards = v }
+        if let v = ctx["caddiePlaysLikeYards"] as? Int { caddiePlaysLikeYards = v }
+        if let v = ctx["caddieHazardNote"] as? String { caddieHazardNote = v } else { caddieHazardNote = "" }
+        if let v = ctx["caddieSource"] as? String { caddieSource = v } else { caddieSource = "" }
+        if let v = ctx["caddieConfidence"] as? Double { caddieConfidence = v }
+        else if let v = ctx["caddieConfidence"] as? Int { caddieConfidence = Double(v) }
         if let v = ctx["caddieWindMph"] as? Double { caddieWindMph = v }
         else if let v = ctx["caddieWindMph"] as? Int { caddieWindMph = Double(v) }
         if let v = ctx["caddieWindDirectionDeg"] as? Double { caddieWindDirectionDeg = v }
@@ -1057,6 +1104,8 @@ extension WatchConnectivityManagerWatch: WCSessionDelegate {
             isRoundActive = false
             currentHoleNumber = 1
             roundStartedAt = nil
+            roundElapsedSeconds = nil
+            roundElapsedSyncedAt = nil
             recentShots.removeAll()
         }
 
@@ -1069,13 +1118,20 @@ extension WatchConnectivityManagerWatch: WCSessionDelegate {
             if let ts = ctx["roundStartedAt"] as? TimeInterval {
                 roundStartedAt = Date(timeIntervalSince1970: ts)
             }
+            if let seconds = ctx["roundElapsedSeconds"] as? TimeInterval {
+                roundElapsedSeconds = seconds
+                roundElapsedSyncedAt = Date()
+            } else if let seconds = ctx["roundElapsedSeconds"] as? Int {
+                roundElapsedSeconds = TimeInterval(seconds)
+                roundElapsedSyncedAt = Date()
+            }
+            isRoundActive = true
             if roundId != lastRoundId {
                 // New round — replace everything.
                 holes = parsed
                 lastRoundId = roundId
                 recentShots.removeAll()
-                currentHoleNumber = 1
-                isRoundActive = true
+                currentHoleNumber = ctx["currentHole"] as? Int ?? playFormat.range.lowerBound
             } else {
                 // Same round — phone is the source of truth. Always
                 // overwrite local strokes/putts so iPhone edits propagate
@@ -1125,6 +1181,8 @@ extension WatchConnectivityManagerWatch: WCSessionDelegate {
                 lastRoundId = nil
                 currentHoleNumber = 1
                 roundStartedAt = nil
+                roundElapsedSeconds = nil
+                roundElapsedSyncedAt = nil
             }
         }
 
@@ -1305,9 +1363,10 @@ struct WatchHoleState: Codable, Equatable {
     }
 
     /// Visual cap for the Crown so the user can still record extreme
-    /// scores, but anything past `netDoubleBogey` is shown as "PU".
+    /// scores. High enough for juniors and blow-up holes without making
+    /// Crown entry effectively unbounded.
     var maxStrokes: Int {
-        max(par + 6, netDoubleBogey + 1)
+        99
     }
 
     /// Default-18 holes used before a round arrives from the phone.
@@ -1325,6 +1384,31 @@ struct WatchHoleState: Codable, Equatable {
     }
 }
 
+struct WatchGroupPlayer: Codable, Identifiable, Equatable {
+    let id: String
+    let name: String
+    let handicapIndex: Double?
+    let courseHandicap: Int?
+    var holes: [WatchGroupHoleScore]
+
+    func score(for holeNumber: Int) -> WatchGroupHoleScore? {
+        holes.first { $0.holeNumber == holeNumber }
+    }
+}
+
+struct WatchGroupHoleScore: Codable, Identifiable, Equatable {
+    var id: Int { holeNumber }
+    let holeNumber: Int
+    let par: Int
+    let handicapIndex: Int
+    let strokesReceived: Int
+    var grossStrokes: Int?
+
+    var netStrokes: Int? {
+        grossStrokes.map { $0 - strokesReceived }
+    }
+}
+
 // MARK: - Watch-side Units
 
 /// Mirror of the iOS `MeasurementSystem` enum, kept lightweight so the watch
@@ -1332,6 +1416,13 @@ struct WatchHoleState: Codable, Equatable {
 enum WatchUnitsSystem: String, Codable, CaseIterable {
     case yards
     case meters
+
+    var toggled: WatchUnitsSystem {
+        switch self {
+        case .yards: return .meters
+        case .meters: return .yards
+        }
+    }
 
     /// Convert a yards value into the user's preferred display value.
     func display(yards: Double) -> Double {
@@ -1377,6 +1468,8 @@ struct ShotEventWatch: Codable, Identifiable, Equatable {
     var club: ClubWatch
     var confidence: Double?
     var isManual: Bool
+    var holeNumber: Int?
+    var heartRateData: HeartRateDataWatch?
     
     /// Club group for backward compatibility
     var clubGroup: ClubGroupWatch {
@@ -1388,22 +1481,34 @@ struct ShotEventWatch: Codable, Identifiable, Equatable {
         timestamp: Date = Date(),
         club: ClubWatch,
         confidence: Double? = nil,
-        isManual: Bool = true
+        isManual: Bool = true,
+        holeNumber: Int? = nil,
+        heartRateData: HeartRateDataWatch? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
         self.club = club
         self.confidence = confidence
         self.isManual = isManual
+        self.holeNumber = holeNumber
+        self.heartRateData = heartRateData
     }
 
-    init(club: ClubWatch, confidence: Double? = nil, isManual: Bool = true) {
+    init(
+        club: ClubWatch,
+        confidence: Double? = nil,
+        isManual: Bool = true,
+        holeNumber: Int? = nil,
+        heartRateData: HeartRateDataWatch? = nil
+    ) {
         self.init(
             id: UUID(),
             timestamp: Date(),
             club: club,
             confidence: confidence,
-            isManual: isManual
+            isManual: isManual,
+            holeNumber: holeNumber,
+            heartRateData: heartRateData
         )
     }
 }
@@ -1552,7 +1657,7 @@ enum ClubWatch: String, Codable, CaseIterable, Identifiable {
             .driver,
             .wood5,
             .iron5, .iron6, .iron7, .iron8, .iron9,
-            .pitchingWedge, .wedge52, .wedge54, .wedge60,
+            .pitchingWedge, .wedge52, .wedge56, .wedge60,
             .putter
         ]
     }

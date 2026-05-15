@@ -112,11 +112,11 @@ class ExportManager {
         }
     }
     
-    /// Export detailed round data as CSV (hole-by-hole)
+    /// Export detailed round data as CSV (scorecard + shot log)
     func exportRoundDetailedCSV(_ round: Round) -> URL? {
         var csv = "Hole,Par,HI,Strokes Received,Gross,Net,Putts,Fairway,GIR\n"
         
-        for hole in round.holes {
+        for hole in round.playedHoles {
             let fairway = hole.fairwayHit.map { $0 ? "Hit" : "Miss" } ?? ""
             let gir = hole.greenInRegulation.map { $0 ? "Yes" : "No" } ?? ""
             
@@ -132,8 +132,35 @@ class ExportManager {
         }
         
         // Add summary row
-        csv += "\nTOTAL,\(round.course.totalPar),,,"
+        let playedPar = round.playedHoles.reduce(0) { $0 + $1.par }
+        csv += "\nTOTAL,\(playedPar),,,"
         csv += "\(round.grossTotal),\(round.netTotal),\(round.totalPutts),,\n"
+
+        csv += "\nSHOT LOG\n"
+        csv += "Hole,Shot,Club,Timestamp,Start Lat,Start Lon,End Lat,End Lon,Distance Yards,Distance Meters,Confidence,Manual,HR At Impact,Motion,Audio\n"
+        let shotsByHole = Dictionary(grouping: round.shots) { $0.holeNumber ?? 0 }
+        for shot in round.shots.sorted(by: { $0.timestamp < $1.timestamp }) {
+            let hole = shot.holeNumber ?? 0
+            let shotNumber = (shotsByHole[hole] ?? [])
+                .sorted(by: { $0.timestamp < $1.timestamp })
+                .firstIndex(where: { $0.id == shot.id })
+                .map { $0 + 1 } ?? 1
+            csv += "\(hole == 0 ? "" : "\(hole)"),"
+            csv += "\(shotNumber),"
+            csv += "\(escapeCSV(shot.club.rawValue)),"
+            csv += "\(isoDate(shot.timestamp)),"
+            csv += "\(shot.startLocation.map { String($0.latitude) } ?? ""),"
+            csv += "\(shot.startLocation.map { String($0.longitude) } ?? ""),"
+            csv += "\(shot.endLocation.map { String($0.latitude) } ?? ""),"
+            csv += "\(shot.endLocation.map { String($0.longitude) } ?? ""),"
+            csv += "\(shot.distanceYards.map { String(format: "%.1f", $0) } ?? ""),"
+            csv += "\(shot.distanceMeters.map { String(format: "%.1f", $0) } ?? ""),"
+            csv += "\(shot.confidence.map { String(format: "%.2f", $0) } ?? ""),"
+            csv += "\(shot.isManual ? "Yes" : "No"),"
+            csv += "\(shot.heartRate.map { String(format: "%.0f", $0.heartRate) } ?? ""),"
+            csv += "\(shot.motion == nil ? "No" : "Yes"),"
+            csv += "\(audioAvailability(for: shot))\n"
+        }
         
         do {
             let filename = "round_\(escapeFilename(round.course.name))_\(formatDate(round.date))_detailed.csv"
@@ -152,6 +179,17 @@ class ExportManager {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
+    }
+
+    private func isoDate(_ date: Date) -> String {
+        ISO8601DateFormatter().string(from: date)
+    }
+
+    private func audioAvailability(for shot: Shot) -> String {
+        // The exporter is intentionally storage-agnostic; audio clips are
+        // included in JSON/API sync and surfaced as availability here when
+        // shot context grows a durable flag.
+        return "Unknown"
     }
     
     private func escapeCSV(_ string: String) -> String {

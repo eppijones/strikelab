@@ -1,3 +1,5 @@
 #include "Common.xcconfig"
 
 API_BASE_URL = $(URL_SCHEME_HTTPS)strikelab.golf/api
+// Set this to the production Clerk publishable key before archiving.
+// Example: CLERK_PUBLISHABLE_KEY = pk_live_...

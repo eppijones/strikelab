@@ -17,6 +17,7 @@ from app.routers import (
     training,
     booking,
     catalog,
+    public,
     range_sessions,
     realtime,
 )
@@ -61,6 +62,7 @@ app.include_router(friends.router, prefix="/friends", tags=["Friends"])
 app.include_router(equipment.router, prefix="/equipment", tags=["Equipment"])
 app.include_router(training.router, prefix="/training", tags=["Training"])
 app.include_router(catalog.router, prefix="/catalog", tags=["Catalog"])
+app.include_router(public.router, prefix="/public", tags=["Open Golf API"])
 app.include_router(range_sessions.router, prefix="/range-sessions", tags=["Range Sessions"])
 
 # On-course / Caddie / Booking

@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     blob_read_write_token: str = ""
     public_api_base_url: str = "http://localhost:8000"
 
+    # Optional upstream course database. Never expose this to web/iOS clients;
+    # the backend normalizes provider data through /public.
+    golfcourseapi_key: str = ""
+    golfcourseapi_base_url: str = "https://api.golfcourseapi.com/v1"
+
     class Config:
         env_file = ".env"
         extra = "ignore"

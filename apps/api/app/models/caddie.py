@@ -35,6 +35,7 @@ class Round(Base):
 
     is_complete = Column(Boolean, default=False)
     current_hole_number = Column(Integer, default=1)
+    play_format = Column(String(20), nullable=False, default="full18", server_default="full18")
 
     # Course-level totals derived from the holes JSON below
     total_par = Column(Integer, default=72)
@@ -45,6 +46,7 @@ class Round(Base):
     # Each item: {hole_number, par, handicap_index, strokes_received,
     #             gross_strokes, net_strokes, putts, fairway_hit, gir, notes}
     holes = Column(JSON, nullable=True)
+    planned_shots = Column(JSON, nullable=True)
 
     # Optional player + course handicap snapshots taken at the start of the round
     player_handicap_index = Column(Float, nullable=True)

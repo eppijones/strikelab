@@ -12,10 +12,15 @@ struct PlayerProfileView: View {
     @EnvironmentObject var connectivityManager: WatchConnectivityManager
     @EnvironmentObject var unitsManager: UnitsManager
     @EnvironmentObject var settingsManager: AppSettingsManager
+    @EnvironmentObject var authStore: AuthStore
 
     @State private var editedName: String = ""
     @State private var editedHandicap: String = ""
     @State private var showExport = false
+    @State private var showDeleteAccountAlert = false
+    @State private var isSigningOut = false
+    @State private var isDeletingAccount = false
+    @State private var accountMessage: String?
     
     var body: some View {
         ScrollView {
@@ -69,6 +74,8 @@ struct PlayerProfileView: View {
                 // Round history
                 roundHistorySection
                 
+                legalAndAccountSection
+
                 // Data export
                 exportSection
                 
@@ -89,6 +96,14 @@ struct PlayerProfileView: View {
             NavigationStack {
                 ExportOptionsView(rounds: persistenceManager.savedRounds)
             }
+        }
+        .alert("Delete StrikeLab account?", isPresented: $showDeleteAccountAlert) {
+            Button("Delete", role: .destructive) {
+                deleteAccount()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This permanently deletes your StrikeLab account and synced performance data from our records. Local data on this device can be removed by deleting the app.")
         }
     }
     
@@ -508,59 +523,16 @@ struct PlayerProfileView: View {
         }
     }
 
-    // MARK: - StrikeLab web / local API
+    // MARK: - StrikeLab web sync
 
     private var strikeLabWebSyncSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionLabel(text: "StrikeLab web sync")
 
-            Toggle(isOn: $settingsManager.localModeEnabled) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("On-course local mode")
-                        .font(Theme.labelFont(12))
-                        .foregroundColor(Theme.ink)
-                    Text("Use rounds, scorecard, shots, and practice without logging in or reaching your Mac.")
-                        .font(Theme.labelFont(10))
-                        .foregroundColor(Theme.ink3)
-                }
-            }
-            .toggleStyle(SwitchToggleStyle(tint: Theme.accent))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Theme.surface)
-            .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
-
-            Text("When local mode is off, range sessions upload to the StrikeLab API after each practice. On a physical iPhone, set your Mac’s LAN URL (not localhost). Paste the same bearer token you use in the web app (e.g. from dev tools → Application → localStorage).")
+            Text("When signed in, completed rounds and range sessions sync securely to strikelab.golf so you can review them on the web and keep iPhone and Apple Watch in agreement.")
                 .font(Theme.labelFont(11))
                 .foregroundColor(Theme.ink3)
                 .fixedSize(horizontal: false, vertical: true)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("API base URL")
-                    .font(Theme.labelFont(10))
-                    .foregroundColor(Theme.ink3)
-                TextField("http://192.168.1.10:8000", text: $settingsManager.strikeLabApiBaseURL)
-                    .textContentType(.URL)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .font(Theme.statFont(13))
-                    .foregroundColor(Theme.ink)
-                    .padding(10)
-                    .background(Theme.surface2)
-                    .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Access token (optional)")
-                    .font(Theme.labelFont(10))
-                    .foregroundColor(Theme.ink3)
-                SecureField("Paste access token", text: $settingsManager.strikeLabAccessToken)
-                    .font(Theme.statFont(12))
-                    .foregroundColor(Theme.ink)
-                    .padding(10)
-                    .background(Theme.surface2)
-                    .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
-            }
 
             if let line = RangeSessionSync.lastSyncStatusLine() {
                 Text(line)
@@ -583,7 +555,7 @@ struct PlayerProfileView: View {
             )
             toggleRow(
                 title: "Mic-confirmed impact",
-                    subtitle: "On by default. Watch listens for the club click for ±10 ms impact timing. Clips sync to StrikeLab when cloud sync is enabled.",
+                    subtitle: "Off by default. When enabled, Apple Watch listens for impact timing and stores short clips for your swing review.",
                 isOn: $settingsManager.micImpactConfirm
             )
             toggleRow(
@@ -600,6 +572,11 @@ struct PlayerProfileView: View {
                 title: "Pressure warnings",
                 subtitle: "Calm-down breathing pattern when HR is high and tempo collapses.",
                 isOn: $settingsManager.pressureWarnings
+            )
+            toggleRow(
+                title: "Show heart rate on watch",
+                subtitle: "Live BPM during rounds. Turn off if pressure data feels distracting.",
+                isOn: $settingsManager.showHeartRateOnWatch
             )
             toggleRow(
                 title: "Anonymous data sharing",
@@ -810,15 +787,81 @@ struct PlayerProfileView: View {
                 )
             }
 
+            if ReleasePolicy.allowsDemoReset {
+                Button {
+                    persistenceManager.resetToDemo()
+                } label: {
+                    ProfileLinkRow(
+                        icon: "arrow.clockwise",
+                        iconTint: Theme.accent,
+                        title: "Reset demo data",
+                        subtitle: "Reload the PGA Catalunya sample round and practice sessions"
+                    )
+                }
+            }
+        }
+    }
+
+    private var legalAndAccountSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionLabel(text: "Account")
+
+            Link(destination: ReleasePolicy.privacyURL) {
+                ProfileLinkRow(
+                    icon: "hand.raised",
+                    iconTint: Theme.accent,
+                    title: "Privacy Policy",
+                    subtitle: "How StrikeLab handles golf, location, watch and account data"
+                )
+            }
+
+            Link(destination: ReleasePolicy.termsURL) {
+                ProfileLinkRow(
+                    icon: "doc.text",
+                    iconTint: Theme.ink2,
+                    title: "Terms of Use",
+                    subtitle: "Use, safety and coaching limitations"
+                )
+            }
+
+            Link(destination: URL(string: "mailto:\(ReleasePolicy.supportEmail)")!) {
+                ProfileLinkRow(
+                    icon: "envelope",
+                    iconTint: Theme.warn,
+                    title: "Support",
+                    subtitle: ReleasePolicy.supportEmail
+                )
+            }
+
             Button {
-                persistenceManager.resetToDemo()
+                signOut()
             } label: {
                 ProfileLinkRow(
-                    icon: "arrow.clockwise",
-                    iconTint: Theme.accent,
-                    title: "Reset demo data",
-                    subtitle: "Reload the PGA Catalunya sample round and practice sessions"
+                    icon: "rectangle.portrait.and.arrow.right",
+                    iconTint: Theme.ink2,
+                    title: isSigningOut ? "Signing out..." : "Sign out",
+                    subtitle: "Return to login and clear this device session"
                 )
+            }
+            .disabled(isSigningOut || !authStore.isAuthenticated)
+
+            Button(role: .destructive) {
+                showDeleteAccountAlert = true
+            } label: {
+                ProfileLinkRow(
+                    icon: "trash",
+                    iconTint: Theme.bad,
+                    title: isDeletingAccount ? "Deleting account..." : "Delete account",
+                    subtitle: "Permanently remove your StrikeLab account and synced data"
+                )
+            }
+            .disabled(isDeletingAccount || !authStore.isAuthenticated)
+
+            if let accountMessage {
+                Text(accountMessage)
+                    .font(Theme.labelFont(11))
+                    .foregroundColor(Theme.warn)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -845,6 +888,31 @@ struct PlayerProfileView: View {
     private func loadPlayerData() {
         editedName = persistenceManager.player.name
         editedHandicap = String(format: "%.1f", persistenceManager.player.handicapIndex)
+    }
+
+    private func deleteAccount() {
+        isDeletingAccount = true
+        accountMessage = nil
+        Task {
+            do {
+                try await authStore.deleteAccount()
+                settingsManager.localModeEnabled = false
+                accountMessage = nil
+            } catch {
+                accountMessage = "Account deletion failed. Please try again or contact \(ReleasePolicy.supportEmail)."
+            }
+            isDeletingAccount = false
+        }
+    }
+
+    private func signOut() {
+        isSigningOut = true
+        accountMessage = nil
+        Task {
+            await authStore.signOut()
+            settingsManager.localModeEnabled = false
+            isSigningOut = false
+        }
     }
 }
 
@@ -891,5 +959,8 @@ struct ProfileLinkRow: View {
         PlayerProfileView()
             .environmentObject(PersistenceManager())
             .environmentObject(WatchConnectivityManager())
+            .environmentObject(UnitsManager.shared)
+            .environmentObject(AppSettingsManager.shared)
+            .environmentObject(AuthStore.shared)
     }
 }

@@ -7,13 +7,32 @@ import {
   useFavoriteCourse,
 } from '@/api/courses'
 import { useCreateTeeTime } from '@/api/courses'
+import {
+  usePublicCourse,
+  usePublicCourseConditionSources,
+  usePublicCourseConditions,
+  usePublicCourseGeometry,
+} from '@/api/publicGolf'
 import { Panel, Stat, Tag } from '@/components/ui'
 import { CourseEditor } from '@/components/courses/CourseEditor'
+
+function pct(value?: number | null) {
+  return value == null ? '—' : `${Math.round(value * 100)}%`
+}
+
+function clock(value?: string | null) {
+  if (!value) return '—'
+  return value.slice(0, 5)
+}
 
 export default function CourseDetail() {
   const { id = '' } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: course, isLoading } = useCourse(id)
+  const { data: publicCourse } = usePublicCourse(id)
+  const { data: geometry } = usePublicCourseGeometry(id)
+  const { data: conditions } = usePublicCourseConditions(id)
+  const { data: conditionSources } = usePublicCourseConditionSources(id)
   const deleteCourse = useDeleteCourse()
   const favorite = useFavoriteCourse()
   const createTeeTime = useCreateTeeTime()
@@ -33,6 +52,17 @@ export default function CourseDetail() {
     )
 
   const editable = !course.is_verified
+  const geometryCounts = geometry?.summary?.counts ?? {}
+  const sourceRows = [
+    ...(publicCourse?.data_sources ?? []),
+    ...(conditionSources?.data_sources ?? []),
+  ].filter((source, index, rows) => rows.findIndex((row) => row.source_id === source.source_id) === index)
+  const holesDetected = geometry?.summary?.holes_detected ?? []
+  const representativeHour =
+    conditions?.hourly?.find((hour) => hour.h === 14) ??
+    conditions?.hourly?.[Math.floor((conditions.hourly?.length ?? 1) / 2)]
+  const hourlyPreview = (conditions?.hourly ?? []).filter((hour) => [8, 12, 16, 20].includes(hour.h))
+  const confidencePct = geometry?.confidence != null ? pct(geometry.confidence) : geometry ? '—' : 'PENDING'
 
   const handleDelete = async () => {
     if (!window.confirm('Delete this course? This cannot be undone.')) return
@@ -48,7 +78,7 @@ export default function CourseDetail() {
       course_id: course.id,
       tee_time: tomorrow.toISOString(),
     })
-    navigate('/calendar')
+    navigate('/tee')
   }
 
   return (
@@ -132,6 +162,98 @@ export default function CourseDetail() {
             value={course.total_yards ?? course.total_meters ?? '—'}
             unit={course.total_yards ? 'YDS' : course.total_meters ? 'M' : ''}
           />
+        </Panel>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-3">
+        <Panel id="DNA 01" title="COURSE DNA">
+          <Stat
+            label={geometry ? `CONFIDENCE ${confidencePct}` : 'GEOMETRY'}
+            value={geometry?.features.features.length ?? '—'}
+            unit={geometry ? 'FEATURES' : ''}
+          />
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {Object.entries(geometryCounts).slice(0, 6).map(([key, value]) => (
+              <Tag key={key}>
+                {key.toUpperCase()} {value}
+              </Tag>
+            ))}
+            {!geometry && <span className="mono text-[11px] text-ink-3">OSM geometry pending</span>}
+          </div>
+          {holesDetected.length > 0 && (
+            <div className="mono text-[10px] text-ink-3 mt-4 uppercase tracking-micro-tight">
+              Holes detected: {holesDetected.slice(0, 18).join(', ')}
+            </div>
+          )}
+        </Panel>
+        <Panel id="DNA 02" title="CONDITIONS">
+          <Stat
+            label={conditions?.source?.toUpperCase() ?? 'SOURCE'}
+            value={representativeHour?.t != null ? Math.round(representativeHour.t) : '—'}
+            unit={representativeHour?.t != null ? '°C' : ''}
+          />
+          <div className="mono text-[11px] text-ink-3 mt-4 uppercase tracking-micro-tight">
+            WIND {representativeHour?.w ?? conditions?.wind_ms ?? '—'} M/S
+            {representativeHour?.dir ? ` ${representativeHour.dir}` : ''} · RAIN {pct(conditions?.rain_pct)}
+            {representativeHour?.gust != null ? ` · GUST ${representativeHour.gust} M/S` : ''}
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <div className="border border-line bg-bg-2 p-2">
+              <div className="micro">SUNRISE</div>
+              <div className="mono text-[12px] text-ink mt-1">{clock(conditions?.sunrise)}</div>
+            </div>
+            <div className="border border-line bg-bg-2 p-2">
+              <div className="micro">GOLDEN</div>
+              <div className="mono text-[12px] text-ink mt-1">{clock(conditions?.golden_start)}</div>
+            </div>
+            <div className="border border-line bg-bg-2 p-2">
+              <div className="micro">SUNSET</div>
+              <div className="mono text-[12px] text-ink mt-1">{clock(conditions?.sunset)}</div>
+            </div>
+          </div>
+          {hourlyPreview.length > 0 && (
+            <div className="mt-4 grid grid-cols-4 gap-1.5">
+              {hourlyPreview.map((hour) => (
+                <div key={hour.h} className="border border-line bg-bg-2 p-2">
+                  <div className="mono text-[9px] text-ink-3">{String(hour.h).padStart(2, '0')}:00</div>
+                  <div className="mono text-[11px] text-ink">{Math.round(hour.w)} m/s</div>
+                  <div className="mono text-[9px] text-ink-3">{pct(hour.rain)} rain</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {conditionSources?.data_sources?.length ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {conditionSources.data_sources.map((source) => (
+                <Tag key={source.source_id}>{source.name.toUpperCase()}</Tag>
+              ))}
+            </div>
+          ) : null}
+        </Panel>
+        <Panel id="DNA 03" title="PROVENANCE">
+          <Stat label="SOURCES" value={sourceRows.length || '—'} />
+          <div className="mt-4 space-y-2">
+            {sourceRows.map((source) => (
+              <div key={source.source_id} className="border border-line bg-bg-2 p-2">
+                <div className="mono text-[10px] text-ink uppercase tracking-micro-tight">
+                  {source.name}
+                </div>
+                <div className="mono text-[9px] text-ink-3 mt-1 uppercase tracking-micro-tight">
+                  {source.license_name}
+                </div>
+                {source.source_url && (
+                  <a
+                    href={source.source_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mono text-[9px] text-accent-fg uppercase tracking-micro-tight hover:underline mt-1 inline-block"
+                  >
+                    Source →
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
         </Panel>
       </div>
 

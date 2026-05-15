@@ -78,7 +78,8 @@ export default function Courses() {
             The <em>library.</em>
           </h1>
           <p className="text-body text-ink-2 mt-3 max-w-2xl">
-            Verified slope, course rating, and hole layouts. Add a course manually,
+            Norway-first verified courses, OSM-enriched geometry, live
+            conditions, and legal source attribution. Add a course manually,
             upload a CSV, or favorite catalog courses to plan rounds.
           </p>
         </div>

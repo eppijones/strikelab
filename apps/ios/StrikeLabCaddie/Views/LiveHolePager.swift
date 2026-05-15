@@ -125,7 +125,7 @@ struct LiveHolePager: View {
             guard round.playFormat.holeRange.contains(newHole) else { return }
             persistCurrentHole(newHole)
         }
-        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now in
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { now in
             clockTick = now
         }
     }
@@ -231,6 +231,7 @@ struct LiveHolePager: View {
             holeNumber: holeNumber,
             par: hole?.par ?? 4,
             holeLayout: layout,
+            shots: round.shots(forHole: holeNumber),
             locationManager: locationManager,
             weatherManager: weatherManager
         )
@@ -262,7 +263,7 @@ struct LiveHolePager: View {
                     .font(Theme.labelFont(11))
                     .tracking(1.6)
                     .foregroundColor(Theme.ink3)
-                Text("\(round.grossTotal) · \(round.formattedOverUnder) · \(round.formattedElapsed)")
+                Text("\(round.grossTotal) · \(round.formattedOverUnder) · \(liveElapsed)")
                     .font(Theme.statFont(15))
                     .foregroundColor(Theme.ink)
             }
@@ -303,6 +304,20 @@ struct LiveHolePager: View {
         if round.grossOverUnder < 0 { return Theme.accent }
         if round.grossOverUnder > 0 { return Theme.bad }
         return Theme.ink
+    }
+
+    private var liveElapsed: String {
+        let total = max(0, Int((round.completedAt ?? clockTick).timeIntervalSince(round.date)))
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 {
+            return "\(hours)h \(String(format: "%02d", minutes))m"
+        }
+        if minutes > 0 {
+            return "\(minutes)m"
+        }
+        return "\(seconds)s"
     }
 
     private func persistCurrentHole(_ holeNumber: Int) {

@@ -37,6 +37,59 @@ final class TeeAPIClient {
         return try await api.get("/booking/courses/\(courseId.uuidString.lowercased())/conditions?date=\(day)")
     }
 
+    // MARK: - Public Open Golf API
+
+    func publicCourse(courseId: UUID) async throws -> PublicCourse {
+        try await api.get("/public/courses/\(courseId.uuidString.lowercased())")
+    }
+
+    func publicCoursesSearch(query: String, countryCode: String? = "NO", limit: Int = 80) async throws -> [PublicCourse] {
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? query
+        var path = "/public/courses?q=\(encoded)&limit=\(limit)"
+        if let countryCode, !countryCode.isEmpty {
+            path += "&country_code=\(countryCode)"
+        }
+        return try await api.get(path)
+    }
+
+    func publicGeometry(courseId: UUID) async throws -> PublicCourseGeometry {
+        try await api.get("/public/courses/\(courseId.uuidString.lowercased())/geometry")
+    }
+
+    func publicConditions(courseId: UUID, date: Date) async throws -> TeeCourseConditions {
+        let day = ISO8601Date.shared.day(date)
+        return try await api.get("/public/courses/\(courseId.uuidString.lowercased())/conditions?date=\(day)")
+    }
+
+    func publicCoursePackage(courseId: UUID, date: Date = Date()) async throws -> PublicCoursePackage {
+        async let course = publicCourse(courseId: courseId)
+        async let conditions = try? publicConditions(courseId: courseId, date: date)
+        async let geometry = try? publicGeometry(courseId: courseId)
+        return PublicCoursePackage(
+            course: try await course,
+            geometry: await geometry,
+            conditions: await conditions,
+            cachedAt: Date()
+        )
+    }
+
+    func golfCourseAPIStatus() async throws -> GolfCourseAPIProviderStatus {
+        try await api.get("/public/providers/golfcourseapi/status")
+    }
+
+    func golfCourseAPISearch(query: String) async throws -> GolfCourseAPIProviderSearch {
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? query
+        return try await api.get("/public/providers/golfcourseapi/search?q=\(encoded)")
+    }
+
+    func golfCourseAPIImport(providerId: Int) async throws -> PublicCourse {
+        try await api.request(
+            "/public/providers/golfcourseapi/import/\(providerId)",
+            method: .post,
+            body: Optional<EmptyBody>.none
+        )
+    }
+
     // MARK: - Preferences
 
     func preferences() async throws -> TeeBookingPreferences {
@@ -90,4 +143,12 @@ private final class ISO8601Date {
         return f
     }()
     func day(_ date: Date) -> String { formatter.string(from: date) }
+}
+
+private extension CharacterSet {
+    static let urlQueryValueAllowed: CharacterSet = {
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: ":#[]@!$&'()*+,;=")
+        return allowed
+    }()
 }

@@ -171,13 +171,13 @@ enum Club: String, Codable, CaseIterable, Identifiable {
     }
     
     /// Common clubs for quick selection — matches the player's bag
-    /// (D, 5W, 5–9 irons, PW, 52°, 54°, 60° wedges + putter).
+    /// (D, 5W, 5–9 irons, PW, 52°, 56°, 60° wedges + putter).
     static var commonClubs: [Club] {
         [
             .driver,
             .wood5,
             .iron5, .iron6, .iron7, .iron8, .iron9,
-            .pitchingWedge, .wedge52, .wedge54, .wedge60,
+            .pitchingWedge, .wedge52, .wedge56, .wedge60,
             .putter
         ]
     }
@@ -276,7 +276,8 @@ struct Shot: Codable, Identifiable, Equatable {
         endLocation: Coordinate? = nil,
         holeNumber: Int? = nil,
         confidence: Double? = nil,
-        isManual: Bool = true
+        isManual: Bool = true,
+        heartRate: HeartRateData? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -286,6 +287,8 @@ struct Shot: Codable, Identifiable, Equatable {
         self.holeNumber = holeNumber
         self.confidence = confidence
         self.isManual = isManual
+        self.heartRate = heartRate
+        self.motion = nil
         
         // Calculate distances if both locations are available
         if let start = startLocation, let end = endLocation {
@@ -322,6 +325,8 @@ struct ShotEvent: Codable, Identifiable, Equatable {
     var club: Club
     var confidence: Double?
     var isManual: Bool
+    var holeNumber: Int?
+    var heartRate: HeartRateData?
     
     /// Club group for backward compatibility
     var clubGroup: ClubGroup {
@@ -333,13 +338,17 @@ struct ShotEvent: Codable, Identifiable, Equatable {
         timestamp: Date = Date(),
         club: Club,
         confidence: Double? = nil,
-        isManual: Bool = true
+        isManual: Bool = true,
+        holeNumber: Int? = nil,
+        heartRate: HeartRateData? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
         self.club = club
         self.confidence = confidence
         self.isManual = isManual
+        self.holeNumber = holeNumber
+        self.heartRate = heartRate
     }
     
     /// Convert to full Shot (without location data)
@@ -348,9 +357,45 @@ struct ShotEvent: Codable, Identifiable, Equatable {
             id: id,
             timestamp: timestamp,
             club: club,
+            holeNumber: holeNumber,
             confidence: confidence,
-            isManual: isManual
+            isManual: isManual,
+            heartRate: heartRate
         )
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case timestamp
+        case club
+        case confidence
+        case isManual
+        case holeNumber
+        case heartRate
+        case heartRateData
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        club = try container.decode(Club.self, forKey: .club)
+        confidence = try container.decodeIfPresent(Double.self, forKey: .confidence)
+        isManual = try container.decode(Bool.self, forKey: .isManual)
+        holeNumber = try container.decodeIfPresent(Int.self, forKey: .holeNumber)
+        heartRate = try container.decodeIfPresent(HeartRateData.self, forKey: .heartRate)
+            ?? container.decodeIfPresent(HeartRateData.self, forKey: .heartRateData)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(timestamp, forKey: .timestamp)
+        try container.encode(club, forKey: .club)
+        try container.encodeIfPresent(confidence, forKey: .confidence)
+        try container.encode(isManual, forKey: .isManual)
+        try container.encodeIfPresent(holeNumber, forKey: .holeNumber)
+        try container.encodeIfPresent(heartRate, forKey: .heartRateData)
     }
 }
 

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
 import {
   useConnectors,
@@ -260,9 +261,12 @@ export default function Connectors() {
               over HTTPS, exact same normalized schema.
             </p>
           </div>
-          <button className="bg-transparent text-ink border border-line-strong px-5 py-3 mono text-[11px] uppercase tracking-micro hover:border-accent-fg hover:text-accent-fg">
+          <Link
+            to="/open-api"
+            className="bg-transparent text-ink border border-line-strong px-5 py-3 mono text-[11px] uppercase tracking-micro hover:border-accent-fg hover:text-accent-fg"
+          >
             Read Docs →
-          </button>
+          </Link>
         </div>
       </Panel>
     </div>

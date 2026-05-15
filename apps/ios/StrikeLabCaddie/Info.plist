@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>StrikeLabCaddie</string>
+	<string>StrikeLab Caddie</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,6 +24,17 @@
 	<string>$(API_BASE_URL)</string>
 	<key>ClerkPublishableKey</key>
 	<string>$(CLERK_PUBLISHABLE_KEY)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Clerk OAuth Callback</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
@@ -54,15 +65,15 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>StrikeLabCaddie uses your location to track shot distances on the golf course.</string>
+	<string>StrikeLab Caddie uses your location during a round to measure shot distances and show course context.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>StrikeLabCaddie uses your location in the background to continuously track your shots during a round.</string>
+	<string>StrikeLab Caddie uses location in the background only while a round is active so shot distances and score context continue when the phone is locked.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>StrikeLabCaddie reads workout data from your Apple Watch to sync your golf sessions.</string>
+	<string>StrikeLab Caddie reads golf workout, heart-rate, resting-heart-rate, and HRV context from Apple Watch to summarize rounds and range sessions you start.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>StrikeLabCaddie saves your golf rounds as workouts to track your activity.</string>
+	<string>StrikeLab Caddie saves golf rounds and range sessions as workouts when you start tracking on Apple Watch.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>StrikeLabCaddie can use the microphone for optional club-impact timing on the Apple Watch. Audio is not uploaded.</string>
+	<string>StrikeLab Caddie can use the Apple Watch microphone for optional club-impact timing. Short clips are stored for your swing review only when you enable this feature.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>StrikeLabCaddie connects to the StrikeLab API on your local network during development.</string>
 	<key>NSAppTransportSecurity</key>

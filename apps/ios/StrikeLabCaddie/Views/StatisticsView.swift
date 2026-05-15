@@ -10,6 +10,7 @@ import Charts
 
 struct StatisticsView: View {
     @EnvironmentObject var persistenceManager: PersistenceManager
+    @EnvironmentObject var unitsManager: UnitsManager
     
     private var stats: RoundStatistics {
         RoundStatistics(rounds: persistenceManager.savedRounds)
@@ -503,11 +504,11 @@ struct StatisticsView: View {
             
             // Distances
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(Int(stat.averageDistance)) yds")
+                Text(unitsManager.format(yards: stat.averageDistance))
                     .font(Theme.statFont(18))
                     .foregroundColor(Theme.nordicForest)
                 
-                Text("max \(Int(stat.longestDistance))")
+                Text("max \(unitsManager.format(yards: stat.longestDistance))")
                     .font(Theme.labelFont(11))
                     .foregroundColor(Theme.neuralCyan)
             }

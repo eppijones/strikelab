@@ -14,6 +14,7 @@ import SwiftUI
 struct PressureSessionView: View {
     @EnvironmentObject var persistenceManager: PersistenceManager
     @EnvironmentObject var connectivityManager: WatchConnectivityManager
+    @EnvironmentObject var unitsManager: UnitsManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedClub: Club = .iron7
@@ -82,8 +83,20 @@ struct PressureSessionView: View {
                 .pickerStyle(.segmented)
             }
 
-            stepperRow("TARGET CARRY", value: $targetYards, range: 30...300, unit: "yds", step: 5)
-            stepperRow("BAND", value: $bandYards, range: 3...40, unit: "yds", step: 1)
+            stepperRow(
+                "TARGET CARRY",
+                value: displayDistanceBinding(for: $targetYards),
+                range: displayDistanceRange(30...300),
+                unit: unitsManager.unitLabel,
+                step: 5
+            )
+            stepperRow(
+                "BAND",
+                value: displayDistanceBinding(for: $bandYards),
+                range: displayDistanceRange(3...40),
+                unit: unitsManager.unitLabel,
+                step: 1
+            )
             stepperRow("ATTEMPTS", value: Binding(
                 get: { Double(attempts) },
                 set: { attempts = Int($0) }
@@ -117,6 +130,17 @@ struct PressureSessionView: View {
         .overlay(Rectangle().stroke(Theme.lineStrong, lineWidth: 1))
     }
 
+    private func displayDistanceBinding(for yards: Binding<Double>) -> Binding<Double> {
+        Binding(
+            get: { unitsManager.displayValue(yards: yards.wrappedValue) },
+            set: { yards.wrappedValue = unitsManager.yards(fromDisplayValue: $0) }
+        )
+    }
+
+    private func displayDistanceRange(_ yards: ClosedRange<Double>) -> ClosedRange<Double> {
+        unitsManager.displayValue(yards: yards.lowerBound)...unitsManager.displayValue(yards: yards.upperBound)
+    }
+
     private func startSession() {
         let goal = PressureGoal.targetCarry(
             club: selectedClub,
@@ -145,7 +169,7 @@ struct PressureSessionView: View {
                     .font(Theme.statFont(13))
                     .foregroundColor(Theme.ink2)
             }
-            Text(s.goal.titleShort)
+            Text(goalTitle(s.goal))
                 .font(Theme.titleFont(18))
                 .foregroundColor(Theme.ink)
 
@@ -196,12 +220,12 @@ struct PressureSessionView: View {
                 }
             }
             Spacer()
-            // Carry input (per-attempt grading).
-            TextField("yds", text: Binding(
-                get: { attempt.carryYards.map { "\(Int($0))" } ?? "" },
+            // Carry input is entered in the user's unit and stored as yards.
+            TextField(unitsManager.unitLabel, text: Binding(
+                get: { attempt.carryYards.map { "\(Int(unitsManager.displayValue(yards: $0).rounded()))" } ?? "" },
                 set: { newVal in
-                    if let v = Double(newVal) {
-                        gradeAttempt(id: attempt.id, carry: v)
+                    if let v = displayCarryValue(from: newVal) {
+                        gradeAttempt(id: attempt.id, carry: unitsManager.yards(fromDisplayValue: v))
                     }
                 }
             ))
@@ -220,6 +244,24 @@ struct PressureSessionView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+    }
+
+    private func goalTitle(_ goal: PressureGoal) -> String {
+        let target = Int(unitsManager.displayValue(yards: goal.targetYards).rounded())
+        let band = Int(unitsManager.displayValue(yards: goal.bandYards).rounded())
+        switch goal {
+        case .targetCarry(let club, _, _, let attempts):
+            return "\(attempts) × \(club.shortName) @ \(target) ± \(band) \(unitsManager.unitLabel)"
+        case .streak(let club, _, _, let attempts):
+            return "\(attempts) in a row · \(club.shortName) @ \(target) ± \(band) \(unitsManager.unitLabel)"
+        }
+    }
+
+    private func displayCarryValue(from text: String) -> Double? {
+        let normalized = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: ".")
+        return Double(normalized)
     }
 
     private var endButton: some View {

@@ -44,6 +44,7 @@ from sqlalchemy.orm import Session  # noqa: E402
 
 from app.database import SessionLocal  # noqa: E402
 from app.models.course import Course  # noqa: E402
+from app.models.open_data import CourseGeometry  # noqa: E402
 
 
 OVERPASS_ENDPOINTS = [
@@ -65,6 +66,29 @@ area["ISO3166-1"="NO"][admin_level=2]->.no;
 );
 out tags center;
 """
+
+GEOMETRY_OVERPASS_QUERY = """
+[out:json][timeout:120];
+area["ISO3166-1"="NO"][admin_level=2]->.no;
+(
+  nwr["golf"~"^(tee|green|fairway|bunker|water_hazard|lateral_water_hazard|rough|hole|pin|driving_range)$"](area.no);
+  nwr["leisure"="golf_course"](area.no);
+);
+out tags center;
+"""
+
+GEOMETRY_TYPES = {
+    "tee",
+    "green",
+    "fairway",
+    "bunker",
+    "water_hazard",
+    "lateral_water_hazard",
+    "rough",
+    "hole",
+    "pin",
+    "driving_range",
+}
 
 
 # Norwegian letters don't decompose via NFKD — substitute explicitly.
@@ -349,6 +373,157 @@ def update_courses(
     }
 
 
+def _feature_kind(tags: dict[str, str]) -> Optional[str]:
+    golf = tags.get("golf")
+    if golf in GEOMETRY_TYPES:
+        return golf
+    if tags.get("leisure") == "golf_course":
+        return "course"
+    return None
+
+
+def _hole_number(tags: dict[str, str], name: Optional[str]) -> Optional[int]:
+    for key in ("ref", "hole", "golf:hole"):
+        raw = tags.get(key)
+        if raw:
+            match = re.search(r"\d{1,2}", raw)
+            if match:
+                return int(match.group(0))
+    if name:
+        match = re.search(r"\b(?:h|hole|green|tee)\s*(\d{1,2})\b", name, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def _feature_payload(el: dict[str, Any]) -> Optional[dict[str, Any]]:
+    tags = el.get("tags") or {}
+    kind = _feature_kind(tags)
+    if not kind:
+        return None
+    lat, lon = _coords(el)
+    if lat is None or lon is None:
+        return None
+    name = tags.get("name") or tags.get("name:no") or tags.get("ref")
+    return {
+        "id": f"{el.get('type')}/{el.get('id')}",
+        "kind": kind,
+        "name": name,
+        "hole": _hole_number(tags, name),
+        "center": {"lat": lat, "lon": lon},
+        "tags": {
+            k: v
+            for k, v in tags.items()
+            if k in {"golf", "leisure", "sport", "ref", "hole", "par", "handicap", "name"}
+        },
+    }
+
+
+def update_course_geometries(
+    db: Session,
+    elements: Iterable[dict[str, Any]],
+    *,
+    dry_run: bool = False,
+) -> dict[str, int]:
+    """Group OSM golf features by matched course and upsert geometry blobs."""
+    norwegian = db.query(Course).filter(Course.country_code == "NO").all()
+    by_key: dict[str, Course] = {_normalize_name(c.name): c for c in norwegian}
+    seeded_keys_sorted = sorted((k for k in by_key.keys() if k), key=lambda k: -len(k))
+
+    def _resolve(key: str) -> Optional[Course]:
+        if key in by_key:
+            return by_key[key]
+        tokens = key.split()
+        for seeded in seeded_keys_sorted:
+            seeded_tokens = seeded.split()
+            if seeded_tokens and all(t in tokens for t in seeded_tokens):
+                return by_key[seeded]
+        return None
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    course_by_id: dict[str, Course] = {}
+    skipped = 0
+    for el in elements:
+        tags = el.get("tags") or {}
+        feature = _feature_payload(el)
+        if not feature:
+            skipped += 1
+            continue
+        raw_name = tags.get("name") or tags.get("operator") or tags.get("club") or ""
+        key = _normalize_name(raw_name)
+        course = _resolve(key)
+        if not course and tags.get("is_in"):
+            course = _resolve(_normalize_name(tags["is_in"]))
+        if not course:
+            skipped += 1
+            continue
+        cid = str(course.id)
+        grouped.setdefault(cid, []).append(feature)
+        course_by_id[cid] = course
+
+    upserted = 0
+    for cid, features in grouped.items():
+        counts: dict[str, int] = {}
+        hole_numbers: set[int] = set()
+        for feature in features:
+            counts[feature["kind"]] = counts.get(feature["kind"], 0) + 1
+            if isinstance(feature.get("hole"), int):
+                hole_numbers.add(feature["hole"])
+        validation = {
+            "feature_count": len(features),
+            "hole_numbers": sorted(hole_numbers),
+            "missing_holes": [
+                h for h in range(1, (course_by_id[cid].holes_count or 18) + 1)
+                if h not in hole_numbers
+            ][:18],
+            "has_greens": counts.get("green", 0) > 0,
+            "has_tees": counts.get("tee", 0) > 0,
+        }
+        confidence = min(1.0, 0.25 + min(len(features), 40) / 80 + min(len(hole_numbers), 18) / 72)
+        payload = {
+            "features": {
+                "type": "FeatureCollection",
+                "features": features,
+            },
+            "summary": {
+                "counts": counts,
+                "holes_detected": sorted(hole_numbers),
+                "source": "openstreetmap",
+            },
+            "validation": validation,
+            "confidence": round(confidence, 2),
+            "attribution": "© OpenStreetMap contributors",
+        }
+        existing = (
+            db.query(CourseGeometry)
+            .filter(CourseGeometry.course_id == course_by_id[cid].id)
+            .first()
+        )
+        if dry_run:
+            print(f"    geometry {course_by_id[cid].name}: {len(features)} features")
+            upserted += 1
+            continue
+        if existing:
+            for key, value in payload.items():
+                setattr(existing, key, value)
+            existing.source_id = "openstreetmap"
+            existing.osm_id = course_by_id[cid].osm_id
+        else:
+            db.add(
+                CourseGeometry(
+                    course_id=course_by_id[cid].id,
+                    source_id="openstreetmap",
+                    osm_id=course_by_id[cid].osm_id,
+                    **payload,
+                )
+            )
+        upserted += 1
+
+    if not dry_run:
+        db.commit()
+    return {"geometry_upserted": upserted, "geometry_skipped": skipped}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Enrich Norwegian courses from OpenStreetMap."
@@ -363,6 +538,11 @@ def main() -> None:
         action="store_true",
         help="Print proposed changes without writing to the database.",
     )
+    parser.add_argument(
+        "--geometry",
+        action="store_true",
+        help="Also import hole-level OSM golf feature geometry.",
+    )
     args = parser.parse_args()
 
     print("Fetching golf facilities in Norway from OpenStreetMap (ODbL)…")
@@ -374,6 +554,17 @@ def main() -> None:
         stats = update_courses(
             db, elements, add_new=args.add_new, dry_run=args.dry_run
         )
+        if args.geometry:
+            print("\nFetching hole-level golf geometry from OpenStreetMap (ODbL)…")
+            geometry_elements = fetch_overpass(GEOMETRY_OVERPASS_QUERY)
+            print(f"  ← {len(geometry_elements)} OSM geometry elements returned")
+            stats.update(
+                update_course_geometries(
+                    db,
+                    geometry_elements,
+                    dry_run=args.dry_run,
+                )
+            )
     finally:
         db.close()
 

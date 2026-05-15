@@ -21,14 +21,17 @@ struct MainWatchView: View {
     @EnvironmentObject var locationManager: WatchLocationManager
     @EnvironmentObject var swingConfirmer: SwingConfirmer
     @EnvironmentObject var hrManager: HighFrequencyHRManager
+    @ObservedObject private var watchSettings = WatchSettings.shared
 
     @State private var showMore = false
+    @State private var showGuestScores = false
     @State private var showClubOverlay = false
     @State private var pendingAutoShot = false
     @State private var clubOverlayLogsShot = false
     @State private var activeShotClub: ClubWatch?
     @State private var selectedHole: Int = 1
     @State private var activeField: HoleField = .strokes
+    @State private var temporaryDistanceUnits: WatchUnitsSystem?
     @State private var elapsedTimerNow = Date()
     @FocusState private var crownFocus: Bool
 
@@ -76,6 +79,9 @@ struct MainWatchView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .sheet(isPresented: $showMore) {
                     moreSheet
+                }
+                .sheet(isPresented: $showGuestScores) {
+                    guestScoresSheet
                 }
                 .sheet(isPresented: $showClubOverlay) {
                     ClubConfirmOverlay(
@@ -135,18 +141,34 @@ struct MainWatchView: View {
                     if didEnd { showingRange = false }
                 }
                 .onChange(of: connectivityManager.isRoundActive) { _, isActive in
-                    if !isActive { showingRound = false }
+                    if isActive {
+                        selectedHole = max(1, connectivityManager.currentHoleNumber)
+                        showingRange = false
+                        showingRound = true
+                        ensureRoundSensorsRunning()
+                        startElapsedTick()
+                    } else {
+                        showingRound = false
+                    }
                 }
                 .onChange(of: connectivityManager.currentHoleNumber) { _, newHole in
                     selectedHole = newHole
                     activeShotClub = nil
+                    temporaryDistanceUnits = nil
                     syncCrown()
                     disarmCrown()
+                }
+                .onChange(of: connectivityManager.isRoundActive) { _, isActive in
+                    if isActive {
+                        ensureRoundSensorsRunning()
+                        startElapsedTick()
+                    }
                 }
                 .onChange(of: selectedHole) { oldHole, newHole in
                     if oldHole != newHole {
                         connectivityManager.sendHoleChange(to: newHole)
                         activeShotClub = nil
+                        temporaryDistanceUnits = nil
                         Haptics.play(.click)
                         syncCrown()
                         disarmCrown()
@@ -162,6 +184,9 @@ struct MainWatchView: View {
                 .onDisappear {
                     disarmCrown()
                     stopElapsedTick()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: WKExtension.applicationWillResignActiveNotification)) { _ in
+                    disarmCrown()
                 }
         }
     }
@@ -392,7 +417,7 @@ struct MainWatchView: View {
         // score and the fastest single gesture for a confident player.
         HStack(alignment: .center, spacing: 4) {
             // Keep the leading edge clear for watchOS' system back chevron.
-            Spacer(minLength: 42)
+            Spacer(minLength: 58)
 
             HStack(spacing: 4) {
                 Text("HOLE \(hole.holeNumber)")
@@ -423,6 +448,7 @@ struct MainWatchView: View {
             .minimumScaleFactor(0.8)
         }
         .padding(.horizontal, 4)
+        .padding(.top, 2)
         .frame(maxWidth: .infinity, alignment: .trailing)
         .contentShape(Rectangle())
         .onLongPressGesture(minimumDuration: 0.4) {
@@ -448,11 +474,9 @@ struct MainWatchView: View {
                 Text(club.shortName.uppercased())
                     .font(SLW.num(12))
             }
-            .foregroundColor(isManual ? SLW.accentInk : SLW.accent)
+            .foregroundColor(isManual ? SLW.accent : SLW.ink2)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-            .background(isManual ? SLW.accent : SLW.surface2)
-            .overlay(Rectangle().stroke(isManual ? SLW.accent : SLW.line, lineWidth: 1))
+            .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
     }
@@ -481,7 +505,11 @@ struct MainWatchView: View {
             .overlay(Rectangle().stroke(isActive ? SLW.accent : Color.clear, lineWidth: 1))
             .contentShape(Rectangle())
             .onTapGesture {
-                guard activeField != field else { return }
+                if activeField == field {
+                    disarmCrown()
+                    Haptics.play(.click)
+                    return
+                }
                 // Drop Crown focus before switching so watchOS does not keep
                 // the old hero expanded under the status clock.
                 disarmCrown()
@@ -504,8 +532,7 @@ struct MainWatchView: View {
 
     private func strokesHero(for hole: WatchHoleState) -> some View {
         let strokes = hole.grossStrokes ?? hole.par
-        let isPickup = strokes > hole.netDoubleBogey
-        let canDecrement = strokes > 0
+        let canDecrement = strokes > 1
         let canIncrement = strokes < hole.maxStrokes
 
         return VStack(spacing: 4) {
@@ -517,7 +544,7 @@ struct MainWatchView: View {
                 // Central armable Crown surface — tap to arm, rotate to
                 // edit. Crown rotation is gated by `crownArmed`.
                 VStack(spacing: 0) {
-                    Text(isPickup ? "PU" : "\(strokes)")
+                    Text("\(strokes)")
                         .font(SLW.num(60))
                         .foregroundColor(crownArmed
                                          ? scoreInk(strokes: strokes, par: hole.par)
@@ -581,16 +608,7 @@ struct MainWatchView: View {
                     lineWidth: crownArmed ? 2 : 1
                 )
             )
-            .overlay(alignment: .topTrailing) {
-                heartRateOverlay
-                    .padding(.top, 5)
-                    .padding(.trailing, 8)
-            }
-            .overlay(alignment: .topLeading) {
-                elapsedTimeOverlay
-                    .padding(.top, 5)
-                    .padding(.leading, 8)
-            }
+            .overlay { scoreVitalsOverlay(for: hole) }
 
             armedStatusLabel
         }
@@ -673,7 +691,7 @@ struct MainWatchView: View {
 
     private func decrementStrokes(hole: WatchHoleState) {
         let current = hole.grossStrokes ?? hole.par
-        let next = max(0, current - 1)
+        let next = max(1, current - 1)
         guard next != current else { return }
         connectivityManager.setStrokes(holeNumber: hole.holeNumber, strokes: next)
         swingConfirmer.cancelPending()
@@ -719,7 +737,7 @@ struct MainWatchView: View {
                         .opacity(crownArmed ? 1.0 : 0.88)
                         .frame(maxWidth: .infinity)
                         .lineLimit(1)
-                    Text(putts == 1 ? "single putt" : "\(putts) putts")
+                    Text(putts == 1 ? "1 putt" : "\(putts) putts")
                         .font(SLW.mono(11, weight: .semibold))
                         .tracking(1.2)
                         .foregroundColor(SLW.ink2)
@@ -767,16 +785,7 @@ struct MainWatchView: View {
                     lineWidth: crownArmed ? 2 : 1
                 )
             )
-            .overlay(alignment: .topTrailing) {
-                heartRateOverlay
-                    .padding(.top, 5)
-                    .padding(.trailing, 8)
-            }
-            .overlay(alignment: .topLeading) {
-                elapsedTimeOverlay
-                    .padding(.top, 5)
-                    .padding(.leading, 8)
-            }
+            .overlay { scoreVitalsOverlay(for: hole) }
 
             armedStatusLabel
         }
@@ -814,48 +823,94 @@ struct MainWatchView: View {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 16))
                     .foregroundColor(SLW.ink2)
-                    .frame(width: 34, height: 34)
-                    .background(SLW.surface2)
-                    .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+                    .frame(maxWidth: .infinity, minHeight: 24)
             }
             .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity)
     }
 
-    private var heartRateOverlay: some View {
+    private func scoreVitalsOverlay(for hole: WatchHoleState) -> some View {
+        ZStack {
+            VStack {
+                HStack(alignment: .top) {
+                    scoreVitalChip(icon: "timer", value: formattedRoundElapsed, tint: SLW.accent)
+                    Spacer()
+                    if watchSettings.showHeartRateOnWatch {
+                        scoreVitalChip(icon: "heart.fill", value: formattedLiveHeartRate, tint: SLW.bad)
+                    } else {
+                        scoreVitalChip(icon: "flag", value: connectivityManager.formattedToPar, tint: SLW.ink2)
+                    }
+                }
+                Spacer()
+                HStack(alignment: .bottom) {
+                    handicapCornerChip(for: hole)
+                    Spacer()
+                    scoreVitalChip(icon: "location.fill", value: distanceToPinLabel(for: hole), tint: SLW.warn)
+                        .hidden()
+                }
+            }
+            .allowsHitTesting(false)
+
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button {
+                        toggleTemporaryDistanceUnits()
+                    } label: {
+                        scoreVitalChip(icon: "location.fill", value: distanceToPinLabel(for: hole), tint: SLW.warn)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(distanceToPinMetersForScoring(hole: hole.holeNumber) == nil)
+                }
+            }
+        }
+        .padding(5)
+    }
+
+    private func scoreVitalChip(icon: String, value: String, tint: Color) -> some View {
         HStack(spacing: 3) {
-            Image(systemName: "heart.fill")
+            Image(systemName: icon)
                 .font(.system(size: 8, weight: .semibold))
-                .foregroundColor(SLW.bad)
-            Text(workoutManager.formattedHeartRate)
-                .font(SLW.num(10))
+                .foregroundColor(tint)
+            Text(value)
+                .font(SLW.num(9))
                 .foregroundColor(SLW.ink2)
         }
         .padding(.horizontal, 5)
         .padding(.vertical, 3)
-        .background(SLW.bg.opacity(0.72))
+        .background(SLW.bg.opacity(0.78))
         .overlay(Rectangle().stroke(SLW.line.opacity(0.75), lineWidth: 1))
     }
 
-    private var elapsedTimeOverlay: some View {
-        HStack(spacing: 3) {
-            Image(systemName: "timer")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundColor(SLW.accent)
-            Text(formattedRoundElapsed)
-                .font(SLW.num(10))
-                .foregroundColor(SLW.ink2)
+    private func handicapCornerChip(for hole: WatchHoleState) -> some View {
+        HStack(spacing: 0) {
+            scoreVitalChip(icon: "number", value: "HCP \(hole.handicapIndex)", tint: SLW.accent)
+            if hole.strokesReceived > 0 {
+                Text("+\(hole.strokesReceived)")
+                    .font(SLW.num(9))
+                    .foregroundColor(SLW.accentInk)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .background(SLW.accent)
+                    .overlay(Rectangle().stroke(SLW.accent.opacity(0.9), lineWidth: 1))
+            }
         }
-        .padding(.horizontal, 5)
-        .padding(.vertical, 3)
-        .background(SLW.bg.opacity(0.72))
-        .overlay(Rectangle().stroke(SLW.line.opacity(0.75), lineWidth: 1))
     }
 
     private var formattedRoundElapsed: String {
-        guard let started = connectivityManager.roundStartedAt else { return "0m" }
-        let seconds = max(0, Int(elapsedTimerNow.timeIntervalSince(started)))
+        let seconds: Int
+        if let started = connectivityManager.roundStartedAt {
+            seconds = max(0, Int(elapsedTimerNow.timeIntervalSince(started)))
+        } else if let elapsed = connectivityManager.roundElapsedSeconds {
+            let age = connectivityManager.roundElapsedSyncedAt.map { elapsedTimerNow.timeIntervalSince($0) } ?? 0
+            seconds = max(0, Int(elapsed + age))
+        } else if workoutManager.elapsedTime > 0 {
+            seconds = max(0, Int(workoutManager.elapsedTime))
+        } else {
+            seconds = 0
+        }
         let minutes = seconds / 60
         let hours = minutes / 60
         let remainder = minutes % 60
@@ -863,6 +918,12 @@ struct MainWatchView: View {
             return "\(hours)h \(String(format: "%02d", remainder))m"
         }
         return "\(minutes)m"
+    }
+
+    private var formattedLiveHeartRate: String {
+        let bpm = hrManager.liveBPM > 0 ? hrManager.liveBPM : workoutManager.heartRate
+        guard bpm > 0 else { return "--" }
+        return String(format: "%.0f", bpm)
     }
 
     private func footerChip(icon: String, value: String, tint: Color) -> some View {
@@ -875,9 +936,16 @@ struct MainWatchView: View {
                 .foregroundColor(SLW.ink)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 7)
-        .background(SLW.surface2)
-        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+        .padding(.vertical, 4)
+    }
+
+    private var displayDistanceUnits: WatchUnitsSystem {
+        temporaryDistanceUnits ?? connectivityManager.unitsSystem
+    }
+
+    private func toggleTemporaryDistanceUnits() {
+        temporaryDistanceUnits = displayDistanceUnits.toggled
+        Haptics.play(.click)
     }
 
     // MARK: - "More" sheet
@@ -902,7 +970,7 @@ struct MainWatchView: View {
                     showMore = false
                     let hole = connectivityManager.currentHole
                     let current = hole.grossStrokes ?? hole.par
-                    if current > 0 {
+                    if current > 1 {
                         connectivityManager.setStrokes(holeNumber: selectedHole, strokes: current - 1)
                     }
                     swingConfirmer.cancelPending()
@@ -919,6 +987,14 @@ struct MainWatchView: View {
                     swingConfirmer.cancelPending()
                 } label: { actionRow(icon: "hand.raised", label: "Pick up (net double bogey)") }
                 .buttonStyle(.plain)
+
+                Button {
+                    showMore = false
+                    showGuestScores = true
+                } label: { actionRow(icon: "person.2", label: "Guest scores") }
+                .buttonStyle(.plain)
+                .disabled(connectivityManager.groupPlayers.isEmpty)
+                .opacity(connectivityManager.groupPlayers.isEmpty ? 0.35 : 1.0)
 
                 Button {
                     showMore = false
@@ -944,6 +1020,99 @@ struct MainWatchView: View {
         .background(SLW.bg)
     }
 
+    private var guestScoresSheet: some View {
+        ScrollView {
+            VStack(spacing: 8) {
+                Text("GUESTS · HOLE \(selectedHole)")
+                    .font(SLW.mono(10, weight: .semibold))
+                    .tracking(1.6)
+                    .foregroundColor(SLW.ink3)
+
+                if connectivityManager.groupPlayers.isEmpty {
+                    Text("Add guests on iPhone")
+                        .font(SLW.mono(11))
+                        .foregroundColor(SLW.ink2)
+                        .padding(10)
+                } else {
+                    ForEach(connectivityManager.groupPlayers) { guest in
+                        guestScoreRow(guest: guest)
+                    }
+                }
+            }
+            .padding(8)
+        }
+        .background(SLW.bg)
+    }
+
+    private func guestScoreRow(guest: WatchGroupPlayer) -> some View {
+        let score = guest.score(for: selectedHole)
+        let gross = score?.grossStrokes ?? score?.par ?? connectivityManager.currentHole.par
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(guest.name.uppercased())
+                        .font(SLW.mono(10, weight: .semibold))
+                        .tracking(1.2)
+                        .foregroundColor(SLW.ink)
+                    if let score {
+                        Text(score.strokesReceived > 0 ? "+\(score.strokesReceived) stroke\(score.strokesReceived == 1 ? "" : "s") here" : "gross only here")
+                            .font(SLW.mono(8))
+                            .foregroundColor(score.strokesReceived > 0 ? SLW.warn : SLW.ink3)
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("\(gross)")
+                        .font(SLW.num(26))
+                        .foregroundColor(SLW.accent)
+                    if let net = score?.netStrokes {
+                        Text("NET \(net)")
+                            .font(SLW.mono(8))
+                            .foregroundColor(SLW.ink3)
+                    }
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    guard gross > 1 else { return }
+                    connectivityManager.setGuestScore(
+                        playerId: guest.id,
+                        holeNumber: selectedHole,
+                        grossStrokes: gross - 1
+                    )
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(SLW.ink)
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                        .background(SLW.surface2)
+                        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    connectivityManager.setGuestScore(
+                        playerId: guest.id,
+                        holeNumber: selectedHole,
+                        grossStrokes: gross + 1
+                    )
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(SLW.ink)
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                        .background(SLW.surface2)
+                        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .background(SLW.surface)
+        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+    }
+
     private func actionRow(icon: String, label: String, danger: Bool = false) -> some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
@@ -962,6 +1131,7 @@ struct MainWatchView: View {
     // MARK: - Score helpers
 
     private func scoreName(strokes: Int, par: Int) -> String {
+        if strokes == 1 { return "Ace" }
         let diff = strokes - par
         switch diff {
         case ..<(-3): return "Albatross"
@@ -1062,6 +1232,9 @@ struct MainWatchView: View {
 
     private func startWorkout() {
         workoutManager.startWorkout()
+        if !hrManager.isStreaming {
+            hrManager.start()
+        }
         motionManager.startDetection()
         // Round mode runs continuous GPS so the SwingConfirmer can
         // distinguish practice swings from real shots via displacement.
@@ -1077,6 +1250,9 @@ struct MainWatchView: View {
         if !motionManager.isDetectionEnabled {
             motionManager.startDetection()
         }
+        if !hrManager.isStreaming {
+            hrManager.start()
+        }
         if locationManager.lastLocation == nil {
             locationManager.startContinuous()
         }
@@ -1086,6 +1262,7 @@ struct MainWatchView: View {
 
     private func endWorkout() {
         workoutManager.endWorkout()
+        hrManager.stop()
         motionManager.stopDetection()
         locationManager.stopContinuous()
         stopConfirmerTick()
@@ -1135,12 +1312,19 @@ struct MainWatchView: View {
                 alsoIncrementPutt: alsoPutt
             )
             let club = activeShotClub ?? suggestedClub(for: connectivityManager.currentHole)
+            let hrSnapshot = hrManager.snapshot(around: candidate.detectedAt)
+            let hrData = WatchConnectivityManagerWatch.buildHeartRateData(
+                from: hrSnapshot,
+                impactAt: candidate.detectedAt
+            )
             let event = ShotEventWatch(
                 id: candidate.id,
                 timestamp: candidate.detectedAt,
                 club: club,
                 confidence: candidate.confidence,
-                isManual: false
+                isManual: false,
+                holeNumber: hole,
+                heartRateData: hrData
             )
             connectivityManager.sendShotEvent(event)
             connectivityManager.sendRoundEnhancedShot(
@@ -1149,7 +1333,7 @@ struct MainWatchView: View {
                 confidence: candidate.confidence,
                 isManual: false,
                 capture: candidate.capture,
-                hrSnapshot: hrManager.snapshot(around: candidate.detectedAt)
+                hrSnapshot: hrSnapshot
             )
             Haptics.swingRecognized()
             activeShotClub = nil
@@ -1222,7 +1406,7 @@ struct MainWatchView: View {
     private func startElapsedTick() {
         elapsedTimerNow = Date()
         stopElapsedTick()
-        elapsedTickTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
+        elapsedTickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             Task { @MainActor in
                 elapsedTimerNow = Date()
             }
@@ -1235,10 +1419,19 @@ struct MainWatchView: View {
     }
 
     private func logShot(club: ClubWatch) {
+        let now = Date()
+        let hrSnapshot = hrManager.snapshot(around: now)
+        let hrData = WatchConnectivityManagerWatch.buildHeartRateData(
+            from: hrSnapshot,
+            impactAt: now
+        )
         let event = ShotEventWatch(
+            timestamp: now,
             club: club,
             confidence: pendingAutoShot ? motionManager.lastSwingConfidence : nil,
-            isManual: !pendingAutoShot
+            isManual: !pendingAutoShot,
+            holeNumber: selectedHole,
+            heartRateData: hrData
         )
         connectivityManager.sendShotEvent(event)
         connectivityManager.sendRoundEnhancedShot(
@@ -1271,6 +1464,16 @@ struct MainWatchView: View {
             return caddieClub
         }
         return .iron7
+    }
+
+    private func distanceToPinLabel(for hole: WatchHoleState) -> String {
+        guard let meters = distanceToPinMetersForScoring(hole: hole.holeNumber) else { return "—" }
+        switch displayDistanceUnits {
+        case .yards:
+            return "\(Int((meters * 1.0936133).rounded()))y"
+        case .meters:
+            return "\(Int(meters.rounded()))m"
+        }
     }
 }
 

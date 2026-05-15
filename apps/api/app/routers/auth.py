@@ -5,6 +5,13 @@ import secrets
 
 from app.database import get_db
 from app.models.user import User, Invite, FriendLink
+from app.models.booking import Booking, BookingHold, BookingPreferences, Playmate, SlotPlayerLink
+from app.models.caddie import GhostAdvice, PlayerShotDNA, Round, RoundShot
+from app.models.coach import ChatMessage
+from app.models.course import TeeTime
+from app.models.equipment import ClubStats
+from app.models.log import SessionLog
+from app.models.training import MetricSnapshot
 from app.schemas.user import (
     UserCreate,
     UserLogin,
@@ -22,7 +29,9 @@ from app.services.auth import (
     create_refresh_token,
     get_current_user,
     decode_token,
+    delete_clerk_user,
 )
+from app.services.media import delete_user_media
 
 router = APIRouter()
 
@@ -220,3 +229,50 @@ def update_me(
     db.refresh(current_user)
 
     return UserResponse.model_validate(current_user)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_me(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete the current account and associated StrikeLab data.
+
+    This is intentionally direct and self-service to satisfy App Store account
+    deletion requirements for apps that allow account creation.
+    """
+    user_id = current_user.id
+    clerk_user_id = current_user.clerk_user_id
+
+    delete_user_media(user_id)
+
+    # Rows without ORM cascades/back_populates are removed explicitly.
+    db.query(ChatMessage).filter(ChatMessage.user_id == user_id).delete(synchronize_session=False)
+    db.query(GhostAdvice).filter(GhostAdvice.user_id == user_id).delete(synchronize_session=False)
+    db.query(PlayerShotDNA).filter(PlayerShotDNA.user_id == user_id).delete(synchronize_session=False)
+    db.query(ClubStats).filter(ClubStats.user_id == user_id).delete(synchronize_session=False)
+    db.query(MetricSnapshot).filter(MetricSnapshot.user_id == user_id).delete(synchronize_session=False)
+    db.query(SessionLog).filter(SessionLog.user_id == user_id).delete(synchronize_session=False)
+    db.query(SlotPlayerLink).filter(SlotPlayerLink.user_id == user_id).delete(synchronize_session=False)
+    db.query(Playmate).filter(
+        (Playmate.user_id == user_id) | (Playmate.friend_user_id == user_id)
+    ).delete(synchronize_session=False)
+    db.query(Booking).filter(Booking.user_id == user_id).delete(synchronize_session=False)
+    db.query(BookingHold).filter(BookingHold.user_id == user_id).delete(synchronize_session=False)
+    db.query(BookingPreferences).filter(BookingPreferences.user_id == user_id).delete(synchronize_session=False)
+    db.query(TeeTime).filter(TeeTime.user_id == user_id).delete(synchronize_session=False)
+    user_round_ids = [row.id for row in db.query(Round.id).filter(Round.user_id == user_id).all()]
+    if user_round_ids:
+        db.query(RoundShot).filter(RoundShot.round_id.in_(user_round_ids)).delete(synchronize_session=False)
+        db.query(Round).filter(Round.id.in_(user_round_ids)).delete(synchronize_session=False)
+
+    db.query(Invite).filter(Invite.used_by_id == user_id).update(
+        {Invite.used_by_id: None},
+        synchronize_session=False,
+    )
+
+    db.delete(current_user)
+    db.commit()
+
+    delete_clerk_user(clerk_user_id)
+    return None

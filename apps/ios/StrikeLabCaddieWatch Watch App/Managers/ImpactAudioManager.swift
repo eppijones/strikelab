@@ -18,7 +18,7 @@
 //      Swing Inspector / Swing Card so the player can HEAR the
 //      impact alongside the gauges.
 //
-//  On by default. Requires `NSMicrophoneUsageDescription` and is gated by
+//  Off by default. Requires `NSMicrophoneUsageDescription` and is gated by
 //  `WatchSettings.micImpactConfirm` (synced from the iPhone or Coach screen).
 //
 
@@ -168,10 +168,11 @@ final class ImpactAudioManager: ObservableObject {
         guard frames > 0 else { return }
 
         let ptr = channelData[0]
+        let samples = Array(UnsafeBufferPointer(start: ptr, count: frames))
 
         // 1. Append into the ring buffer (for clip rendering).
         Task { @MainActor [weak self] in
-            self?.appendToRing(ptr: ptr, frames: frames)
+            self?.appendToRing(samples)
         }
 
         // 2. Click detection on this buffer.
@@ -200,21 +201,22 @@ final class ImpactAudioManager: ObservableObject {
         }
         let highShare = highFrequencyShare(samples: window, sampleRate: Float(sampleRate))
 
+        let detectedPeak = peak
         Task { @MainActor [weak self] in
             guard let self else { return }
             if let until = self.cooldownUntil, now < until { return }
             guard highShare >= self.minHighFreqShare else { return }
             self.cooldownUntil = now.addingTimeInterval(self.cooldown)
             self.lastImpactAt = impactTime
-            self.lastImpactPeak = peak
+            self.lastImpactPeak = detectedPeak
         }
     }
 
-    /// Copy `frames` samples from `ptr` into the ring. Called on main.
-    private func appendToRing(ptr: UnsafePointer<Float>, frames: Int) {
+    /// Copy samples into the ring. Called on main.
+    private func appendToRing(_ samples: [Float]) {
         guard ringCapacity > 0 else { return }
-        for i in 0..<frames {
-            ringSamples[ringWriteIdx] = ptr[i]
+        for sample in samples {
+            ringSamples[ringWriteIdx] = sample
             ringWriteIdx = (ringWriteIdx + 1) % ringCapacity
             if ringWriteIdx == 0 { ringFilled = true }
         }

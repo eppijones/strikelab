@@ -79,6 +79,42 @@ def _round_holes(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def _play_format(payload: dict[str, Any]) -> str:
+    raw = _get(payload, "play_format", "playFormat", "play_format_raw", "playFormatRaw")
+    return raw if raw in {"full18", "front9", "back9"} else "full18"
+
+
+def _played_holes(holes: list[dict[str, Any]], play_format: str) -> list[dict[str, Any]]:
+    if play_format == "front9":
+        return [h for h in holes if 1 <= int(h.get("hole_number") or 0) <= 9]
+    if play_format == "back9":
+        return [h for h in holes if 10 <= int(h.get("hole_number") or 0) <= 18]
+    return holes
+
+
+def _planned_shots(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    shots = _get(payload, "planned_shots", "plannedShots")
+    if not isinstance(shots, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for raw in shots:
+        if not isinstance(raw, dict):
+            continue
+        out.append(
+            {
+                "id": str(_parse_uuid(_get(raw, "id")) or UUID(int=0)),
+                "hole_number": _get(raw, "hole_number", "holeNumber") or 1,
+                "order": _get(raw, "order") or 1,
+                "club": _get(raw, "club") or "Unknown",
+                "target_position": _get(raw, "target_position", "targetPosition") or {},
+                "start_position": _get(raw, "start_position", "startPosition"),
+                "expected_distance": _get(raw, "expected_distance", "expectedDistance"),
+                "notes": _get(raw, "notes"),
+            }
+        )
+    return [p for p in out if p["id"] != str(UUID(int=0))]
+
+
 def _coordinate(raw: Any) -> tuple[float | None, float | None]:
     if not isinstance(raw, dict):
         return None, None
@@ -113,7 +149,8 @@ def _shot_payload(raw: dict[str, Any], index: int) -> dict[str, Any]:
     }
 
 
-def _totals(holes: list[dict[str, Any]]) -> tuple[int, int, int]:
+def _totals(holes: list[dict[str, Any]], play_format: str = "full18") -> tuple[int, int, int]:
+    holes = _played_holes(holes, play_format)
     played = [h for h in holes if (h.get("gross_strokes") or 0) > 0]
     total_par = sum(int(h.get("par") or 0) for h in holes)
     total_gross = sum(int(h.get("gross_strokes") or 0) for h in played)
@@ -162,8 +199,10 @@ def create_round(
         course_name=payload.course_name,
         date=payload.date,
         selected_tee=payload.selected_tee,
+        play_format=payload.play_format_raw or payload.play_format,
         total_par=payload.total_par,
         holes=[h.model_dump() for h in payload.holes],
+        planned_shots=[s.model_dump() for s in payload.planned_shots],
         player_handicap_index=payload.player_handicap_index,
         course_handicap=payload.course_handicap,
     )
@@ -187,7 +226,8 @@ def sync_ios_round(
 
     course = _get(payload, "course")
     holes = _round_holes(payload)
-    total_par, total_gross, total_net = _totals(holes)
+    play_format = _play_format(payload)
+    total_par, total_gross, total_net = _totals(holes, play_format)
     selected_tee = _get(payload, "selected_tee", "selectedTee")
 
     row = db.query(Round).filter(Round.id == round_id, Round.user_id == current_user.id).first()
@@ -202,10 +242,12 @@ def sync_ios_round(
     row.selected_tee = str(_get(selected_tee, "name") or selected_tee or "") or None
     row.is_complete = bool(_get(payload, "is_complete", "isComplete") or False)
     row.current_hole_number = int(_get(payload, "current_hole_number", "currentHoleNumber") or 1)
+    row.play_format = play_format
     row.total_par = total_par
     row.total_gross = total_gross
     row.total_net = total_net
     row.holes = holes
+    row.planned_shots = _planned_shots(payload)
     player = _get(payload, "player")
     row.player_handicap_index = _get(player, "handicap_index", "handicapIndex") if isinstance(player, dict) else None
     row.course_handicap = None
@@ -275,6 +317,14 @@ def update_round(
     data = payload.model_dump(exclude_unset=True)
     if "holes" in data and data["holes"] is not None:
         data["holes"] = [h if isinstance(h, dict) else h.model_dump() for h in data["holes"]]
+    if "planned_shots" in data and data["planned_shots"] is not None:
+        data["planned_shots"] = [
+            s if isinstance(s, dict) else s.model_dump() for s in data["planned_shots"]
+        ]
+    if "play_format_raw" in data:
+        play_format_raw = data.pop("play_format_raw")
+        if play_format_raw is not None:
+            data["play_format"] = play_format_raw
     for k, v in data.items():
         setattr(rnd, k, v)
 

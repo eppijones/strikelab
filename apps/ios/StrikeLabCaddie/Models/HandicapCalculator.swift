@@ -56,9 +56,9 @@ struct HandicapCalculator {
     /// where 1 is the hardest hole to make par on.
     ///
     /// Allocation rules:
-    /// - Course Handicap 1-18: One stroke on the hardest N holes
-    /// - Course Handicap 19-36: Two strokes on the hardest (CH-18) holes, one on the rest
-    /// - Course Handicap 37-54: Three strokes on hardest (CH-36) holes, etc.
+    /// - Course Handicap 1-N: One stroke on the hardest N holes
+    /// - Higher handicaps: Continue looping through the stroke index order
+    ///   until all strokes are allocated.
     /// - Negative (plus) handicap: Give strokes back on easiest holes
     ///
     /// - Parameters:
@@ -69,12 +69,9 @@ struct HandicapCalculator {
         courseHandicap: Int,
         holes: [HoleInfo]
     ) -> [Int] {
-        guard holes.count == 18 else {
-            // Return zeros if not a full 18-hole course
-            return Array(repeating: 0, count: holes.count)
-        }
-        
-        var allocation = Array(repeating: 0, count: 18)
+        guard !holes.isEmpty else { return [] }
+
+        var allocation = Array(repeating: 0, count: holes.count)
         
         // Handle positive handicaps (receiving strokes)
         if courseHandicap > 0 {
@@ -83,9 +80,10 @@ struct HandicapCalculator {
                 .sorted { $0.element.handicapIndex < $1.element.handicapIndex }
                 .map { $0.offset }
             
-            // Allocate strokes - each pass through 18 holes gives one stroke per hole
-            for i in 0..<min(courseHandicap, 54) { // Cap at +54 (3 strokes per hole)
-                let holeIndex = sortedIndices[i % 18]
+            // Allocate strokes - each pass through the played holes gives one stroke per hole.
+            let maxStrokes = holes.count * 3
+            for i in 0..<min(courseHandicap, maxStrokes) {
+                let holeIndex = sortedIndices[i % holes.count]
                 allocation[holeIndex] += 1
             }
         }
@@ -98,7 +96,7 @@ struct HandicapCalculator {
             
             // Remove strokes from easiest holes
             let strokesToGive = abs(courseHandicap)
-            for i in 0..<min(strokesToGive, 18) {
+            for i in 0..<min(strokesToGive, holes.count) {
                 let holeIndex = sortedIndices[i]
                 allocation[holeIndex] -= 1
             }

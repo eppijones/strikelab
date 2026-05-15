@@ -4,6 +4,7 @@ struct ClubPickerView: View {
     var clubs: [ClubChoice]
     var suggested: String
     var onConfirm: (ClubChoice) -> Void
+    var units: WatchUnitsSystem = .yards
 
     @State private var selectionIndex: Int = 0
 
@@ -21,7 +22,8 @@ struct ClubPickerView: View {
                             ClubRow(
                                 club: club,
                                 isSelected: idx == selectionIndex,
-                                isSuggested: club.label == suggested
+                                isSuggested: club.label == suggested,
+                                units: units
                             )
                             .id(club.id)
                             .onTapGesture { selectionIndex = idx }
@@ -74,6 +76,7 @@ private struct ClubRow: View {
     var club: ClubChoice
     var isSelected: Bool
     var isSuggested: Bool
+    var units: WatchUnitsSystem
 
     var body: some View {
         HStack {
@@ -81,11 +84,11 @@ private struct ClubRow: View {
                 .font(SLW.mono(11, weight: isSuggested ? .semibold : .regular))
                 .foregroundColor(isSuggested ? SLW.accent : SLW.ink2)
                 .frame(width: 32, alignment: .leading)
-            Text("\(club.carryYards)")
+            Text(units.formatNumber(yards: Double(club.carryYards)))
                 .font(SLW.num(13))
                 .foregroundColor(SLW.ink)
             Spacer()
-            Text(club.deltaToTarget == 0 ? "·" : "\(club.deltaToTarget > 0 ? "+" : "")\(club.deltaToTarget)")
+            Text(deltaText)
                 .font(SLW.mono(10))
                 .foregroundColor(club.deltaToTarget < 0 ? SLW.warn : SLW.ink3)
         }
@@ -93,5 +96,11 @@ private struct ClubRow: View {
         .padding(.vertical, 6)
         .background(isSelected ? SLW.surface2 : SLW.surface.opacity(0.4))
         .overlay(Rectangle().stroke(isSelected ? SLW.accent : SLW.line, lineWidth: 1))
+    }
+
+    private var deltaText: String {
+        guard club.deltaToTarget != 0 else { return "·" }
+        let converted = Int(units.display(yards: Double(club.deltaToTarget)).rounded())
+        return "\(converted > 0 ? "+" : "")\(converted)"
     }
 }

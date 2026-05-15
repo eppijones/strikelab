@@ -151,6 +151,21 @@ def _clerk_user_profile(clerk_user_id: str) -> dict:
         return {}
 
 
+def delete_clerk_user(clerk_user_id: str | None) -> bool:
+    """Best-effort Clerk account deletion for App Store account deletion."""
+    if not clerk_user_id or not settings.clerk_secret_key:
+        return False
+    try:
+        response = httpx.delete(
+            f"https://api.clerk.com/v1/users/{clerk_user_id}",
+            headers={"Authorization": f"Bearer {settings.clerk_secret_key}"},
+            timeout=10.0,
+        )
+        return response.status_code in (200, 202, 204, 404)
+    except Exception:
+        return False
+
+
 def _email_from_clerk_profile(profile: dict) -> str | None:
     primary_id = profile.get("primary_email_address_id")
     addresses = profile.get("email_addresses")

@@ -2,13 +2,8 @@ import Foundation
 
 /// StrikeLab API client — JSON over HTTPS with bearer token + offline retry.
 ///
-/// Resolution order for the base URL (first non-empty wins):
-///   1. Runtime override via `APIClient.shared.configure(baseURL:...)` —
-///      typically driven by `AppSettingsManager.strikeLabApiBaseURL` from
-///      the Profile screen, or `STRIKELAB_API_BASE` scheme env.
-///   2. `APIBaseURL` Info.plist key, populated from `apps/ios/Config/*.xcconfig`
-///      (Debug → http://$(DEV_HOST):8000, Release → https://api.strikelab.golf).
-///   3. Compile-time default — localhost in DEBUG, prod URL in Release.
+/// The bundled base URL points at the public production API so iPhone and
+/// Watch installs work on cellular without local-network configuration.
 ///
 /// Errors surface as `SLAPIError`. The companion `SyncQueue` retries when offline.
 final class APIClient {
@@ -29,13 +24,39 @@ final class APIClient {
     init(session: URLSession = .shared) {
         self.session = session
         self.decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom(Self.decodeISO8601Date)
         decoder.keyDecodingStrategy = .convertFromSnakeCase
         self.encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.keyEncodingStrategy = .convertToSnakeCase
         self.baseURL = Self.defaultBaseURL()
     }
+
+    private static func decodeISO8601Date(from decoder: Decoder) throws -> Date {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+
+        if let date = iso8601WithFractionalSeconds.date(from: value) ?? iso8601.date(from: value) {
+            return date
+        }
+
+        throw DecodingError.dataCorruptedError(
+            in: container,
+            debugDescription: "Invalid ISO8601 date: \(value)"
+        )
+    }
+
+    private static let iso8601WithFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let iso8601: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 
     func configure(baseURL: URL, accessToken: String?, refreshToken: String? = nil) {
         self.baseURL = baseURL
@@ -61,16 +82,34 @@ final class APIClient {
                 return url
             }
         }
-        #if DEBUG
-        return URL(string: "http://localhost:8000")!
-        #else
-        return URL(string: "https://api.strikelab.golf")!
-        #endif
+        return URL(string: "https://strikelab.golf/api")!
     }
 
     // MARK: - Generic request
 
     enum Method: String { case get = "GET", post = "POST", put = "PUT", patch = "PATCH", delete = "DELETE" }
+
+    private func url(for path: String) -> URL {
+        guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            return baseURL.appending(path: path)
+        }
+
+        let split = path.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+        let rawPath = String(split.first ?? "")
+        let query = split.count > 1 ? String(split[1]) : nil
+
+        let basePath = components.percentEncodedPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let requestPath = rawPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        components.percentEncodedPath = "/" + [basePath, requestPath]
+            .filter { !$0.isEmpty }
+            .joined(separator: "/")
+
+        if let query, !query.isEmpty {
+            components.percentEncodedQuery = query
+        }
+
+        return components.url ?? baseURL.appending(path: rawPath)
+    }
 
     func request<Body: Encodable, Response: Decodable>(
         _ path: String,
@@ -96,8 +135,7 @@ final class APIClient {
         body: Body?,
         responseType: Response.Type
     ) async throws -> Response {
-        var url = baseURL
-        url.append(path: path)
+        let url = url(for: path)
         var req = URLRequest(url: url)
         req.httpMethod = method.rawValue
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -128,8 +166,7 @@ final class APIClient {
     /// no refresh is possible (no token, or server rejected it).
     private func performTokenRefresh() async throws -> Bool {
         guard let refreshToken else { return false }
-        var url = baseURL
-        url.append(path: "/auth/refresh")
+        let url = url(for: "/auth/refresh")
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -190,8 +227,7 @@ final class APIClient {
         mimeType: String,
         responseType: Response.Type
     ) async throws -> Response {
-        var url = baseURL
-        url.append(path: path)
+        let url = url(for: path)
 
         let boundary = "Boundary-\(UUID().uuidString)"
         var req = URLRequest(url: url)

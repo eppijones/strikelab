@@ -30,8 +30,8 @@ final class WatchSettings: ObservableObject {
         didSet { defaults.set(fullMotionCapture, forKey: Self.fullMotionKey) }
     }
 
-    /// Mic-confirmed impact — defaults ON so strike audio is captured;
-    /// user can turn off in iOS Profile or watch Coach page.
+    /// Mic-confirmed impact — defaults OFF; user opts in from iOS Profile or
+    /// watch range settings before any microphone capture starts.
     @Published var micImpactConfirm: Bool {
         didSet { defaults.set(micImpactConfirm, forKey: Self.micImpactKey) }
     }
@@ -54,6 +54,11 @@ final class WatchSettings: ObservableObject {
         didSet { defaults.set(pressureWarnings, forKey: Self.pressureKey) }
     }
 
+    /// Show live heart rate on the round scoring screen — defaults ON.
+    @Published var showHeartRateOnWatch: Bool {
+        didSet { defaults.set(showHeartRateOnWatch, forKey: Self.showHeartRateKey) }
+    }
+
     /// Anonymous swing-data sharing for server-side calibration learning —
     /// defaults OFF (GDPR-clean).
     @Published var anonymousDataSharing: Bool {
@@ -69,15 +74,17 @@ final class WatchSettings: ObservableObject {
     private static let rangeHudKey     = "strikelab.range.resultHUD.v1"
     private static let coachingKey     = "strikelab.coaching.haptics.v1"
     private static let pressureKey     = "strikelab.pressure.warnings.v1"
+    private static let showHeartRateKey = "strikelab.watch.showHeartRate.v1"
     private static let shareKey        = "strikelab.share.anonymous.v1"
 
     private init() {
         hapticsEnabled       = Self.read(defaults: .standard, key: Self.hapticsKey,    fallback: true)
         fullMotionCapture    = Self.read(defaults: .standard, key: Self.fullMotionKey, fallback: true)
-        micImpactConfirm     = Self.read(defaults: .standard, key: Self.micImpactKey,  fallback: true)
+        micImpactConfirm     = Self.read(defaults: .standard, key: Self.micImpactKey,  fallback: false)
         showRangeResultHUD   = Self.read(defaults: .standard, key: Self.rangeHudKey,    fallback: false)
         coachingHaptics      = Self.read(defaults: .standard, key: Self.coachingKey,   fallback: true)
         pressureWarnings     = Self.read(defaults: .standard, key: Self.pressureKey,   fallback: true)
+        showHeartRateOnWatch = Self.read(defaults: .standard, key: Self.showHeartRateKey, fallback: true)
         anonymousDataSharing = Self.read(defaults: .standard, key: Self.shareKey,      fallback: false)
     }
 
@@ -109,6 +116,10 @@ final class WatchSettings: ObservableObject {
 
     func applyPressureWarnings(_ enabled: Bool) {
         if pressureWarnings != enabled { pressureWarnings = enabled }
+    }
+
+    func applyShowHeartRateOnWatch(_ enabled: Bool) {
+        if showHeartRateOnWatch != enabled { showHeartRateOnWatch = enabled }
     }
 
     func applyAnonymousDataSharing(_ enabled: Bool) {

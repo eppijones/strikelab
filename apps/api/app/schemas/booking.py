@@ -60,6 +60,10 @@ class HourlyCondition(BaseModel):
     sun: float = 0.5
     cloud: float = 0.0
     rain: float = 0.0
+    gust: Optional[float] = None
+    humidity: Optional[float] = None
+    uv: Optional[float] = None
+    apparent: Optional[float] = None
 
 
 class CourseConditionsResponse(BaseModel):

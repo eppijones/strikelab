@@ -19,6 +19,9 @@ struct WatchCaddieTile: View {
     var body: some View {
         let yards = resolvedYards()
         let age = ageString()
+        let playsLike = connectivity.caddiePlaysLikeYards
+        let wind = connectivity.caddieWindMph
+        let confidence = connectivity.caddieConfidence
 
         VStack(alignment: .leading, spacing: 3) {
             HStack {
@@ -33,9 +36,21 @@ struct WatchCaddieTile: View {
                         .foregroundColor(SLW.ink3)
                 }
             }
-            Text("\(yards) y")
+            Text(connectivity.unitsSystem.format(yards: Double(yards)))
                 .font(SLW.num(26))
                 .foregroundColor(SLW.ink)
+
+            HStack(spacing: 6) {
+                if let playsLike, playsLike != yards {
+                    chip("PLAYS \(connectivity.unitsSystem.format(yards: Double(playsLike)))")
+                }
+                if let wind {
+                    chip("WIND \(Int(wind.rounded()))")
+                }
+                if let confidence {
+                    chip("\(Int((confidence * 100).rounded()))%")
+                }
+            }
 
             Text("REC · \(connectivity.caddieClubRaw.uppercased())")
                 .font(SLW.mono(9, weight: .semibold))
@@ -48,6 +63,18 @@ struct WatchCaddieTile: View {
                 .foregroundColor(SLW.ink2)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
+
+            if !connectivity.caddieHazardNote.isEmpty {
+                Text(connectivity.caddieHazardNote)
+                    .font(SLW.mono(8))
+                    .foregroundColor(SLW.warn)
+                    .lineLimit(1)
+            } else if !connectivity.caddieSource.isEmpty {
+                Text(connectivity.caddieSource.uppercased())
+                    .font(SLW.mono(7))
+                    .foregroundColor(SLW.ink3)
+                    .lineLimit(1)
+            }
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -75,5 +102,14 @@ struct WatchCaddieTile: View {
         let s = Int(Date().timeIntervalSince(t))
         if s < 2 { return nil }
         return "\(s)s ago"
+    }
+
+    private func chip(_ text: String) -> some View {
+        Text(text)
+            .font(SLW.mono(7, weight: .semibold))
+            .foregroundColor(SLW.accent)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .background(SLW.accent.opacity(0.12))
     }
 }

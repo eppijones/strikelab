@@ -73,7 +73,7 @@ struct RoundSummaryView: View {
                     Text(round.formattedOverUnder)
                         .font(Theme.statFont(28))
                         .foregroundColor(scoreColor)
-                    Text("vs par \(round.course.totalPar)")
+                    Text("vs par \(round.playedHoles.reduce(0) { $0 + $1.par })")
                         .font(Theme.labelFont(11))
                         .foregroundColor(Theme.ink3)
                 }
@@ -87,7 +87,7 @@ struct RoundSummaryView: View {
                     heroStat(label: "CH", value: "\(ch)", tint: Theme.warn)
                 }
                 heroDivider
-                heroStat(label: "HOLES", value: "\(round.holesCompleted)/\(round.holes.count)", tint: Theme.ink2)
+                heroStat(label: "HOLES", value: "\(round.holesCompleted)/\(round.playFormat.totalHoles)", tint: Theme.ink2)
                 heroDivider
                 heroStat(label: "TIME", value: round.formattedElapsed, tint: Theme.ink2)
             }

@@ -64,6 +64,7 @@ class Course(Base):
     teeone_id = Column(String(100), nullable=True)
     ngf_club_id = Column(String(40), nullable=True)  # Norges Golfforbund club id
     osm_id = Column(String(40), nullable=True)  # OpenStreetMap relation/way id
+    golfcourseapi_id = Column(String(40), nullable=True)  # golfcourseapi.com id
 
     # Which booking provider owns this course's tee sheet.
     # internal = StrikeLab Tee hosts it directly; otherwise we proxy.

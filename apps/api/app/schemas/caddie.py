@@ -51,13 +51,27 @@ class RoundShotResponse(RoundShotCreate):
     created_at: datetime
 
 
+class PlannedRoundShot(BaseModel):
+    id: UUID
+    hole_number: int
+    order: int
+    club: str
+    target_position: dict[str, Any]
+    start_position: dict[str, Any] | None = None
+    expected_distance: float | None = None
+    notes: str | None = None
+
+
 class RoundCreate(BaseModel):
     course_id: UUID | None = None
     course_name: str
     date: datetime | None = None
     selected_tee: str | None = None
+    play_format: str = "full18"
+    play_format_raw: str | None = None
     total_par: int = 72
     holes: list[RoundHole] = []
+    planned_shots: list[PlannedRoundShot] = []
     player_handicap_index: float | None = None
     course_handicap: int | None = None
 
@@ -65,9 +79,12 @@ class RoundCreate(BaseModel):
 class RoundUpdate(BaseModel):
     is_complete: bool | None = None
     current_hole_number: int | None = None
+    play_format: str | None = None
+    play_format_raw: str | None = None
     total_gross: int | None = None
     total_net: int | None = None
     holes: list[RoundHole] | None = None
+    planned_shots: list[PlannedRoundShot] | None = None
 
 
 class RoundResponse(BaseModel):
@@ -81,10 +98,12 @@ class RoundResponse(BaseModel):
     selected_tee: str | None
     is_complete: bool
     current_hole_number: int
+    play_format: str = "full18"
     total_par: int
     total_gross: int
     total_net: int
     holes: list[dict[str, Any]] | None
+    planned_shots: list[dict[str, Any]] | None = None
     player_handicap_index: float | None
     course_handicap: int | None
     created_at: datetime

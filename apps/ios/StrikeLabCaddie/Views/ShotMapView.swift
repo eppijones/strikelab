@@ -11,6 +11,7 @@ import MapKit
 struct ShotMapView: View {
     @Binding var round: Round
     @EnvironmentObject var locationManager: LocationManager
+    @EnvironmentObject var unitsManager: UnitsManager
     
     @State private var position: MapCameraPosition = .automatic
     @State private var selectedShot: Shot?
@@ -185,7 +186,7 @@ struct ShotMapView: View {
                                 .font(.system(size: 12))
                             
                             if let yards = shot.distanceYards {
-                                Text("\(Int(yards)) yds")
+                                Text(unitsManager.format(yards: yards))
                                     .font(Theme.statFont(12))
                             }
                         }
@@ -231,7 +232,7 @@ struct ShotMapView: View {
                         .position(screenCenter)
                     
                     // Distance label
-                    Text("\(distance)y")
+                    Text(distanceLabel(distance))
                         .font(.system(size: isSelected ? 12 : 10, weight: .bold))
                         .foregroundColor(isSelected ? Theme.neuralCyan : .white)
                         .padding(.horizontal, 6)
@@ -297,6 +298,10 @@ struct ShotMapView: View {
         case .wedge: return Theme.nordicSage
         case .putt: return Theme.neutral
         }
+    }
+
+    private func distanceLabel(_ value: Int) -> String {
+        "\(value) \(unitsManager.unitLabel)"
     }
     
     private func centerOnShots() {

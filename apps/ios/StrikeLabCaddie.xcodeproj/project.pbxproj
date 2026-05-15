@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		EE00030000000000000000A1 /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE00030000000000000000A2 /* ClerkKit */; };
 		EE00010000000000000000A1 /* StrikeLabCaddieWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 20F33E042F301A59006D5008 /* StrikeLabCaddieWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EE00030000000000000000A1 /* ClerkKit in Frameworks */ = {isa = PBXBuildFile; productRef = EE00030000000000000000A2 /* ClerkKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -204,13 +204,13 @@
 			);
 			mainGroup = 20F33D592F300F4E006D5008;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EE00030000000000000000A3 /* XCRemoteSwiftPackageReference "clerk-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 20F33D632F300F4E006D5008 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			packageReferences = (
-				EE00030000000000000000A3 /* XCRemoteSwiftPackageReference "clerk-ios" */,
-			);
 			targets = (
 				20F33D612F300F4E006D5008 /* StrikeLabCaddie */,
 				20F33E032F301A59006D5008 /* StrikeLabCaddieWatch Watch App */,
@@ -387,9 +387,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = StrikeLabCaddie/StrikeLabCaddie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 73D3GXKCHQ;
+				DEVELOPMENT_TEAM = XG6XRGV7Q7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = StrikeLabCaddie/Info.plist;
@@ -403,7 +404,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.strikelab.caddie.StrikeLabCaddie;
+				PRODUCT_BUNDLE_IDENTIFIER = golf.strikelab.caddie;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -420,9 +421,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = StrikeLabCaddie/StrikeLabCaddie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 73D3GXKCHQ;
+				DEVELOPMENT_TEAM = XG6XRGV7Q7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = StrikeLabCaddie/Info.plist;
@@ -436,7 +438,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.strikelab.caddie.StrikeLabCaddie;
+				PRODUCT_BUNDLE_IDENTIFIER = golf.strikelab.caddie;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -456,7 +458,7 @@
 				CODE_SIGN_ENTITLEMENTS = "StrikeLabCaddieWatch Watch App/StrikeLabCaddieWatch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 73D3GXKCHQ;
+				DEVELOPMENT_TEAM = XG6XRGV7Q7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "StrikeLabCaddieWatch Watch App/Info.plist";
@@ -467,7 +469,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.strikelab.caddie.StrikeLabCaddie.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = golf.strikelab.caddie.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -490,7 +492,7 @@
 				CODE_SIGN_ENTITLEMENTS = "StrikeLabCaddieWatch Watch App/StrikeLabCaddieWatch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 73D3GXKCHQ;
+				DEVELOPMENT_TEAM = XG6XRGV7Q7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "StrikeLabCaddieWatch Watch App/Info.plist";
@@ -501,7 +503,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.strikelab.caddie.StrikeLabCaddie.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = golf.strikelab.caddie.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;

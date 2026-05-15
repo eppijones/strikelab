@@ -15,22 +15,21 @@ struct HoleOverlayView: View {
     let currentLocation: CLLocation?
     let shots: [Shot]
     let holeLayout: HoleLayout?
+    var isPreview: Bool = false
     @EnvironmentObject var unitsManager: UnitsManager
 
+    @State private var position: MapCameraPosition = .automatic
     @State private var region: MKCoordinateRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
         span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
     )
     @State private var selectedDistance: Int?
     
-    // Distance arc intervals in yards
+    // Distance arc intervals in the user's display unit.
     private let distanceIntervals = [50, 100, 150, 200, 250]
     
     var body: some View {
         ZStack {
-            // TODO(swiftui-26): migrate to MapContentBuilder + Annotation when
-            // we drop iOS 16. The deprecated initializer here renders fine and
-            // the warnings just clutter the issue navigator.
             mapView
             .ignoresSafeArea()
             
@@ -39,16 +38,20 @@ struct HoleOverlayView: View {
                 distanceArcsOverlay
             }
             
-            // Info panel
-            VStack {
-                holeInfoPanel
-                
-                Spacer()
-                
-                // Distance selector
-                distanceSelector
+            if isPreview {
+                previewChrome
+            } else {
+                // Info panel
+                VStack {
+                    holeInfoPanel
+
+                    Spacer()
+
+                    // Distance selector
+                    distanceSelector
+                }
+                .padding()
             }
-            .padding()
         }
         .onAppear {
             updateRegion()
@@ -58,16 +61,45 @@ struct HoleOverlayView: View {
         }
     }
     
-    /// Wrapped in a separate property so we can pin the deprecation warning
-    /// to one place. Migrate to `MapContentBuilder` when iOS 16 is dropped.
-    @available(iOS, introduced: 14.0, deprecated: 17.0)
     private var mapView: some View {
-        Map(coordinateRegion: $region, annotationItems: mapAnnotations) { annotation in
-            MapAnnotation(coordinate: annotation.coordinate) {
-                annotationView(for: annotation)
+        Map(position: $position) {
+            ForEach(mapAnnotations) { annotation in
+                Annotation("", coordinate: annotation.coordinate) {
+                    annotationView(for: annotation)
+                }
             }
         }
         .mapStyle(.imagery(elevation: .realistic))
+    }
+
+    private var previewChrome: some View {
+        VStack {
+            HStack {
+                Label("Tap for satellite map", systemImage: "map")
+                    .font(Theme.labelFont(10))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.black.opacity(0.58))
+                    .cornerRadius(10)
+                Spacer()
+            }
+            Spacer()
+            if let yards = distanceToGreenYards {
+                HStack {
+                    Spacer()
+                    Text("\(unitsManager.format(yards: yards, includesUnit: false)) \(unitsManager.unitLabel)")
+                        .font(Theme.statFont(18))
+                        .foregroundColor(Theme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.black.opacity(0.62))
+                        .cornerRadius(10)
+                }
+            }
+        }
+        .padding(10)
+        .allowsHitTesting(false)
     }
 
     // MARK: - Hole Info Panel
@@ -148,7 +180,7 @@ struct HoleOverlayView: View {
             ZStack {
                 // Draw distance arcs
                 ForEach(distanceIntervals, id: \.self) { distance in
-                    let radius = calculateRadius(yards: distance, in: geometry.size)
+                    let radius = calculateRadius(displayDistance: distance, in: geometry.size)
                     
                     // Arc
                     Circle()
@@ -160,7 +192,7 @@ struct HoleOverlayView: View {
                         .position(center)
                     
                     // Distance label
-                    Text("\(distance)")
+                    Text(distanceLabel(distance))
                         .font(.system(size: 10, weight: .bold))
                         .foregroundColor(selectedDistance == distance ? Theme.neuralCyan : .white)
                         .padding(.horizontal, 4)
@@ -200,7 +232,7 @@ struct HoleOverlayView: View {
                         selectedDistance = selectedDistance == distance ? nil : distance
                     }
                 } label: {
-                    Text("\(distance)y")
+                    Text(distanceLabel(distance))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(selectedDistance == distance ? .white : .white.opacity(0.8))
                         .padding(.horizontal, 12)
@@ -341,21 +373,83 @@ struct HoleOverlayView: View {
     
     private func updateRegion() {
         if let location = currentLocation {
+            updateCamera(from: location.coordinate)
             region = MKCoordinateRegion(
                 center: location.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+                span: isPreview
+                    ? MKCoordinateSpan(latitudeDelta: 0.0025, longitudeDelta: 0.0025)
+                    : MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)
+            )
+        } else if let center = holeLayout?.greenCenter?.clCoordinate ?? holeLayout?.greenFront?.clCoordinate {
+            position = .camera(MapCamera(
+                centerCoordinate: center,
+                distance: isPreview ? 320 : 520,
+                heading: 0,
+                pitch: 0
+            ))
+            region = MKCoordinateRegion(
+                center: center,
+                span: MKCoordinateSpan(latitudeDelta: 0.0035, longitudeDelta: 0.0035)
             )
         }
     }
     
-    private func calculateRadius(yards: Int, in size: CGSize) -> CGFloat {
-        // Estimate pixels per yard based on map span
+    private func updateCamera(from current: CLLocationCoordinate2D) {
+        let green = holeLayout?.greenCenter?.clCoordinate ?? holeLayout?.greenFront?.clCoordinate
+        guard let green else {
+            position = .camera(MapCamera(
+                centerCoordinate: current,
+                distance: isPreview ? 320 : 520,
+                heading: 0,
+                pitch: 0
+            ))
+            return
+        }
+        let center = midpoint(current, green)
+        let distance = CLLocation(latitude: current.latitude, longitude: current.longitude)
+            .distance(from: CLLocation(latitude: green.latitude, longitude: green.longitude))
+        position = .camera(MapCamera(
+            centerCoordinate: center,
+            distance: max(isPreview ? 280 : 420, distance * (isPreview ? 2.0 : 2.4)),
+            heading: bearing(from: current, to: green),
+            pitch: 0
+        ))
+    }
+
+    private func calculateRadius(displayDistance: Int, in size: CGSize) -> CGFloat {
+        // Estimate pixels per display unit based on map span
         // This is approximate; in production, use proper coordinate conversion
         let metersPerDegree: Double = 111320  // at equator
         let mapWidthMeters = region.span.longitudeDelta * metersPerDegree
         let pixelsPerMeter = size.width / mapWidthMeters
-        let yardsInMeters = Double(yards) * 0.9144
-        return CGFloat(yardsInMeters * pixelsPerMeter)
+        return CGFloat(metersForDisplayDistance(displayDistance) * pixelsPerMeter)
+    }
+
+    private func metersForDisplayDistance(_ value: Int) -> Double {
+        switch unitsManager.system {
+        case .yards: return Double(value) * 0.9144
+        case .meters: return Double(value)
+        }
+    }
+
+    private func distanceLabel(_ value: Int) -> String {
+        "\(value) \(unitsManager.unitLabel)"
+    }
+
+    private func midpoint(_ a: CLLocationCoordinate2D, _ b: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
+        CLLocationCoordinate2D(
+            latitude: (a.latitude + b.latitude) / 2,
+            longitude: (a.longitude + b.longitude) / 2
+        )
+    }
+
+    private func bearing(from start: CLLocationCoordinate2D, to end: CLLocationCoordinate2D) -> CLLocationDirection {
+        let lat1 = start.latitude * .pi / 180
+        let lat2 = end.latitude * .pi / 180
+        let dLon = (end.longitude - start.longitude) * .pi / 180
+        let y = sin(dLon) * cos(lat2)
+        let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+        return (atan2(y, x) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
     }
     
     private func hazardColor(_ type: HazardType) -> Color {

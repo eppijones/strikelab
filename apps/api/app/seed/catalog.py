@@ -26,6 +26,7 @@ if __name__ == "__main__" and __package__ is None:
 
 from app.database import Base, SessionLocal, engine
 from app.models import Brand, ClubModel, Connector, Course
+from app.seed.open_data import seed_data_sources
 
 
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -159,6 +160,7 @@ def seed_catalog(db: Session | None = None) -> dict[str, int]:
     try:
         Base.metadata.create_all(bind=engine)
         results = {
+            "data_sources": seed_data_sources(db),
             "brands": seed_brands(db),
             "club_models": seed_club_models(db),
             "connectors": seed_connectors(db),

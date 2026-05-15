@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { useUpdateProfile } from '@/api/auth'
+import { useDeleteAccount, useUpdateProfile } from '@/api/auth'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { Panel, Tag } from '@/components/ui'
 
@@ -16,14 +17,17 @@ const PRACTICE_OPTIONS = [
 export default function Settings() {
   const { t } = useTranslation()
   const user = useAuthStore((state) => state.user)
+  const navigate = useNavigate()
   const { language, setLanguage, units, setUnits, theme, setTheme } = useSettingsStore()
   const updateProfile = useUpdateProfile()
+  const deleteAccount = useDeleteAccount()
 
   const [displayName, setDisplayName] = useState(user?.displayName || '')
   const [handicap, setHandicap] = useState(user?.handicapIndex?.toString() || '')
   const [goal, setGoal] = useState(user?.goalHandicap?.toString() || '')
   const [practice, setPractice] = useState(user?.practiceFrequency || '')
   const [saved, setSaved] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -45,6 +49,20 @@ export default function Settings() {
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  async function onDeleteAccount() {
+    setDeleteError(null)
+    const ok = window.confirm(
+      'Permanently delete your StrikeLab account and synced performance data? This cannot be undone.',
+    )
+    if (!ok) return
+    try {
+      await deleteAccount.mutateAsync()
+      navigate('/marketing')
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : 'Account deletion failed')
+    }
   }
 
   return (
@@ -145,6 +163,25 @@ export default function Settings() {
             <div className="mono text-[13px] text-ink mb-4">{user?.email}</div>
             <div className="micro mb-2">USER ID</div>
             <div className="mono text-[11px] text-ink-3 break-all">{user?.id}</div>
+            <div className="flex flex-wrap gap-3 mt-5 mono text-[10px] uppercase tracking-micro">
+              <Link to="/privacy" className="text-accent-fg hover:text-accent-fg-hover">
+                Privacy
+              </Link>
+              <Link to="/terms" className="text-accent-fg hover:text-accent-fg-hover">
+                Terms
+              </Link>
+              <Link to="/support" className="text-accent-fg hover:text-accent-fg-hover">
+                Support
+              </Link>
+            </div>
+            <button
+              onClick={onDeleteAccount}
+              disabled={deleteAccount.isPending}
+              className="mt-6 border border-bad text-bad px-4 py-3 mono text-[10px] uppercase tracking-micro hover:bg-bad/10 disabled:opacity-50"
+            >
+              {deleteAccount.isPending ? 'Deleting...' : 'Delete account'}
+            </button>
+            {deleteError && <div className="mono text-[11px] text-bad mt-3">{deleteError}</div>}
           </Panel>
         </div>
       </div>

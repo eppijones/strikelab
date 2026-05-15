@@ -101,8 +101,8 @@ final class SwingConfirmer: ObservableObject {
         countsAsPutt: Bool = false
     ) {
         let new = Candidate(
-            id: UUID(),
-            detectedAt: Date(),
+            id: capture?.id ?? UUID(),
+            detectedAt: capture?.detectedAt ?? Date(),
             location: location,
             hole: hole,
             confidence: confidence,

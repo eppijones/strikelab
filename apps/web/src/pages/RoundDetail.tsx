@@ -21,14 +21,21 @@ export default function RoundDetail() {
     )
   }
 
-  const vsPar = round.total_gross - round.total_par
-  const front = round.holes.slice(0, 9)
-  const back = round.holes.slice(9, 18)
+  const playFormat = round.play_format ?? (round.holes.length <= 9 ? 'front9' : 'full18')
+  const sections = scorecardSections(round.holes, playFormat)
+  const playedHoles = sections.flatMap((section) => section.holes)
+  const scorecardPar = playedHoles.reduce((sum, hole) => sum + hole.par, 0)
+  const vsPar = round.total_gross - scorecardPar
+  const targetHoles = playedHoles.length || round.holes.length || 18
   const shots = round.shots ?? []
   const withMotion = shots.filter((s) => s.motion_data).length
   const withHeart = shots.filter((s) => s.heart_rate_at_shot != null || s.biometric_data).length
   const withGps = shots.filter((s) => s.start_lat != null && s.start_lon != null).length
   const withAudio = shots.filter((s) => s.shot_context?.audio?.url).length
+  const planned = round.planned_shots ?? []
+  const plannedKeys = new Set(planned.map((s) => `${s.hole_number}:${s.order}`))
+  const actualKeys = new Set(shots.map((s) => `${s.hole_number}:${s.shot_number}`))
+  const plannedMatched = [...plannedKeys].filter((key) => actualKeys.has(key)).length
 
   return (
     <div className="space-y-6">
@@ -50,6 +57,9 @@ export default function RoundDetail() {
               </Tag>
             </div>
           </div>
+          <Link to={`/rounds/${round.id}/plan`} className="bg-accent text-accent-ink px-4 py-3 mono text-[11px] uppercase tracking-micro">
+            Plan Shots →
+          </Link>
         </div>
       </header>
 
@@ -65,7 +75,7 @@ export default function RoundDetail() {
           />
         </Panel>
         <Panel id="R 04" title="HOLES PLAYED">
-          <Stat label="OF 18" value={round.holes.filter((h) => h.gross_strokes > 0).length} />
+          <Stat label={`OF ${targetHoles}`} value={playedHoles.filter((h) => h.gross_strokes > 0).length} />
         </Panel>
       </div>
 
@@ -79,11 +89,45 @@ export default function RoundDetail() {
         </div>
       </Panel>
 
+      <Panel id="REVIEW" title="ROUND REVIEW">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat label="Plan match" value={planned.length ? `${plannedMatched}/${planned.length}` : '—'} />
+          <Stat label="Club intents" value={planned.length} />
+          <Stat label="Capture rate" value={shots.length ? `${Math.round((withHeart / shots.length) * 100)}% HR` : '—'} />
+          <Stat label="GPS coverage" value={shots.length ? `${Math.round((withGps / shots.length) * 100)}%` : '—'} />
+        </div>
+        <p className="text-body text-ink-3 mt-3">
+          Review whether the round was played to plan, then use missing GPS, HR, motion, or audio counts to diagnose capture setup before the next tee.
+        </p>
+      </Panel>
+
+      <Panel id="PLAN" title="PLANNED SHOTS">
+        {round.planned_shots?.length ? (
+          <div className="space-y-2">
+            {round.planned_shots
+              .slice()
+              .sort((a, b) => a.hole_number - b.hole_number || a.order - b.order)
+              .map((shot) => (
+                <div key={shot.id} className="border border-line-strong bg-bg-2/30 p-3 grid gap-3 sm:grid-cols-[80px_100px_1fr]">
+                  <div className="mono text-[11px] text-ink-3">H{shot.hole_number} · #{shot.order}</div>
+                  <div className="mono text-[13px] text-ink">{shot.club}</div>
+                  <div className="text-body text-ink-2">{shot.notes || 'Planned target'}</div>
+                </div>
+              ))}
+          </div>
+        ) : (
+          <p className="text-ink-3 mono text-[12px]">No planned shots yet.</p>
+        )}
+      </Panel>
+
       {/* Scorecard */}
       <Panel id="CARD" title="SCORECARD">
-        <Nine label="OUT" holes={front} />
-        <hr className="rule my-4" />
-        <Nine label="IN" holes={back} />
+        {sections.map((section, index) => (
+          <div key={section.label}>
+            {index > 0 && <hr className="rule my-4" />}
+            <Nine label={section.label} holes={section.holes} />
+          </div>
+        ))}
       </Panel>
 
       <Panel id="SHOTS" title="SHOT LOG">
@@ -122,6 +166,21 @@ export default function RoundDetail() {
       </Panel>
     </div>
   )
+}
+
+function scorecardSections(
+  holes: { hole_number: number; par: number; gross_strokes: number; net_strokes: number }[],
+  playFormat: 'full18' | 'front9' | 'back9',
+) {
+  const front = holes.filter((h) => h.hole_number >= 1 && h.hole_number <= 9)
+  const back = holes.filter((h) => h.hole_number >= 10 && h.hole_number <= 18)
+
+  if (playFormat === 'front9') return [{ label: 'OUT', holes: front }]
+  if (playFormat === 'back9') return [{ label: 'IN', holes: back.length ? back : holes.slice(0, 9) }]
+  return [
+    { label: 'OUT', holes: front.length ? front : holes.slice(0, 9) },
+    { label: 'IN', holes: back.length ? back : holes.slice(9, 18) },
+  ].filter((section) => section.holes.length > 0)
 }
 
 function Mini({ label, value }: { label: string; value: string }) {

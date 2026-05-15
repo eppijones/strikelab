@@ -20,6 +20,10 @@ struct StrikeLabCaddieApp: App {
     @StateObject private var authStore = AuthStore.shared
 
     init() {
+        guard !ReleasePolicy.allowsLocalMode else {
+            AuthStore.isClerkConfigured = false
+            return
+        }
         if let key = Bundle.main.object(forInfoDictionaryKey: "ClerkPublishableKey") as? String,
            !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
            !key.hasPrefix("$("),
@@ -28,18 +32,21 @@ struct StrikeLabCaddieApp: App {
                 publishableKey: key,
                 options: .init(
                     keychainConfig: .init(service: "com.strikelab.caddie.clerk", accessGroup: nil),
+                    redirectConfig: .init(
+                        redirectUrl: "\(Bundle.main.bundleIdentifier ?? "golf.strikelab.caddie")://callback",
+                        callbackUrlScheme: Bundle.main.bundleIdentifier ?? "golf.strikelab.caddie"
+                    ),
                     watchConnectivityEnabled: true
                 )
             )
+            AuthStore.isClerkConfigured = true
         }
     }
 
-    /// `true` when either Keychain-backed login is active OR a manually
-    /// pasted dev token has been entered in Profile → StrikeLab OR the
-    /// on-course local mode is enabled.
+    /// `true` when either Keychain-backed login is active or on-course local
+    /// mode is enabled.
     private var hasAuth: Bool {
         authStore.isAuthenticated
-            || !settingsManager.strikeLabAccessToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || settingsManager.localModeEnabled
     }
 
@@ -61,7 +68,9 @@ struct StrikeLabCaddieApp: App {
                 .environmentObject(authStore)
                 .onAppear {
                     applyStrikeLabAPIConfiguration()
-                    Task { await authStore.hydrateFromClerkIfAvailable() }
+                    if !settingsManager.localModeEnabled {
+                        Task { await authStore.hydrateFromClerkIfAvailable() }
+                    }
                     setupWatchShotHandling()
                     setupWatchScoreHandling()
                     setupStartRoundFromWatch()
@@ -76,25 +85,7 @@ struct StrikeLabCaddieApp: App {
                 .onChange(of: unitsManager.system) { _, newSystem in
                     connectivityManager.sendUnitsSystem(newSystem.rawValue)
                 }
-                .onChange(of: settingsManager.watchHapticsEnabled) { _, _ in
-                    pushAllSettings()
-                }
-                .onChange(of: settingsManager.fullMotionCapture) { _, _ in
-                    pushAllSettings()
-                }
-                .onChange(of: settingsManager.micImpactConfirm) { _, _ in
-                    pushAllSettings()
-                }
-                .onChange(of: settingsManager.showRangeResultHUD) { _, _ in
-                    pushAllSettings()
-                }
-                .onChange(of: settingsManager.coachingHaptics) { _, _ in
-                    pushAllSettings()
-                }
-                .onChange(of: settingsManager.pressureWarnings) { _, _ in
-                    pushAllSettings()
-                }
-                .onChange(of: settingsManager.anonymousDataSharing) { _, _ in
+                .onChange(of: settingsSyncToken) { _, _ in
                     pushAllSettings()
                 }
                 .onChange(of: persistenceManager.currentRound) { _, _ in
@@ -114,12 +105,6 @@ struct StrikeLabCaddieApp: App {
                         RangeSessionSync.scheduleUpload(session: session, persistence: persistenceManager)
                     }
                 }
-                .onChange(of: settingsManager.strikeLabApiBaseURL) { _, _ in
-                    applyStrikeLabAPIConfiguration()
-                }
-                .onChange(of: settingsManager.strikeLabAccessToken) { _, _ in
-                    applyStrikeLabAPIConfiguration()
-                }
                 .onChange(of: authStore.isAuthenticated) { _, _ in
                     applyStrikeLabAPIConfiguration()
                 }
@@ -130,28 +115,24 @@ struct StrikeLabCaddieApp: App {
         connectivityManager.sendCoursesDirectory(persistenceManager.courses)
     }
 
-    /// Profile → StrikeLab web: saved URL/token override Xcode env, which
-    /// overrides the bundled `APIBaseURL` Info.plist value (from xcconfig).
-    /// Tokens from `AuthStore` (Keychain) take precedence over the pasted
-    /// `strikeLabAccessToken` so a real login flow always wins.
-    /// Physical device: use your Mac's LAN IP (e.g. http://192.168.1.10:8000), not `localhost`.
-    /// Scheme env: `STRIKELAB_API_BASE` + optional `STRIKELAB_ACCESS_TOKEN` when overrides are empty.
-    private func applyStrikeLabAPIConfiguration() {
-        let e = ProcessInfo.processInfo.environment
-        let userBase = settingsManager.strikeLabApiBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        let envBase = e["STRIKELAB_API_BASE"] ?? ""
-        // Picking order: Profile override → env → bundled default (already
-        // set by APIClient.init() from Info.plist + #if DEBUG fallback).
-        let resolvedBaseStr = !userBase.isEmpty ? userBase : envBase
-        let base: URL
-        if !resolvedBaseStr.isEmpty, let parsed = URL(string: resolvedBaseStr) {
-            base = parsed
-        } else {
-            base = APIClient.shared.baseURL
-        }
+    private var settingsSyncToken: String {
+        [
+            settingsManager.watchHapticsEnabled,
+            settingsManager.fullMotionCapture,
+            settingsManager.micImpactConfirm,
+            settingsManager.showRangeResultHUD,
+            settingsManager.coachingHaptics,
+            settingsManager.pressureWarnings,
+            settingsManager.showHeartRateOnWatch,
+            settingsManager.anonymousDataSharing
+        ].map { $0 ? "1" : "0" }.joined()
+    }
 
-        // If AuthStore has a Keychain token, leave it alone — only reconfigure
-        // the base URL. Otherwise fall through to the legacy paste-token path.
+    /// Always use the bundled production API URL from Info.plist. User-facing
+    /// builds must work on cellular without local network configuration.
+    private func applyStrikeLabAPIConfiguration() {
+        let base = APIClient.shared.baseURL
+
         if authStore.isAuthenticated {
             APIClient.shared.configure(
                 baseURL: base,
@@ -159,19 +140,10 @@ struct StrikeLabCaddieApp: App {
                 refreshToken: KeychainStore.get("refresh_token")
             )
         } else {
-            let userTok = settingsManager.strikeLabAccessToken.trimmingCharacters(in: .whitespacesAndNewlines)
-            let raw = userTok.isEmpty ? (e["STRIKELAB_ACCESS_TOKEN"] ?? "") : userTok
-            let token = raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : raw
-            APIClient.shared.configure(baseURL: base, accessToken: token)
+            APIClient.shared.configure(baseURL: base, accessToken: nil)
         }
-        // Mirror the resolved config to the watch so any future direct-API
-        // path (or diagnostic UI) inherits the same backend.
-        let mirrorToken: String? = authStore.isAuthenticated
-            ? KeychainStore.get("access_token")
-            : {
-                let manual = settingsManager.strikeLabAccessToken.trimmingCharacters(in: .whitespacesAndNewlines)
-                return manual.isEmpty ? nil : manual
-            }()
+
+        let mirrorToken = authStore.isAuthenticated ? KeychainStore.get("access_token") : nil
         connectivityManager.sendAPIConfig(baseURL: base, accessToken: mirrorToken)
         // Keep the realtime channel pinned to the resolved config so the
         // app sees round/shot updates from other devices without polling.
@@ -338,6 +310,9 @@ struct StrikeLabCaddieApp: App {
                     if !persistence.player.clubModels.isEmpty {
                         connectivity.sendClubModels(persistence.player.clubModels)
                     }
+                    if let round = persistence.currentRound {
+                        RoundLiveSync.schedule(round: round, persistence: persistence)
+                    }
                 }
                 if let sessionId = persistence.mergeEnhancedShotIntoStoredPracticeSessions(event) {
                     RangeSessionSync.scheduleDebouncedUpload(sessionId: sessionId, persistence: persistence)
@@ -437,6 +412,7 @@ struct StrikeLabCaddieApp: App {
             showRangeResultHUD: settingsManager.showRangeResultHUD,
             coachingHaptics:  settingsManager.coachingHaptics,
             pressureWarnings: settingsManager.pressureWarnings,
+            showHeartRate:    settingsManager.showHeartRateOnWatch,
             anonymousSharing: settingsManager.anonymousDataSharing
         )
     }
@@ -450,13 +426,16 @@ struct StrikeLabCaddieApp: App {
             Task { @MainActor in
                 // Convert ShotEvent to Shot and add location data
                 var shot = persistence.applyEnhancedData(to: event.toShot())
-                shot.holeNumber = persistence.currentRound?.currentHoleNumber
+                shot.holeNumber = event.holeNumber ?? persistence.currentRound?.currentHoleNumber
                 
                 // Enrich with location data from clustering
                 location.enrichShotWithLocation(&shot)
                 
                 // Add to current round
-                persistence.addShot(shot)
+                persistence.upsertShot(shot)
+                if let round = persistence.currentRound {
+                    RoundLiveSync.schedule(round: round, persistence: persistence)
+                }
             }
         }
     }
@@ -480,6 +459,23 @@ struct StrikeLabCaddieApp: App {
                 guard var round = persistence.currentRound else { return }
                 round.currentHoleNumber = holeNumber
                 persistence.currentRound = round
+            }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: .guestScoreUpdatedFromWatch,
+            object: nil,
+            queue: .main
+        ) { note in
+            Task { @MainActor in
+                guard var round = persistence.currentRound,
+                      let rawPlayerId = note.userInfo?["playerId"] as? String,
+                      let playerId = UUID(uuidString: rawPlayerId),
+                      let holeNumber = note.userInfo?["holeNumber"] as? Int,
+                      let gross = note.userInfo?["grossStrokes"] as? Int else { return }
+                round.updateGroupScore(playerId: playerId, holeNumber: holeNumber, grossStrokes: gross)
+                persistence.currentRound = round
+                connectivityManager.sendRoundConfig(round)
             }
         }
     }
@@ -550,27 +546,13 @@ struct ContentView: View {
             .tag(3)
             
             NavigationStack {
-                if let round = persistenceManager.currentRound {
-                    ShotListView(round: Binding(
-                        get: { round },
-                        set: { persistenceManager.currentRound = $0 }
-                    ))
-                } else {
-                    NoRoundView()
-                }
-            }
-            .tabItem {
-                Label("Shots", systemImage: "scope")
-            }
-            .tag(4)
-            
-            NavigationStack {
                 PlayerProfileView()
+                    .environmentObject(AuthStore.shared)
             }
             .tabItem {
                 Label("Profile", systemImage: "person.fill")
             }
-            .tag(5)
+            .tag(4)
         }
         .tint(Theme.accent)
         .onAppear {

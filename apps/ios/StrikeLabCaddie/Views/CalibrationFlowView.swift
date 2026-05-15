@@ -16,6 +16,7 @@ import SwiftUI
 struct CalibrationFlowView: View {
     @EnvironmentObject var persistenceManager: PersistenceManager
     @EnvironmentObject var connectivityManager: WatchConnectivityManager
+    @EnvironmentObject var unitsManager: UnitsManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedClub: Club = .iron7
@@ -79,7 +80,7 @@ struct CalibrationFlowView: View {
             Text("Hit 5 shots, enter the carry after each")
                 .font(Theme.titleFont(20))
                 .foregroundColor(Theme.ink)
-            Text("Captures pair automatically with the watch. Use a launch monitor, yardage marker, or GPS pin for the carry.")
+            Text("Captures pair automatically with the watch. Use a launch monitor, course marker, or GPS pin for the carry.")
                 .font(Theme.labelFont(11))
                 .foregroundColor(Theme.ink3)
         }
@@ -139,8 +140,9 @@ struct CalibrationFlowView: View {
 
             Spacer()
 
-            // Carry input — 3-digit max keeps it punchy on iPhone.
-            TextField("yds", text: Binding(
+            // Carry input is shown in the user's unit, then converted back
+            // to canonical yards when fitting the model.
+            TextField(unitsManager.unitLabel, text: Binding(
                 get: { rows[index].carryYards },
                 set: { rows[index].carryYards = $0 }
             ))
@@ -187,11 +189,19 @@ struct CalibrationFlowView: View {
         var out: [ClubCalibration.Sample] = []
         for row in rows {
             guard let h = row.handMph,
-                  let c = Double(row.carryYards.trimmingCharacters(in: .whitespaces))
+                  let displayCarry = displayCarryValue(from: row.carryYards)
             else { continue }
+            let c = unitsManager.yards(fromDisplayValue: displayCarry)
             out.append(ClubCalibration.Sample(handMph: h, carryYards: c))
         }
         return out
+    }
+
+    private func displayCarryValue(from text: String) -> Double? {
+        let normalized = text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: ".")
+        return Double(normalized)
     }
 
     private func fit() {
@@ -220,10 +230,10 @@ struct CalibrationFlowView: View {
                 .font(Theme.labelFont(10))
                 .tracking(1.4)
                 .foregroundColor(Theme.accent)
-            Text("\(selectedClub.shortName) · est. carry = \(formatNumber(model.alpha))·hand + \(formatNumber(model.gamma))")
+            Text("\(selectedClub.shortName) · est. carry = \(formatDisplaySlope(model.alpha))·hand + \(formatDisplayDistance(model.gamma))")
                 .font(Theme.statFont(13))
                 .foregroundColor(Theme.ink)
-            Text(String(format: "± %.1f yds (residual std-dev)", model.sigma))
+            Text("± \(formatDisplaySigma(model.sigma)) \(unitsManager.unitLabel) (residual std-dev)")
                 .font(Theme.labelFont(11))
                 .foregroundColor(Theme.ink3)
             Text("Median hand speed used: \(Int(model.medianHandMph.rounded())) mph")
@@ -237,6 +247,18 @@ struct CalibrationFlowView: View {
 
     private func formatNumber(_ d: Double) -> String {
         String(format: "%.2f", d)
+    }
+
+    private func formatDisplayDistance(_ yards: Double) -> String {
+        formatNumber(unitsManager.displayValue(yards: yards))
+    }
+
+    private func formatDisplaySlope(_ yardsPerMph: Double) -> String {
+        formatNumber(unitsManager.displayValue(yards: yardsPerMph))
+    }
+
+    private func formatDisplaySigma(_ yards: Double) -> String {
+        String(format: "%.1f", unitsManager.displayValue(yards: yards))
     }
 
     // MARK: - Auto-pair shots

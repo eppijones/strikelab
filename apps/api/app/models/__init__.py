@@ -8,6 +8,7 @@ from app.models.training import TrainingPlan, Drill, SwingVideo, SwingAnalysis, 
 from app.models.equipment import UserBag, UserClub, ClubStats
 from app.models.caddie import Round, RoundShot, PlayerShotDNA, GhostAdvice
 from app.models.catalog import Brand, ClubModel, Connector
+from app.models.open_data import CourseGeometry, DataSource
 from app.models.range_session import RangeSession
 from app.models.booking import (
     Booking,
@@ -48,6 +49,8 @@ __all__ = [
     "Brand",
     "ClubModel",
     "Connector",
+    "CourseGeometry",
+    "DataSource",
     # Tee booking surface
     "Booking",
     "BookingHold",

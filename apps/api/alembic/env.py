@@ -10,7 +10,7 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import Base
-from app.models import user, session, shot, log, coach, course, training
+from app.models import user, session, shot, log, coach, course, training, open_data
 
 config = context.config
 

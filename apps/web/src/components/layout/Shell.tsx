@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useClerk } from '@clerk/clerk-react'
 import { useAuthStore, type Persona } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useCourse } from '@/api/courses'
@@ -69,6 +70,7 @@ const PERSONA_NAV: Record<
 
 export function Shell() {
   const { t, i18n } = useTranslation()
+  const clerk = useClerk()
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const theme = useSettingsStore((s) => s.theme)
@@ -101,6 +103,15 @@ export function Shell() {
     month: 'short',
     year: 'numeric',
   })
+
+  async function signOut() {
+    try {
+      await clerk.signOut()
+    } finally {
+      logout()
+      navigate('/login')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-bg text-ink">
@@ -191,10 +202,7 @@ export function Shell() {
               {initials}
             </button>
             <button
-              onClick={() => {
-                logout()
-                navigate('/login')
-              }}
+              onClick={signOut}
               className="mono text-[10px] text-ink-3 hover:text-bad uppercase tracking-micro"
               aria-label="Sign out"
             >

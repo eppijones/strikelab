@@ -190,6 +190,41 @@ struct SLAppIconSurface: View {
     }
 }
 
+// MARK: - Brand Lockup
+
+/// Compact StrikeLab lockup for authenticated app surfaces.
+struct StrikeLabLogoLockup: View {
+    var subtitle: String?
+    var title: String = "STRIKELAB"
+    var markSize: CGFloat = 34
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SLLogoMark(accent: false)
+                .frame(width: markSize, height: markSize)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(Theme.labelFont(13))
+                    .tracking(3.0)
+                    .foregroundColor(Theme.ink)
+
+                if let subtitle {
+                    Text(subtitle.uppercased())
+                        .font(Theme.labelFont(9))
+                        .tracking(1.6)
+                        .foregroundColor(Theme.ink3)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(subtitle == nil ? title : "\(title), \(subtitle ?? "")")
+    }
+}
+
 #Preview("Mark · accent") {
     ZStack {
         Theme.bg.ignoresSafeArea()

@@ -2,12 +2,14 @@
 //  CourseAlenda.swift
 //  StrikeLabCaddie
 //
-//  Seed courses shipped with the app. Three real courses:
+//  Seed courses shipped with the app. Four real courses:
 //
 //    1. Groruddalen Golfklubb — sloped par-3 course in Oslo. Real scorecard
 //       (Yellow + Red tees, hole-by-hole metres, HCP index, slope tables).
-//    2. Alenda Golf — local Alicante course with WHS slope/rating data.
-//    3. PGA Catalunya · Stadium — championship course with full GPS hole
+//    2. Grini Golfklubb — 9-hole Bærum/Oslo course played twice, with official
+//       scorecard data and on-course GPS layouts.
+//    3. Alenda Golf — local Alicante course with WHS slope/rating data.
+//    4. PGA Catalunya · Stadium — championship course with full GPS hole
 //       layouts so the GPS, Smart Caddie and watch flow can be demoed without
 //       leaving the office.
 //
@@ -70,6 +72,52 @@ enum CourseData {
             apiCourseId: nil,
             latitude: 59.9686927,
             longitude: 10.9169836,
+            isCustom: false
+        )
+    }()
+
+    // MARK: - Grini Golfklubb — Eiksmarka, Norway (9-hole par 35, played twice)
+    //
+    // Official scorecard data from grinigolfklubb.no/banen/scorekort. The
+    // routing is 9 holes; holes 10-18 repeat 1-9 with the even handicap indexes.
+
+    static let grini: Course = {
+        let parsFront = [4, 3, 4, 4, 4, 4, 5, 4, 3]
+        let hcpFront = [11, 17, 3, 1, 9, 13, 5, 7, 15]
+        let hcpBack = [12, 18, 4, 2, 10, 14, 6, 8, 16]
+        let meters52Front = [273, 106, 339, 359, 287, 274, 475, 336, 143]
+        let meters45Front = [259, 89, 274, 326, 236, 235, 410, 292, 120]
+        let meters31Front = [178, 62, 205, 178, 170, 201, 307, 136, 105]
+        let meters23Front = [139, 41, 154, 144, 142, 125, 216, 136, 49]
+
+        let pars = parsFront + parsFront
+        let his = hcpFront + hcpBack
+        let meters52 = meters52Front + meters52Front
+
+        let holes = (0..<18).map { i in
+            HoleInfo(number: i + 1, par: pars[i], handicapIndex: his[i])
+        }
+
+        let tees = [
+            Tee(name: "Tee 52 Men · \(meters52.reduce(0, +))m", slope: 131, courseRating: 68.1, par: 70),
+            Tee(name: "Tee 52 Women · \(meters52.reduce(0, +))m", slope: 136, courseRating: 73.0, par: 70),
+            Tee(name: "Tee 45 Men · \((meters45Front + meters45Front).reduce(0, +))m", slope: 124, courseRating: 64.4, par: 70),
+            Tee(name: "Tee 45 Women · \((meters45Front + meters45Front).reduce(0, +))m", slope: 126, courseRating: 68.6, par: 70),
+            Tee(name: "Tee 31 Men · \((meters31Front + meters31Front).reduce(0, +))m", slope: 112, courseRating: 60.1, par: 70),
+            Tee(name: "Tee 31 Women · \((meters31Front + meters31Front).reduce(0, +))m", slope: 112, courseRating: 60.3, par: 70),
+            Tee(name: "Tee 23 Men · \((meters23Front + meters23Front).reduce(0, +))m", slope: 102, courseRating: 53.6, par: 70),
+            Tee(name: "Tee 23 Women · \((meters23Front + meters23Front).reduce(0, +))m", slope: 98, courseRating: 55.3, par: 70)
+        ]
+
+        return Course(
+            name: "Grini Golfklubb",
+            location: "Eiksmarka · Bærum, Norway",
+            holes: holes,
+            tees: tees,
+            holeLayouts: makeGriniLayouts(yardages: meters52.map { Int(round(Double($0) * 1.0936133)) }),
+            apiCourseId: nil,
+            latitude: 59.950568,
+            longitude: 10.625226,
             isCustom: false
         )
     }()
@@ -174,7 +222,7 @@ enum CourseData {
         )
     }()
 
-    static let allCourses: [Course] = [drivingRange, groruddalen, pgaCatalunyaStadium, alenda]
+    static let allCourses: [Course] = [drivingRange, groruddalen, grini, pgaCatalunyaStadium, alenda]
 
     /// A sample course with synthetic data — kept for SwiftUI previews and
     /// unit tests so we do not have to mutate the real seed data.
@@ -390,6 +438,85 @@ private func makeGroruddalenLayouts(yardages: [Int]) -> [HoleLayout] {
             teeBox: teeBox,
             hazards: hazards,
             layupTargets: []
+        )
+    }
+}
+
+// MARK: - Grini layout synthesis
+//
+// Grini is a compact 9-hole course at Griniveien 159. The official course map
+// and safety notes identify a relatively open layout with road/OB pressure on
+// the early holes and the long 7th playing back through the property. These
+// coordinates are practical GPS targets for play today, not survey-grade pins.
+private func makeGriniLayouts(yardages: [Int]) -> [HoleLayout] {
+    let centroidLat = 59.950568
+    let centroidLon = 10.625226
+
+    let holeRouting: [(dx: Double, dy: Double, bearing: Double, primary: HazardType?)] = [
+        ( -80,  -20,  58, .trees),       // 1 - semi-blind opener
+        ( 120,   40, 105, .water),       // 2 - short par 3 with penalty-area option
+        ( 210,  110,  22, .outOfBounds), // 3 - OB/field pressure
+        ( 120,  300, 326, .outOfBounds), // 4 - hardest hole
+        (-120,  310, 260, .bunker),      // 5
+        (-250,  160, 198, .trees),       // 6
+        (-180,  -90,  44, .trees),       // 7 - long par 5
+        (  40,  150, 137, .bunker),      // 8
+        ( 170,  -70, 248, nil)           // 9 - short finisher
+    ]
+
+    return (0..<18).map { i in
+        let routingIndex = i % 9
+        let route = holeRouting[routingIndex]
+        let teeBox = offset(centroidLat, centroidLon, eastYards: route.dx, northYards: route.dy)
+        let yardage = Double(yardages[i])
+
+        let greenCenter = advance(teeBox, bearingDegrees: route.bearing, yards: yardage)
+        let greenFront = advance(teeBox, bearingDegrees: route.bearing, yards: yardage - 10)
+        let greenBack = advance(teeBox, bearingDegrees: route.bearing, yards: yardage + 10)
+
+        var hazards: [Hazard] = []
+        if let hazardType = route.primary {
+            let carry = min(max(yardage * 0.55, 75), yardage - 20)
+            let name: String = {
+                switch hazardType {
+                case .water: return "Penalty area"
+                case .bunker: return "Fairway bunker"
+                case .outOfBounds: return "Out of bounds"
+                case .trees: return "Tree line"
+                case .lateral: return "Lateral hazard"
+                }
+            }()
+            hazards.append(Hazard(
+                type: hazardType,
+                coordinate: advance(teeBox, bearingDegrees: route.bearing + 8, yards: carry),
+                name: name,
+                carryDistance: carry + 6
+            ))
+        }
+
+        hazards.append(Hazard(
+            type: .bunker,
+            coordinate: advance(greenCenter, bearingDegrees: route.bearing - 90, yards: 8),
+            name: "Greenside bunker"
+        ))
+
+        var layups: [LayupTarget] = []
+        if routingIndex == 6 {
+            layups.append(LayupTarget(
+                coordinate: advance(teeBox, bearingDegrees: route.bearing, yards: max(yardage - 115, 220)),
+                name: "Layup · 100m in",
+                description: "Long par 5: leave a full wedge into the green."
+            ))
+        }
+
+        return HoleLayout(
+            holeNumber: i + 1,
+            greenFront: greenFront,
+            greenCenter: greenCenter,
+            greenBack: greenBack,
+            teeBox: teeBox,
+            hazards: hazards,
+            layupTargets: layups
         )
     }
 }

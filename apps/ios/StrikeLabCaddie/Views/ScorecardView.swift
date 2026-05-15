@@ -22,12 +22,19 @@ struct ScorecardView: View {
     @State private var showFullScorecard = false
     @State private var scorecardImage: UIImage?
     @State private var quickEntryHole: RoundHole?
+    @State private var showExtendRoundAlert = false
+    @State private var quickEntryGuest: GuestScoreTarget?
+    @State private var showAddGuest = false
     
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
                 // Score summary header
                 scoreSummaryCard
+
+                if round.hasGroupPlayers {
+                    groupSummaryCard
+                }
 
                 // Per-format sections — show only the nines being played.
                 let format = round.playFormat
@@ -43,6 +50,10 @@ struct ScorecardView: View {
 
                 // Total
                 totalRow
+
+                if round.hasGroupPlayers {
+                    groupScorecardSection
+                }
 
                 // Action buttons
                 actionButtons
@@ -79,6 +90,18 @@ struct ScorecardView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will save your round and end the session.")
+        }
+        .alert("Extend to 18 holes?", isPresented: $showExtendRoundAlert) {
+            Button("Play back 9") {
+                round.extendFrontNineToFull18()
+                persistenceManager.saveCurrentRound()
+                connectivityManager.sendCurrentHole(round.currentHoleNumber)
+                connectivityManager.sendRoundConfig(round)
+                RoundLiveSync.syncNow(round: round, persistence: persistenceManager)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your front 9 stays intact and the scorecard becomes a full 18-hole round for export.")
         }
         .toolbar {
             if isReadOnly {
@@ -121,6 +144,20 @@ struct ScorecardView: View {
                 applyScore(newValue, to: hole)
             }
         }
+        .sheet(item: $quickEntryGuest) { target in
+            ScorePadSheet(
+                par: target.score.par,
+                strokesReceived: target.score.strokesReceived,
+                initialScore: target.score.grossStrokes
+            ) { newValue in
+                applyGuestScore(newValue, target: target)
+            }
+        }
+        .sheet(isPresented: $showAddGuest) {
+            NavigationStack {
+                GroupPlayerEditorView(round: $round)
+            }
+        }
     }
 
     /// Single source of truth for committing a score from the quick-entry
@@ -129,6 +166,15 @@ struct ScorecardView: View {
         guard let idx = round.holes.firstIndex(where: { $0.id == hole.id }) else { return }
         round.holes[idx].grossStrokes = value
         round.holes[idx].recalculateNet()
+        persistenceManager.saveCurrentRound()
+    }
+
+    private func applyGuestScore(_ value: Int?, target: GuestScoreTarget) {
+        round.updateGroupScore(
+            playerId: target.playerId,
+            holeNumber: target.score.holeNumber,
+            grossStrokes: value
+        )
         persistenceManager.saveCurrentRound()
     }
     
@@ -158,6 +204,45 @@ struct ScorecardView: View {
         }
         .padding(.vertical, 16)
         .glassCard(cornerRadius: Theme.cornerRadius, padding: 0)
+    }
+
+    private var groupSummaryCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionLabel(text: "Group", trailing: "\(round.groupPlayers.count + 1) players")
+            HStack(spacing: 8) {
+                groupMiniCard(name: round.player.name, gross: round.grossTotal, net: round.netTotal, isPrimary: true)
+                ForEach(round.groupPlayers) { guest in
+                    groupMiniCard(
+                        name: guest.displayName,
+                        gross: guest.grossTotal(format: round.playFormat),
+                        net: guest.netTotal(format: round.playFormat),
+                        isPrimary: false
+                    )
+                }
+            }
+        }
+    }
+
+    private func groupMiniCard(name: String, gross: Int, net: Int, isPrimary: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(name.uppercased())
+                .font(Theme.labelFont(9))
+                .tracking(1.0)
+                .foregroundColor(isPrimary ? Theme.accent : Theme.ink3)
+                .lineLimit(1)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(gross)")
+                    .font(Theme.statFont(22))
+                    .foregroundColor(Theme.ink)
+                Text("NET \(net)")
+                    .font(Theme.labelFont(9))
+                    .foregroundColor(Theme.accent)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Theme.surface2)
+        .overlay(Rectangle().stroke(isPrimary ? Theme.accent.opacity(0.55) : Theme.line, lineWidth: 1))
     }
 
     private func scoreTile(label: String, value: String, tint: Color) -> some View {
@@ -467,12 +552,135 @@ struct ScorecardView: View {
         .background(Theme.accent.opacity(0.08))
         .overlay(Rectangle().stroke(Theme.accent.opacity(0.5), lineWidth: 1))
     }
+
+    private var groupScorecardSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Guest Scores", trailing: "tap score")
+            ForEach(round.groupPlayers) { guest in
+                guestScoreCard(guest: guest)
+            }
+            Button {
+                showAddGuest = true
+            } label: {
+                HStack {
+                    Image(systemName: "person.badge.plus")
+                    Text("Manage Guests")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                }
+                .secondaryButton()
+            }
+        }
+    }
+
+    private func guestScoreCard(guest: GroupPlayer) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(guest.displayName.uppercased())
+                        .font(Theme.labelFont(12))
+                        .tracking(1.4)
+                        .foregroundColor(Theme.ink)
+                    Text("HCP \(guest.formattedHandicap) · CH \(guest.courseHandicap(fallbackTee: round.selectedTee, format: round.playFormat).map(String.init) ?? "--")")
+                        .font(Theme.labelFont(9))
+                        .tracking(1.0)
+                        .foregroundColor(Theme.ink3)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(guest.grossTotal(format: round.playFormat))")
+                        .font(Theme.statFont(20))
+                        .foregroundColor(Theme.ink)
+                    Text("NET \(guest.netTotal(format: round.playFormat))")
+                        .font(Theme.labelFont(9))
+                        .foregroundColor(Theme.accent)
+                }
+            }
+            .padding(12)
+            .background(Theme.surface3)
+
+            guestColumnHeaders
+            ForEach(guest.playedHoles(format: round.playFormat)) { score in
+                guestHoleRow(guest: guest, score: score)
+            }
+        }
+        .glassCard(cornerRadius: Theme.smallCornerRadius, padding: 0)
+    }
+
+    private var guestColumnHeaders: some View {
+        HStack(spacing: 0) {
+            Text("Hole").frame(width: 45, alignment: .leading)
+            Text("Par").frame(width: 35)
+            Text("HI").frame(width: 30)
+            Text("+").frame(width: 25)
+            Spacer()
+            Text("Gross").frame(width: 58)
+            Text("Net").frame(width: 45)
+        }
+        .font(Theme.labelFont(10))
+        .foregroundColor(Theme.ink3)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Theme.surface2)
+    }
+
+    private func guestHoleRow(guest: GroupPlayer, score: GroupPlayerHoleScore) -> some View {
+        Button {
+            quickEntryGuest = GuestScoreTarget(playerId: guest.id, score: score)
+        } label: {
+            HStack(spacing: 0) {
+                Text("\(score.holeNumber)")
+                    .font(Theme.statFont(13))
+                    .frame(width: 45, alignment: .leading)
+                Text("\(score.par)")
+                    .font(Theme.labelFont(12))
+                    .frame(width: 35)
+                Text("\(score.handicapIndex)")
+                    .font(Theme.labelFont(10))
+                    .foregroundColor(Theme.ink3)
+                    .frame(width: 30)
+                Text(score.strokesReceived > 0 ? "\(score.strokesReceived)" : "-")
+                    .font(Theme.labelFont(10))
+                    .foregroundColor(score.strokesReceived > 0 ? Theme.warn : Theme.ink3)
+                    .frame(width: 25)
+                Spacer()
+                Text(score.grossStrokes.map(String.init) ?? "-")
+                    .font(Theme.statFont(14))
+                    .foregroundColor(.scoreColor(strokes: score.grossStrokes, par: score.par))
+                    .frame(width: 58)
+                Text(score.netStrokes.map(String.init) ?? "-")
+                    .font(Theme.statFont(12))
+                    .foregroundColor(score.netStrokes == nil ? Theme.ink3 : Theme.accent)
+                    .frame(width: 45)
+            }
+            .foregroundColor(Theme.ink)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(score.holeNumber == round.currentHoleNumber ? Theme.accent.opacity(0.08) : Theme.surface)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(Theme.line).frame(height: 1)
+            }
+        }
+        .buttonStyle(.plain)
+    }
     
     // MARK: - Action Buttons
     
     @ViewBuilder
     private var actionButtons: some View {
         VStack(spacing: 12) {
+            if !isReadOnly && round.playFormat == .front9 {
+                Button {
+                    showExtendRoundAlert = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle")
+                        Text("Extend to 18 Holes")
+                    }
+                    .secondaryButton()
+                }
+            }
+
             // View full scorecard button
             Button {
                 showFullScorecard = true
@@ -480,6 +688,16 @@ struct ScorecardView: View {
                 HStack {
                     Image(systemName: "tablecells")
                     Text("View Full Scorecard")
+                }
+                .secondaryButton()
+            }
+
+            Button {
+                showAddGuest = true
+            } label: {
+                HStack {
+                    Image(systemName: "person.2")
+                    Text(round.hasGroupPlayers ? "Manage Group" : "Add Group Scores")
                 }
                 .secondaryButton()
             }
@@ -537,6 +755,193 @@ struct ScorecardView: View {
             }
         }
         .padding(.top, 20)
+    }
+}
+
+private struct GuestScoreTarget: Identifiable {
+    let playerId: UUID
+    let score: GroupPlayerHoleScore
+
+    var id: String {
+        "\(playerId.uuidString)-\(score.holeNumber)"
+    }
+}
+
+private struct GroupPlayerEditorView: View {
+    @Binding var round: Round
+    @Environment(\.dismiss) private var dismiss
+    @State private var draftGuests: [DraftGuest] = []
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                SectionLabel(text: "Group Players", trailing: "\(draftGuests.count + 1)/4 players")
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Your watch keeps tracking your strokes, shots, GPS and biometric data. Guests only get scorecard rows and handicap strokes.")
+                        .font(Theme.bodyFont(12))
+                        .foregroundColor(Theme.ink3)
+
+                    ForEach($draftGuests) { $guest in
+                        draftGuestRow(guest: $guest)
+                    }
+
+                    if draftGuests.count < 3 {
+                        Button {
+                            draftGuests.append(DraftGuest(name: "Guest \(draftGuests.count + 1)"))
+                        } label: {
+                            HStack {
+                                Image(systemName: "person.badge.plus")
+                                Text("Add Guest")
+                                Spacer()
+                            }
+                            .secondaryButton()
+                        }
+                    }
+                }
+                .glassCard()
+            }
+            .padding()
+        }
+        .nordicBackground()
+        .navigationTitle("Group")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Cancel") { dismiss() }
+                    .foregroundColor(Theme.ink2)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Save") {
+                    save()
+                    dismiss()
+                }
+                .foregroundColor(Theme.accent)
+            }
+        }
+        .onAppear {
+            draftGuests = round.groupPlayers.map(DraftGuest.init)
+        }
+    }
+
+    private func draftGuestRow(guest: Binding<DraftGuest>) -> some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                TextField("Guest name", text: guest.name)
+                    .font(Theme.bodyFont(14))
+                    .foregroundColor(Theme.ink)
+                    .textInputAutocapitalization(.words)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 9)
+                    .background(Theme.surface3)
+                    .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
+
+                Button {
+                    draftGuests.removeAll { $0.id == guest.wrappedValue.id }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.ink3)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.surface3)
+                        .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 10) {
+                TextField("HCP index", text: guest.handicapText)
+                    .keyboardType(.decimalPad)
+                    .font(Theme.statFont(14))
+                    .foregroundColor(Theme.ink)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 9)
+                    .background(Theme.surface3)
+                    .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
+
+                Text(guest.wrappedValue.strokePreview(fallbackTee: round.selectedTee))
+                    .font(Theme.labelFont(10))
+                    .tracking(1.1)
+                    .foregroundColor(Theme.warn)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .padding(12)
+        .background(Theme.surface2)
+        .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
+    }
+
+    private func save() {
+        let existingByDraftId = Dictionary(uniqueKeysWithValues: zip(round.groupPlayers.map(\.id), round.groupPlayers))
+        round.groupPlayers = draftGuests.compactMap { draft in
+            let name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { return nil }
+            if var existing = existingByDraftId[draft.sourceId ?? UUID()] {
+                existing.name = name
+                existing.handicapIndex = draft.handicapIndex
+                existing.tee = existing.tee ?? round.selectedTee
+                existing.recalculateStrokeAllocation(course: round.course, format: round.playFormat)
+                return existing
+            }
+            var guest = GroupPlayer(
+                name: name,
+                handicapIndex: draft.handicapIndex,
+                tee: round.selectedTee,
+                holes: round.course.holes.map {
+                    GroupPlayerHoleScore(holeNumber: $0.number, par: $0.par, handicapIndex: $0.handicapIndex)
+                }
+            )
+            guest.recalculateStrokeAllocation(course: round.course, format: round.playFormat)
+            return guest
+        }
+    }
+}
+
+private struct DraftGuest: Identifiable, Equatable {
+    let id: UUID
+    var sourceId: UUID?
+    var name: String
+    var handicapText: String
+
+    init(id: UUID = UUID(), sourceId: UUID? = nil, name: String, handicapText: String = "") {
+        self.id = id
+        self.sourceId = sourceId
+        self.name = name
+        self.handicapText = handicapText
+    }
+
+    init(player: GroupPlayer) {
+        self.id = player.id
+        self.sourceId = player.id
+        self.name = player.name
+        if let handicapIndex = player.handicapIndex {
+            self.handicapText = String(format: "%.1f", handicapIndex)
+        } else {
+            self.handicapText = ""
+        }
+    }
+
+    var handicapIndex: Double? {
+        let normalized = handicapText.replacingOccurrences(of: ",", with: ".")
+        if normalized.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return nil }
+        return Double(normalized)
+    }
+
+    func strokePreview(fallbackTee: Tee?) -> String {
+        guard let handicapIndex else { return "Gross only" }
+        guard let tee = fallbackTee,
+              let slope = tee.slope,
+              let rating = tee.courseRating,
+              let par = tee.par else {
+            return "HCP set · no tee rating"
+        }
+        let ch = HandicapCalculator.courseHandicap(
+            handicapIndex: handicapIndex,
+            slope: slope,
+            courseRating: rating,
+            par: par
+        )
+        return "CH \(ch)"
     }
 }
 

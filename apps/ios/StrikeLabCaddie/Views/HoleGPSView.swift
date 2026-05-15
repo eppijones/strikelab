@@ -13,16 +13,35 @@ struct HoleGPSView: View {
     let holeNumber: Int
     let par: Int
     let holeLayout: HoleLayout?
+    var shots: [Shot] = []
     @ObservedObject var locationManager: LocationManager
     @ObservedObject var weatherManager: WeatherManager
     @EnvironmentObject var unitsManager: UnitsManager
 
     @State private var gpsData: HoleGPSData?
+    @State private var showExpandedMap = false
     
     var body: some View {
         VStack(spacing: 16) {
             // Header
             holeHeader
+
+            HoleOverlayView(
+                holeNumber: holeNumber,
+                par: par,
+                currentLocation: locationManager.currentLocation,
+                shots: shots,
+                holeLayout: holeLayout,
+                isPreview: true
+            )
+            .environmentObject(unitsManager)
+            .frame(height: 190)
+            .clipped()
+            .overlay(Rectangle().stroke(Theme.lineStrong, lineWidth: 1))
+            .contentShape(Rectangle())
+            .onTapGesture {
+                showExpandedMap = true
+            }
             
             if let layout = holeLayout, let location = locationManager.currentLocation {
                 let calculator = HoleDistanceCalculator(
@@ -57,6 +76,27 @@ struct HoleGPSView: View {
         }
         .padding()
         .nordicBackground()
+        .fullScreenCover(isPresented: $showExpandedMap) {
+            NavigationStack {
+                HoleOverlayView(
+                    holeNumber: holeNumber,
+                    par: par,
+                    currentLocation: locationManager.currentLocation,
+                    shots: shots,
+                    holeLayout: holeLayout
+                )
+                .environmentObject(unitsManager)
+                .ignoresSafeArea(edges: .bottom)
+                .navigationTitle("Hole \(holeNumber) Map")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { showExpandedMap = false }
+                            .foregroundColor(Theme.accent)
+                    }
+                }
+            }
+        }
     }
     
     // MARK: - Header

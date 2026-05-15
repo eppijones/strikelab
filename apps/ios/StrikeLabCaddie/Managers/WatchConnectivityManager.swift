@@ -84,24 +84,34 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     
     /// Send current hole number to watch
     func sendCurrentHole(_ holeNumber: Int) {
-        guard let session = session, session.isReachable else { return }
+        guard let session = session else { return }
         
         let message: [String: Any] = ["currentHole": holeNumber]
-        session.sendMessage(message, replyHandler: nil) { error in
-            print("Failed to send hole number: \(error)")
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                print("Failed to send hole number: \(error)")
+                session.transferUserInfo(message)
+            }
+        } else if session.activationState == .activated {
+            session.transferUserInfo(message)
         }
     }
     
     /// Send round status to watch
     func sendRoundStatus(isActive: Bool, courseName: String?) {
-        guard let session = session, session.isReachable else { return }
+        guard let session = session else { return }
         
         var message: [String: Any] = ["roundActive": isActive]
         if let name = courseName {
             message["courseName"] = name
         }
-        session.sendMessage(message, replyHandler: nil) { error in
-            print("Failed to send round status: \(error)")
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { error in
+                print("Failed to send round status: \(error)")
+                session.transferUserInfo(message)
+            }
+        } else if session.activationState == .activated {
+            session.transferUserInfo(message)
         }
     }
     
@@ -182,6 +192,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         showRangeResultHUD: Bool,
         coachingHaptics: Bool,
         pressureWarnings: Bool,
+        showHeartRate: Bool,
         anonymousSharing: Bool
     ) {
         guard let session = session else { return }
@@ -192,6 +203,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         ctx["showRangeResultHUD"]  = showRangeResultHUD
         ctx["coachingHaptics"]     = coachingHaptics
         ctx["pressureWarnings"]    = pressureWarnings
+        ctx["showHeartRateOnWatch"] = showHeartRate
         ctx["anonymousSharing"]    = anonymousSharing
         try? session.updateApplicationContext(ctx)
     }
@@ -227,6 +239,10 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         warning: String?,
         frontYards: Int? = nil,
         backYards: Int? = nil,
+        playsLikeYards: Int? = nil,
+        hazardNote: String? = nil,
+        source: String? = nil,
+        confidence: Double? = nil,
         windMph: Double? = nil,
         windDirectionDeg: Double? = nil
     ) {
@@ -246,6 +262,10 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         // these when present and falls back to demo values otherwise.
         if let frontYards { ctx["caddieFrontYards"] = frontYards } else { ctx.removeValue(forKey: "caddieFrontYards") }
         if let backYards { ctx["caddieBackYards"] = backYards } else { ctx.removeValue(forKey: "caddieBackYards") }
+        if let playsLikeYards { ctx["caddiePlaysLikeYards"] = playsLikeYards } else { ctx.removeValue(forKey: "caddiePlaysLikeYards") }
+        if let hazardNote, !hazardNote.isEmpty { ctx["caddieHazardNote"] = hazardNote } else { ctx.removeValue(forKey: "caddieHazardNote") }
+        if let source, !source.isEmpty { ctx["caddieSource"] = source } else { ctx.removeValue(forKey: "caddieSource") }
+        if let confidence { ctx["caddieConfidence"] = confidence } else { ctx.removeValue(forKey: "caddieConfidence") }
         if let windMph { ctx["caddieWindMph"] = windMph } else { ctx.removeValue(forKey: "caddieWindMph") }
         if let windDirectionDeg { ctx["caddieWindDirectionDeg"] = windDirectionDeg } else { ctx.removeValue(forKey: "caddieWindDirectionDeg") }
         try? session.updateApplicationContext(ctx)
@@ -303,6 +323,22 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             var putts: Int?
         }
 
+        struct WatchGuestHolePayload: Codable {
+            let holeNumber: Int
+            let par: Int
+            let handicapIndex: Int
+            let strokesReceived: Int
+            let grossStrokes: Int?
+        }
+
+        struct WatchGuestPayload: Codable {
+            let id: String
+            let name: String
+            let handicapIndex: Double?
+            let courseHandicap: Int?
+            let holes: [WatchGuestHolePayload]
+        }
+
         let payload: [WatchHolePayload] = round.holes.map { h in
             WatchHolePayload(
                 holeNumber: h.holeNumber,
@@ -315,6 +351,24 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         }
 
         guard let data = try? JSONEncoder().encode(payload) else { return }
+        let guestPayload: [WatchGuestPayload] = round.groupPlayers.map { guest in
+            WatchGuestPayload(
+                id: guest.id.uuidString,
+                name: guest.displayName,
+                handicapIndex: guest.handicapIndex,
+                courseHandicap: guest.courseHandicap(fallbackTee: round.selectedTee, format: round.playFormat),
+                holes: guest.holes.map {
+                    WatchGuestHolePayload(
+                        holeNumber: $0.holeNumber,
+                        par: $0.par,
+                        handicapIndex: $0.handicapIndex,
+                        strokesReceived: $0.strokesReceived,
+                        grossStrokes: $0.grossStrokes
+                    )
+                }
+            )
+        }
+        let guestData = try? JSONEncoder().encode(guestPayload)
 
         struct WatchPinPayload: Codable {
             let holeNumber: Int
@@ -332,8 +386,14 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         ctx["roundId"] = round.id.uuidString
         ctx["roundConfig"] = data
         ctx["roundStartedAt"] = round.date.timeIntervalSince1970
+        ctx["roundElapsedSeconds"] = round.elapsed
         ctx["currentHole"] = round.currentHoleNumber
         ctx["playFormat"] = round.playFormat.rawValue
+        if let guestData {
+            ctx["groupPlayers"] = guestData
+        } else {
+            ctx.removeValue(forKey: "groupPlayers")
+        }
         if let pinData {
             ctx["holePins"] = pinData
         } else {
@@ -351,7 +411,9 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         ctx.removeValue(forKey: "roundId")
         ctx.removeValue(forKey: "roundConfig")
         ctx.removeValue(forKey: "roundStartedAt")
+        ctx.removeValue(forKey: "roundElapsedSeconds")
         ctx.removeValue(forKey: "currentHole")
+        ctx.removeValue(forKey: "groupPlayers")
         try? session.updateApplicationContext(ctx)
 
         // Also send a transient "round ended" message so a watch that is
@@ -565,6 +627,21 @@ extension WatchConnectivityManager: WCSessionDelegate {
             )
         }
 
+        if message["guestScoreUpdate"] as? Bool == true,
+           let playerId = message["playerId"] as? String,
+           let holeNumber = message["holeNumber"] as? Int,
+           let grossStrokes = message["grossStrokes"] as? Int {
+            NotificationCenter.default.post(
+                name: .guestScoreUpdatedFromWatch,
+                object: nil,
+                userInfo: [
+                    "playerId": playerId,
+                    "holeNumber": holeNumber,
+                    "grossStrokes": grossStrokes
+                ]
+            )
+        }
+
         // Watch-only edits to preferences (range HUD, mic) — keep iPhone in sync.
         if message["watchPreferencesEcho"] as? Bool == true {
             let m = AppSettingsManager.shared
@@ -703,5 +780,6 @@ extension Notification.Name {
     static let shotReceivedFromWatch = Notification.Name("shotReceivedFromWatch")
     static let holeChangedFromWatch = Notification.Name("holeChangedFromWatch")
     static let scoreUpdatedFromWatch = Notification.Name("scoreUpdatedFromWatch")
+    static let guestScoreUpdatedFromWatch = Notification.Name("guestScoreUpdatedFromWatch")
     static let openTeePass = Notification.Name("StrikeLab.Tee.OpenPass")
 }

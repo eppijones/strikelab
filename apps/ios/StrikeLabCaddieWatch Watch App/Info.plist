@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>StrikeLabCaddie</string>
+	<string>StrikeLab</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -23,17 +23,17 @@
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
-	<string>com.strikelab.caddie.StrikeLabCaddie</string>
+	<string>golf.strikelab.caddie</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>StrikeLabCaddie tracks your golf rounds as workouts.</string>
+	<string>StrikeLab reads heart-rate, resting-heart-rate, HRV, active energy, and workout data during golf sessions you start.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>StrikeLabCaddie saves your golf rounds and heart rate data during play.</string>
+	<string>StrikeLab saves golf rounds and range sessions as workouts so they appear in Activity and sync to your StrikeLab account.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>StrikeLabCaddie uses motion sensors to detect golf swings for automatic shot logging.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>StrikeLabCaddie uses your location on the watch to recognise when you arrive at a course you've saved, so you can start a round in one tap.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>StrikeLabCaddie listens for the click of club impact to time your swing more precisely. You can turn this off in Settings. Impact audio is stored only for your swing review and is not uploaded.</string>
+	<string>StrikeLab can listen for club impact to time swings more precisely after you enable mic impact capture. Short clips are used only for your swing review.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>

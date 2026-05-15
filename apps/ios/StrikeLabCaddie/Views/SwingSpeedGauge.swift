@@ -22,6 +22,8 @@ struct SwingSpeedGauge: View {
     /// estimated carry beneath the gauge.
     var clubModel: ClubModel? = nil
 
+    @EnvironmentObject var unitsManager: UnitsManager
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
@@ -58,10 +60,10 @@ struct SwingSpeedGauge: View {
                         .tracking(1.0)
                         .foregroundColor(Theme.ink3)
                     Spacer()
-                    Text("\(Int(carry.rounded())) yds")
+                    Text(unitsManager.format(yards: carry))
                         .font(Theme.statFont(15))
                         .foregroundColor(Theme.ink)
-                    Text(String(format: "± %.0f", m.sigma))
+                    Text("± \(unitsManager.format(yards: m.sigma, includesUnit: false))")
                         .font(Theme.labelFont(10))
                         .foregroundColor(Theme.ink3)
                 }

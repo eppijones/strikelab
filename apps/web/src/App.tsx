@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useRealtime } from '@/realtime/useRealtime'
@@ -27,12 +28,14 @@ import Stats from '@/pages/Stats'
 import Marketing from '@/pages/Marketing'
 import Rounds from '@/pages/Rounds'
 import RoundDetail from '@/pages/RoundDetail'
+import RoundPlan from '@/pages/RoundPlan'
 import SwingLabLibrary from '@/pages/SwingLabLibrary'
 import SwingLabAnalyze from '@/pages/SwingLabAnalyze'
 import SwingLabCompare from '@/pages/SwingLabCompare'
 import RangeLab from '@/pages/RangeLab'
 import RangeLabDetail from '@/pages/RangeLabDetail'
 import Play from '@/pages/Play'
+import OpenGolfApiDocs from '@/pages/OpenGolfApiDocs'
 import {
   TeeDiscover,
   TeeCourseHero,
@@ -43,7 +46,7 @@ import {
   TeePreferences,
 } from '@/pages/tee'
 
-function PublicInfoPage({ type }: { type: 'privacy' | 'terms' | 'security' }) {
+function PublicInfoPage({ type }: { type: 'privacy' | 'terms' | 'security' | 'support' }) {
   const { i18n } = useTranslation()
   const isNo = i18n.language === 'no'
   const content = {
@@ -53,9 +56,9 @@ function PublicInfoPage({ type }: { type: 'privacy' | 'terms' | 'security' }) {
       title: 'Your golf data stays yours.',
       titleNo: 'Golfdataene dine er dine.',
       body:
-        'StrikeLab uses imported sessions, rounds, course preferences, and device data to build your player profile. We do not sell personal performance data, and beta provider/payment features are clearly labeled before you connect or pay.',
+        'StrikeLab collects account details, golf sessions, rounds, course preferences, approximate and on-course location, Apple Watch workout data, heart-rate context, swing motion samples, and optional short impact-audio clips when you enable microphone capture. We use this data to provide caddie, range, scorecard, sync, and coaching features. We do not sell personal performance data. You can delete your account and associated synced data from Settings.',
       bodyNo:
-        'StrikeLab bruker importerte økter, runder, banepreferanser og enhetsdata for å bygge spillerprofilen din. Vi selger ikke personlige ytelsesdata, og beta-funksjoner for leverandører og betaling merkes tydelig før du kobler til eller betaler.',
+        'StrikeLab samler inn kontodetaljer, golføkter, runder, banepreferanser, omtrentlig og banerelatert posisjon, Apple Watch-treningsdata, puls-kontekst, svingbevegelse og valgfrie korte impact-lydklipp når du aktiverer mikrofonopptak. Dataene brukes til caddie-, range-, scorekort-, synk- og coachingfunksjoner. Vi selger ikke personlige ytelsesdata. Du kan slette konto og tilknyttede synkroniserte data fra Innstillinger.',
     },
     terms: {
       eyebrow: 'Terms',
@@ -63,9 +66,9 @@ function PublicInfoPage({ type }: { type: 'privacy' | 'terms' | 'security' }) {
       title: 'Beta access, clear expectations.',
       titleNo: 'Betatilgang, tydelige forventninger.',
       body:
-        'StrikeLab is in beta. Pricing, provider connections, booking availability, and payment methods may change as pilots open. Paid access will show cancellation and billing terms before checkout.',
+        'StrikeLab provides golf performance tools, not medical, safety, or professional tournament advice. You remain responsible for safe play on course and range. First-release mobile features focus on caddie, scoring, range capture, Apple Watch companion use, and account sync. Any paid access or booking flow will show pricing, cancellation, and billing terms before checkout.',
       bodyNo:
-        'StrikeLab er i beta. Priser, leverandørkoblinger, bookingtilgjengelighet og betalingsmåter kan endres når piloter åpnes. Betalt tilgang viser avbestilling og fakturavilkår før betaling.',
+        'StrikeLab tilbyr golfverktøy, ikke medisinske råd, sikkerhetsråd eller profesjonelle turneringsråd. Du er selv ansvarlig for trygg bruk på bane og range. Første mobilversjon fokuserer på caddie, score, range-opptak, Apple Watch og kontosynk. Betalt tilgang eller booking viser pris, avbestilling og fakturavilkår før betaling.',
     },
     security: {
       eyebrow: 'Data security',
@@ -76,6 +79,16 @@ function PublicInfoPage({ type }: { type: 'privacy' | 'terms' | 'security' }) {
         'StrikeLab handles golf performance, round, location-adjacent, and watch companion data with explicit account access. Production payment and provider connections should be treated as beta until marked live in-product.',
       bodyNo:
         'StrikeLab håndterer golfytelse, runder, stedsnære data og klokke-data med tydelig kontotilgang. Produksjonsbetaling og leverandørkoblinger skal behandles som beta til de er merket live i produktet.',
+    },
+    support: {
+      eyebrow: 'Support',
+      eyebrowNo: 'Support',
+      title: 'We can help with account, sync, and deletion requests.',
+      titleNo: 'Vi hjelper med konto, synk og sletting.',
+      body:
+        'Contact hello@strikelab.golf for support. Account deletion is available from Settings in the web and iPhone app. We aim to respond to support and privacy requests within 7 days.',
+      bodyNo:
+        'Kontakt hello@strikelab.golf for hjelp. Kontosletting er tilgjengelig fra Innstillinger på web og iPhone. Vi forsøker å svare på support- og personvernforespørsler innen 7 dager.',
     },
   }[type]
 
@@ -103,6 +116,12 @@ function PublicInfoPage({ type }: { type: 'privacy' | 'terms' | 'security' }) {
           {isNo ? 'Kontakt' : 'Contact'}:{' '}
           <a href="mailto:hello@strikelab.golf" className="text-accent-fg hover:text-accent-fg-hover">hello@strikelab.golf</a>
         </div>
+        {type === 'privacy' && (
+          <div className="mt-6 border border-line-strong p-5 text-body text-ink-2 space-y-3">
+            <p>Data processors include Clerk for authentication, Vercel for hosting/functions, PostgreSQL for app data, and Vercel Blob or filesystem storage for optional media.</p>
+            <p>Health and sensor data are used only for StrikeLab features you enable. Microphone impact capture is optional and off by default.</p>
+          </div>
+        )}
       </main>
     </div>
   )
@@ -144,9 +163,19 @@ function App() {
         <Route path="/marketing" element={<Marketing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route
+          path="/sso-callback"
+          element={
+            <AuthenticateWithRedirectCallback
+              signInFallbackRedirectUrl="/"
+              signUpFallbackRedirectUrl="/onboarding"
+            />
+          }
+        />
         <Route path="/privacy" element={<PublicInfoPage type="privacy" />} />
         <Route path="/terms" element={<PublicInfoPage type="terms" />} />
         <Route path="/security" element={<PublicInfoPage type="security" />} />
+        <Route path="/support" element={<PublicInfoPage type="support" />} />
         <Route
           path="/onboarding"
           element={
@@ -173,10 +202,12 @@ function App() {
           <Route path="training" element={<TrainingPlan />} />
           <Route path="my-bag" element={<MyBag />} />
           <Route path="connectors" element={<Connectors />} />
+          <Route path="open-api" element={<OpenGolfApiDocs />} />
 
           <Route path="play" element={<Play />} />
           <Route path="rounds" element={<Rounds />} />
           <Route path="rounds/:id" element={<RoundDetail />} />
+          <Route path="rounds/:id/plan" element={<RoundPlan />} />
           <Route path="calendar" element={<Navigate to="/tee" replace />} />
           <Route path="courses" element={<Courses />} />
           <Route path="courses/:id" element={<CourseDetail />} />

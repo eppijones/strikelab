@@ -96,6 +96,15 @@ final class UnitsManager: ObservableObject {
         }
     }
 
+    /// Convert a user-entered value in the current display unit back to
+    /// canonical yards for storage and calculations.
+    func yards(fromDisplayValue value: Double) -> Double {
+        switch system {
+        case .yards: return value
+        case .meters: return Self.yards(fromMetres: value)
+        }
+    }
+
     // MARK: - Formatting
 
     /// "245 yds" / "224 m" — full short label, lowercase.

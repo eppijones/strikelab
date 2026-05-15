@@ -65,15 +65,23 @@ struct PlanModeView: View {
     @State private var selectedShotIndex: Int? = nil
     @State private var draggedPosition: CGPoint? = nil
     
-    /// Current hole data from Alenda
-    private var currentHoleData: AlendaHoleData {
-        alendaHoles.first { $0.holeNumber == selectedHole } ?? alendaHoles[0]
+    private var currentRoundHole: RoundHole? {
+        round.holes.first { $0.holeNumber == selectedHole }
+    }
+
+    private var currentHoleLayout: HoleLayout? {
+        round.course.holeLayouts?.first { $0.holeNumber == selectedHole }
     }
     
     /// Total hole distance based on selected tee
     private var totalHoleDistance: Int {
+        if let layout = currentHoleLayout,
+           let tee = layout.teeBox,
+           let green = layout.greenCenter ?? layout.greenFront {
+            return Int(tee.distance(to: green).rounded())
+        }
         let teeName = round.selectedTee?.name ?? "Yellow"
-        return currentHoleData.distance(for: teeName)
+        return (alendaHoles.first { $0.holeNumber == selectedHole } ?? alendaHoles[0]).distance(for: teeName)
     }
     
     var body: some View {
@@ -84,10 +92,9 @@ struct PlanModeView: View {
             // Hole info bar
             holeInfoBar
             
-            // Main planning area with Alenda image
+            // Main planning area with course-specific layout when available
             ZStack {
-                // Alenda hole image
-                alendaHoleImage
+                planningCanvas
                 
                 // Planned shots overlay
                 plannedShotsOverlay
@@ -160,7 +167,7 @@ struct PlanModeView: View {
                     .font(Theme.statFont(16))
                     .foregroundColor(Theme.nordicForest)
                 
-                Text("Par \(currentHoleData.par)")
+                Text("Par \(currentRoundHole?.par ?? 4)")
                     .font(Theme.labelFont(14))
                     .foregroundColor(Theme.nordicForest.opacity(0.7))
             }
@@ -179,7 +186,7 @@ struct PlanModeView: View {
             }
             
             // Handicap
-            Text("HCP \(currentHoleData.handicap)")
+            Text("HCP \(currentRoundHole?.handicapIndex ?? selectedHole)")
                 .font(Theme.labelFont(12))
                 .foregroundColor(Theme.nordicForest.opacity(0.5))
         }
@@ -198,19 +205,19 @@ struct PlanModeView: View {
         }
     }
     
-    // MARK: - Alenda Hole Image
+    // MARK: - Planning Canvas
     
-    private var alendaHoleImage: some View {
+    private var planningCanvas: some View {
         GeometryReader { geometry in
             ZStack {
-                // Load Alenda hole image
-                if let image = loadAlendaHoleImage(for: selectedHole) {
+                if let layout = currentHoleLayout, layout.hasGPSData {
+                    courseLayoutView(layout, in: geometry)
+                } else if let image = loadAlendaHoleImage(for: selectedHole) {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    // Fallback to generic fairway
                     genericFairwayView(in: geometry)
                 }
                 
@@ -233,6 +240,61 @@ struct PlanModeView: View {
             .contentShape(Rectangle())
             .onTapGesture { location in
                 handleTap(at: location, in: geometry.size)
+            }
+        }
+    }
+
+    private func courseLayoutView(_ layout: HoleLayout, in geometry: GeometryProxy) -> some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color(red: 0.08, green: 0.18, blue: 0.11), Color(red: 0.17, green: 0.32, blue: 0.18)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .overlay(
+                Path { path in
+                    path.move(to: CGPoint(x: geometry.size.width / 2, y: geometry.size.height - 44))
+                    path.addCurve(
+                        to: CGPoint(x: geometry.size.width / 2, y: 74),
+                        control1: CGPoint(x: geometry.size.width * 0.36, y: geometry.size.height * 0.68),
+                        control2: CGPoint(x: geometry.size.width * 0.64, y: geometry.size.height * 0.34)
+                    )
+                }
+                .stroke(Theme.accent.opacity(0.28), style: StrokeStyle(lineWidth: 44, lineCap: .round))
+            )
+
+            if let green = layout.greenCenter ?? layout.greenFront {
+                if let point = mapPoint(green, in: geometry.size) {
+                    Ellipse()
+                        .fill(Theme.nordicSage.opacity(0.82))
+                        .frame(width: 72, height: 52)
+                        .position(point)
+                }
+            }
+            if let tee = layout.teeBox {
+                if let point = mapPoint(tee, in: geometry.size) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(teeColor)
+                        .frame(width: 34, height: 18)
+                        .position(point)
+                }
+            }
+            ForEach(layout.hazards) { hazard in
+                if let point = mapPoint(hazard.coordinate, in: geometry.size) {
+                    Circle()
+                        .fill(hazardColor(hazard.type).opacity(0.8))
+                        .frame(width: 24, height: 24)
+                        .overlay(Image(systemName: hazard.type.icon).font(.system(size: 10)).foregroundColor(.white))
+                        .position(point)
+                }
+            }
+            ForEach(layout.layupTargets) { target in
+                if let point = mapPoint(target.coordinate, in: geometry.size) {
+                    Image(systemName: "target")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Theme.neuralCyan)
+                        .position(point)
+                }
             }
         }
     }
@@ -439,6 +501,10 @@ struct PlanModeView: View {
     
     /// Calculate approximate distance from tee to shot position
     private func calculateDistanceFromTee(to shot: PlannedShot) -> Int {
+        if currentHoleLayout?.hasGPSData == true,
+           let start = shot.startPosition ?? currentHoleLayout?.teeBox {
+            return Int(start.distance(to: shot.targetPosition).rounded())
+        }
         // Position is normalized (0-1), Y=1 is tee, Y=0 is green
         let progress = 1.0 - shot.targetPosition.latitude
         return Int(Double(totalHoleDistance) * progress)
@@ -715,6 +781,15 @@ struct PlanModeView: View {
         
         return distance > 300 ? .driver : .putter
     }
+
+    private func hazardColor(_ type: HazardType) -> Color {
+        switch type {
+        case .water: return .blue
+        case .bunker: return .yellow
+        case .outOfBounds, .lateral: return .red
+        case .trees: return .green
+        }
+    }
     
     // MARK: - Helpers
     
@@ -732,7 +807,9 @@ struct PlanModeView: View {
                 holeNumber: selectedHole,
                 order: order,
                 club: club,
-                targetPosition: position
+                targetPosition: position,
+                startPosition: startPositionForNewShot(),
+                expectedDistance: expectedDistanceYards(to: position)
             )
             round.addPlannedShot(newShot)
         }
@@ -753,6 +830,7 @@ struct PlanModeView: View {
     private func moveShot(_ shot: PlannedShot, to location: CGPoint, in size: CGSize) {
         var updated = shot
         updated.targetPosition = pointToPosition(location, in: size)
+        updated.expectedDistance = expectedDistanceYards(to: updated.targetPosition)
         round.updatePlannedShot(updated)
         persistenceManager.saveCurrentRound()
     }
@@ -791,6 +869,9 @@ struct PlanModeView: View {
     
     // Convert CGPoint to Coordinate (for storage)
     private func pointToPosition(_ point: CGPoint, in size: CGSize) -> Coordinate {
+        if currentHoleLayout?.hasGPSData == true {
+            return coordinateForPoint(point, in: size)
+        }
         let normalizedX = point.x / size.width
         let normalizedY = point.y / size.height
         return Coordinate(latitude: normalizedY, longitude: normalizedX)
@@ -798,9 +879,65 @@ struct PlanModeView: View {
     
     // Convert Coordinate back to CGPoint (for display)
     private func positionToPoint(_ position: Coordinate, in size: CGSize) -> CGPoint {
-        CGPoint(
+        if currentHoleLayout?.hasGPSData == true, let point = mapPoint(position, in: size) {
+            return point
+        }
+        return CGPoint(
             x: position.longitude * size.width,
             y: position.latitude * size.height
+        )
+    }
+
+    private func startPositionForNewShot() -> Coordinate? {
+        if let previous = round.plannedShots(forHole: selectedHole).last {
+            return previous.targetPosition
+        }
+        return currentHoleLayout?.teeBox
+    }
+
+    private func expectedDistanceYards(to target: Coordinate) -> Double? {
+        guard let start = startPositionForNewShot() else { return nil }
+        return start.distance(to: target) * 1.09361
+    }
+
+    private func layoutBounds() -> (minLat: Double, maxLat: Double, minLon: Double, maxLon: Double)? {
+        guard let layout = currentHoleLayout else { return nil }
+        let coords = [layout.teeBox, layout.greenFront, layout.greenCenter, layout.greenBack]
+            .compactMap { $0 }
+            + layout.hazards.map(\.coordinate)
+            + layout.layupTargets.map(\.coordinate)
+        guard let first = coords.first else { return nil }
+        var minLat = first.latitude
+        var maxLat = first.latitude
+        var minLon = first.longitude
+        var maxLon = first.longitude
+        for c in coords.dropFirst() {
+            minLat = min(minLat, c.latitude)
+            maxLat = max(maxLat, c.latitude)
+            minLon = min(minLon, c.longitude)
+            maxLon = max(maxLon, c.longitude)
+        }
+        let latPad = max(0.0004, (maxLat - minLat) * 0.18)
+        let lonPad = max(0.0004, (maxLon - minLon) * 0.18)
+        return (minLat - latPad, maxLat + latPad, minLon - lonPad, maxLon + lonPad)
+    }
+
+    private func mapPoint(_ coordinate: Coordinate, in size: CGSize) -> CGPoint? {
+        guard let b = layoutBounds() else { return nil }
+        let x = (coordinate.longitude - b.minLon) / max(0.000001, b.maxLon - b.minLon)
+        let y = 1.0 - (coordinate.latitude - b.minLat) / max(0.000001, b.maxLat - b.minLat)
+        return CGPoint(x: CGFloat(x) * size.width, y: CGFloat(y) * size.height)
+    }
+
+    private func coordinateForPoint(_ point: CGPoint, in size: CGSize) -> Coordinate {
+        guard let b = layoutBounds() else {
+            return Coordinate(latitude: point.y / size.height, longitude: point.x / size.width)
+        }
+        let x = min(max(Double(point.x / size.width), 0), 1)
+        let y = min(max(Double(point.y / size.height), 0), 1)
+        return Coordinate(
+            latitude: b.maxLat - y * (b.maxLat - b.minLat),
+            longitude: b.minLon + x * (b.maxLon - b.minLon)
         )
     }
     

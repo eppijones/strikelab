@@ -219,6 +219,20 @@ struct CourseSearchView: View {
                     .foregroundColor(Theme.ink3)
             }
             Spacer()
+
+            if persistenceManager.isHiddenFromRoundSetup(course) {
+                Button {
+                    restoreFavorite(course)
+                } label: {
+                    Text("Add")
+                        .font(Theme.labelFont(12))
+                        .foregroundColor(Theme.accentInk)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Theme.accent)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding()
         .glassCard(cornerRadius: Theme.smallCornerRadius, padding: 0)
@@ -230,7 +244,9 @@ struct CourseSearchView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel(text: "Imported Courses")
 
-            let importedCourses = persistenceManager.courses.filter { $0.isFromAPI }
+            let importedCourses = persistenceManager.courses.filter {
+                $0.isFromAPI && !persistenceManager.isHiddenFromRoundSetup($0)
+            }
 
             if importedCourses.isEmpty {
                 VStack(spacing: 10) {
@@ -318,15 +334,25 @@ struct CourseSearchView: View {
                 .font(Theme.labelFont(12))
                 .foregroundColor(Theme.nordicForest.opacity(0.6))
             
-            ForEach(apiManager.searchResults) { result in
+            ForEach(apiManager.searchResults, id: \.importKey) { result in
                 searchResultRow(result)
             }
         }
     }
     
     private func searchResultRow(_ result: APISearchResult) -> some View {
-        let isAlreadyImported = persistenceManager.courses.contains { $0.apiCourseId == result.id }
-        let isImporting = importingCourseId == result.id
+        let importedCourse = persistenceManager.courses.first {
+            if result.isProviderBacked, $0.apiCourseId == result.id {
+                return true
+            }
+            if let courseId = result.courseId, $0.id == courseId {
+                return true
+            }
+            return false
+        }
+        let isAlreadyImported = importedCourse != nil
+        let isHiddenImported = importedCourse.map { persistenceManager.isHiddenFromRoundSetup($0) } ?? false
+        let isImporting = importingCourseId == result.importKey.hashValue
         
         return HStack(spacing: 12) {
             // Course icon
@@ -356,7 +382,23 @@ struct CourseSearchView: View {
             Spacer()
             
             // Import button
-            if isAlreadyImported {
+            if isHiddenImported, let importedCourse {
+                Button {
+                    restoreFavorite(importedCourse)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 14))
+                        Text("Add")
+                            .font(Theme.labelFont(13))
+                    }
+                    .foregroundColor(Theme.accentInk)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Theme.accent)
+                }
+                .buttonStyle(.plain)
+            } else if isAlreadyImported {
                 Text("Imported")
                     .font(Theme.labelFont(12))
                     .foregroundColor(Theme.nordicSage)
@@ -448,11 +490,11 @@ struct CourseSearchView: View {
     // MARK: - Import
     
     private func importCourse(_ result: APISearchResult) {
-        importingCourseId = result.id
+        importingCourseId = result.importKey.hashValue
         
         Task {
             do {
-                let details = try await apiManager.getCourseDetails(id: result.id)
+                let details = try await apiManager.getCourseDetails(for: result)
                 let course = apiManager.convertToCourse(details)
                 
                 await MainActor.run {
@@ -468,6 +510,10 @@ struct CourseSearchView: View {
                 }
             }
         }
+    }
+
+    private func restoreFavorite(_ course: Course) {
+        persistenceManager.showCourseInRoundSetup(course)
     }
 }
 

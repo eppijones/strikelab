@@ -13,6 +13,10 @@ export interface HourlyCondition {
   sun: number
   cloud: number
   rain: number
+  gust?: number | null
+  humidity?: number | null
+  uv?: number | null
+  apparent?: number | null
 }
 
 export interface CourseConditions {

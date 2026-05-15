@@ -24,8 +24,10 @@ struct CaddieFlowView: View {
     private var pinYards: Int {
         connectivityManager.caddieDistanceYards > 0 ? connectivityManager.caddieDistanceYards : 148
     }
+    private var playsLikeYards: Int { connectivityManager.caddiePlaysLikeYards ?? pinYards }
     private var frontYards: Int { connectivityManager.caddieFrontYards ?? max(0, pinYards - 10) }
     private var backYards: Int { connectivityManager.caddieBackYards ?? pinYards + 14 }
+    private var units: WatchUnitsSystem { connectivityManager.unitsSystem }
     private var suggestedClub: String {
         connectivityManager.caddieClubRaw.isEmpty ? "9i" : connectivityManager.caddieClubRaw
     }
@@ -36,7 +38,7 @@ struct CaddieFlowView: View {
     }
     private var coachLine: String {
         connectivityManager.caddieWarning.isEmpty
-            ? "Smooth swing — back of green is safe."
+            ? (connectivityManager.caddieHazardNote.isEmpty ? "Smooth swing — back of green is safe." : connectivityManager.caddieHazardNote)
             : connectivityManager.caddieWarning
     }
     private var windMph: Int { Int((connectivityManager.caddieWindMph ?? 8).rounded()) }
@@ -51,15 +53,17 @@ struct CaddieFlowView: View {
                 frontYards: frontYards,
                 backYards: backYards,
                 suggestedClub: suggestedClub,
-                coachLine: coachLine,
-                onLogShot: { page = 1 }
+                coachLine: playsLikeYards == pinYards ? coachLine : "Plays \(units.formatNumber(yards: Double(playsLikeYards))). \(coachLine)",
+                onLogShot: { page = 1 },
+                units: units
             )
             .tag(0)
 
             ClubPickerView(
                 clubs: clubChoices,
                 suggested: suggestedClub,
-                onConfirm: { _ in page = 2 }
+                onConfirm: { _ in page = 2 },
+                units: units
             )
             .tag(1)
 
@@ -76,7 +80,8 @@ struct CaddieFlowView: View {
                 smashFactor: 1.39,
                 heartRate: 96,
                 onEdit: {},
-                onNext: { page = 4 }
+                onNext: { page = 4 },
+                units: units
             )
             .tag(3)
 
@@ -84,7 +89,8 @@ struct CaddieFlowView: View {
                 holeNumber: holeNumber,
                 pinYards: pinYards,
                 windMph: windMph,
-                windDirectionDeg: windDirectionDeg
+                windDirectionDeg: windDirectionDeg,
+                units: units
             )
             .tag(4)
 

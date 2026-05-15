@@ -13,7 +13,7 @@ struct ShotListView: View {
     @EnvironmentObject var persistenceManager: PersistenceManager
     @EnvironmentObject var unitsManager: UnitsManager
 
-    @State private var showAddShot = false
+    @State private var addShotRoute: AddShotRoute?
     @State private var showMap = false
     @State private var swingCardShot: Shot?
     
@@ -46,9 +46,8 @@ struct ShotListView: View {
                 }
             }
         }
-        .sheet(isPresented: $showAddShot) {
-            AddShotSheet(round: $round)
-                .presentationDetents([.medium])
+        .fullScreenCover(item: $addShotRoute) { _ in
+            AddShotView(round: $round)
         }
         .navigationDestination(isPresented: $showMap) {
             ShotMapView(round: $round)
@@ -113,7 +112,7 @@ struct ShotListView: View {
                     .foregroundColor(Theme.nordicForest.opacity(0.6))
                 
                 if let avg = averageDistance {
-                    Text("\(Int(avg)) yds")
+                    Text(unitsManager.format(yards: avg))
                         .font(Theme.statFont(20))
                         .foregroundColor(Theme.nordicForest)
                 } else {
@@ -143,7 +142,7 @@ struct ShotListView: View {
     private var actionButtons: some View {
         HStack(spacing: 12) {
             Button {
-                showAddShot = true
+                addShotRoute = AddShotRoute()
             } label: {
                 HStack {
                     Image(systemName: "plus.circle")
@@ -334,9 +333,13 @@ struct ShotListView: View {
     }
 }
 
-// MARK: - Add Shot Sheet
+private struct AddShotRoute: Identifiable {
+    let id = UUID()
+}
 
-struct AddShotSheet: View {
+// MARK: - Add Shot
+
+struct AddShotView: View {
     @Binding var round: Round
     @Environment(\.dismiss) private var dismiss
     
@@ -358,7 +361,7 @@ struct AddShotSheet: View {
                 .padding()
             }
             .nordicBackground()
-            .navigationTitle("Add Shot")
+            .navigationTitle("Add Shot v2")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -427,11 +430,13 @@ struct AddShotSheet: View {
             addShot(club: club)
         } label: {
             Text(club.shortName)
-                .font(Theme.statFont(16))
-                .foregroundColor(.white)
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundColor(Theme.ink)
+                .shadow(color: .black.opacity(0.9), radius: 1, x: 0, y: 1)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(clubColor(for: club.group))
+                .overlay(Rectangle().stroke(Theme.lineStrong, lineWidth: 1))
                 .cornerRadius(Theme.smallCornerRadius)
         }
     }
@@ -477,11 +482,13 @@ struct AddShotSheet: View {
                         addShot(club: club)
                     } label: {
                         Text(club.shortName)
-                            .font(Theme.statFont(18))
-                            .foregroundColor(.white)
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                            .foregroundColor(Theme.ink)
+                            .shadow(color: .black.opacity(0.9), radius: 1, x: 0, y: 1)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 20)
                             .background(clubColor(for: group))
+                            .overlay(Rectangle().stroke(Theme.lineStrong, lineWidth: 1))
                             .cornerRadius(Theme.smallCornerRadius)
                     }
                 }
@@ -493,11 +500,11 @@ struct AddShotSheet: View {
     
     private func clubColor(for group: ClubGroup) -> Color {
         switch group {
-        case .driver: return Theme.neuralCyan
-        case .wood, .hybrid: return Theme.champagne
-        case .iron: return Theme.nordicForest
-        case .wedge: return Theme.nordicSage
-        case .putt: return Theme.neutral
+        case .driver: return Theme.accent.opacity(0.82)
+        case .wood, .hybrid: return Theme.warn.opacity(0.82)
+        case .iron: return Theme.surface3
+        case .wedge: return Theme.accent.opacity(0.82)
+        case .putt: return Theme.ink4
         }
     }
     

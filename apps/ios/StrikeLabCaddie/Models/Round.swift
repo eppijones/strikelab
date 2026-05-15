@@ -45,6 +45,20 @@ enum PlayFormat: String, Codable, CaseIterable {
     var totalHoles: Int { holeRange.count }
 }
 
+extension Tee {
+    func adjustedForPlayFormat(_ format: PlayFormat) -> Tee {
+        guard format.totalHoles == 9,
+              let courseRating,
+              let par else {
+            return self
+        }
+        var adjusted = self
+        adjusted.courseRating = courseRating / 2.0
+        adjusted.par = max(1, Int((Double(par) / 2.0).rounded()))
+        return adjusted
+    }
+}
+
 struct Round: Codable, Identifiable, Equatable {
     let id: UUID
     var date: Date                  // When the round was started
@@ -57,6 +71,7 @@ struct Round: Codable, Identifiable, Equatable {
     var plannedShots: [PlannedShot] // Planned strategy shots
     var isComplete: Bool
     var currentHoleNumber: Int      // 1-18, tracks which hole player is on
+    var groupPlayers: [GroupPlayer] // Optional guest scorecards; no shot/biometric data.
     /// Optional in storage so older saved rounds (before PlayFormat
     /// existed) decode without a custom init. Read via `playFormat`.
     var playFormatRaw: PlayFormat?
@@ -73,13 +88,20 @@ struct Round: Codable, Identifiable, Equatable {
         let range = playFormat.holeRange
         return holes.filter { range.contains($0.holeNumber) }
     }
+
+    var hasGroupPlayers: Bool {
+        !groupPlayers.isEmpty
+    }
     
     // MARK: - Computed Properties
     
     /// Course handicap based on selected tee and player handicap
     var courseHandicap: Int? {
-        guard let tee = selectedTee,
-              let slope = tee.slope,
+        guard let selectedTee else {
+            return nil
+        }
+        let tee = selectedTee.adjustedForPlayFormat(playFormat)
+        guard let slope = tee.slope,
               let rating = tee.courseRating,
               let par = tee.par else {
             return nil
@@ -191,6 +213,7 @@ struct Round: Codable, Identifiable, Equatable {
         self.plannedShots = []
         self.isComplete = false
         self.currentHoleNumber = 1
+        self.groupPlayers = []
         
         // Initialize holes from course data
         self.holes = course.holes.map { holeInfo in
@@ -203,6 +226,28 @@ struct Round: Codable, Identifiable, Equatable {
         
         // Calculate stroke allocation if tee data is available
         recalculateStrokeAllocation()
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, date, completedAt, course, selectedTee, player, holes, shots, plannedShots
+        case isComplete, currentHoleNumber, playFormatRaw, groupPlayers
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        date = try c.decode(Date.self, forKey: .date)
+        completedAt = try c.decodeIfPresent(Date.self, forKey: .completedAt)
+        course = try c.decode(Course.self, forKey: .course)
+        selectedTee = try c.decodeIfPresent(Tee.self, forKey: .selectedTee)
+        player = try c.decode(Player.self, forKey: .player)
+        holes = try c.decode([RoundHole].self, forKey: .holes)
+        shots = try c.decodeIfPresent([Shot].self, forKey: .shots) ?? []
+        plannedShots = try c.decodeIfPresent([PlannedShot].self, forKey: .plannedShots) ?? []
+        isComplete = try c.decodeIfPresent(Bool.self, forKey: .isComplete) ?? false
+        currentHoleNumber = try c.decodeIfPresent(Int.self, forKey: .currentHoleNumber) ?? 1
+        playFormatRaw = try c.decodeIfPresent(PlayFormat.self, forKey: .playFormatRaw)
+        groupPlayers = try c.decodeIfPresent([GroupPlayer].self, forKey: .groupPlayers) ?? []
     }
     
     // MARK: - Methods
@@ -218,14 +263,20 @@ struct Round: Codable, Identifiable, Equatable {
             return
         }
         
-        let allocation = HandicapCalculator.allocateStrokes(
-            courseHandicap: ch,
-            holes: course.holes
+        let playedHoleNumbers = Set(playedHoles.map(\.holeNumber))
+        let playedCourseHoles = course.holes.filter { playedHoleNumbers.contains($0.number) }
+        let allocation = HandicapCalculator.allocateStrokes(courseHandicap: ch, holes: playedCourseHoles)
+        let allocationByHoleNumber = Dictionary(
+            uniqueKeysWithValues: zip(playedCourseHoles.map(\.number), allocation)
         )
-        
+
         for i in holes.indices {
-            holes[i].strokesReceived = allocation[i]
+            holes[i].strokesReceived = allocationByHoleNumber[holes[i].holeNumber] ?? 0
             holes[i].recalculateNet()
+        }
+
+        for i in groupPlayers.indices {
+            groupPlayers[i].recalculateStrokeAllocation(course: course, format: playFormat)
         }
     }
     
@@ -243,6 +294,49 @@ struct Round: Codable, Identifiable, Equatable {
     /// Get hole by number
     func hole(number: Int) -> RoundHole? {
         holes.first { $0.holeNumber == number }
+    }
+
+    mutating func extendFrontNineToFull18() {
+        guard playFormat == .front9 else { return }
+        playFormat = .full18
+        if currentHoleNumber < 10 {
+            currentHoleNumber = 10
+        }
+        recalculateStrokeAllocation()
+    }
+
+    mutating func addGroupPlayer(name: String, handicapIndex: Double?, tee: Tee? = nil) {
+        guard groupPlayers.count < 3 else { return }
+        var guest = GroupPlayer(
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "Guest \(groupPlayers.count + 1)"
+                : name.trimmingCharacters(in: .whitespacesAndNewlines),
+            handicapIndex: handicapIndex,
+            tee: tee ?? selectedTee,
+            holes: course.holes.map {
+                GroupPlayerHoleScore(holeNumber: $0.number, par: $0.par, handicapIndex: $0.handicapIndex)
+            }
+        )
+        guest.recalculateStrokeAllocation(course: course, format: playFormat)
+        groupPlayers.append(guest)
+    }
+
+    mutating func updateGroupPlayer(_ player: GroupPlayer) {
+        guard let index = groupPlayers.firstIndex(where: { $0.id == player.id }) else { return }
+        var updated = player
+        updated.recalculateStrokeAllocation(course: course, format: playFormat)
+        groupPlayers[index] = updated
+    }
+
+    mutating func removeGroupPlayer(id: UUID) {
+        groupPlayers.removeAll { $0.id == id }
+    }
+
+    mutating func updateGroupScore(playerId: UUID, holeNumber: Int, grossStrokes: Int?) {
+        guard let playerIndex = groupPlayers.firstIndex(where: { $0.id == playerId }),
+              let holeIndex = groupPlayers[playerIndex].holes.firstIndex(where: { $0.holeNumber == holeNumber }) else { return }
+        groupPlayers[playerIndex].holes[holeIndex].grossStrokes = grossStrokes
+        groupPlayers[playerIndex].holes[holeIndex].recalculateNet()
     }
     
     /// Add a shot to the round
@@ -362,6 +456,137 @@ struct RoundHole: Codable, Identifiable, Equatable {
     mutating func recalculateNet() {
         if let gross = grossStrokes {
             netStrokes = gross - strokesReceived
+        } else {
+            netStrokes = nil
+        }
+    }
+}
+
+// MARK: - Group Scorecards
+
+struct GroupPlayer: Codable, Identifiable, Equatable {
+    let id: UUID
+    var name: String
+    var handicapIndex: Double?
+    var manualCourseHandicap: Int?
+    var tee: Tee?
+    var holes: [GroupPlayerHoleScore]
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        handicapIndex: Double? = nil,
+        manualCourseHandicap: Int? = nil,
+        tee: Tee? = nil,
+        holes: [GroupPlayerHoleScore]
+    ) {
+        self.id = id
+        self.name = name
+        self.handicapIndex = handicapIndex
+        self.manualCourseHandicap = manualCourseHandicap
+        self.tee = tee
+        self.holes = holes
+    }
+
+    var displayName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Guest" : name
+    }
+
+    var formattedHandicap: String {
+        guard let handicapIndex else { return "--" }
+        if handicapIndex < 0 {
+            return String(format: "+%.1f", abs(handicapIndex))
+        }
+        return String(format: "%.1f", handicapIndex)
+    }
+
+    func courseHandicap(fallbackTee: Tee?) -> Int? {
+        if let manualCourseHandicap { return manualCourseHandicap }
+        guard let handicapIndex,
+              let tee = tee ?? fallbackTee,
+              let slope = tee.slope,
+              let rating = tee.courseRating,
+              let par = tee.par else {
+            return nil
+        }
+        return HandicapCalculator.courseHandicap(
+            handicapIndex: handicapIndex,
+            slope: slope,
+            courseRating: rating,
+            par: par
+        )
+    }
+
+    func courseHandicap(fallbackTee: Tee?, format: PlayFormat) -> Int? {
+        if let manualCourseHandicap { return manualCourseHandicap }
+        return courseHandicap(fallbackTee: (tee ?? fallbackTee)?.adjustedForPlayFormat(format))
+    }
+
+    func playedHoles(format: PlayFormat) -> [GroupPlayerHoleScore] {
+        let range = format.holeRange
+        return holes.filter { range.contains($0.holeNumber) }
+    }
+
+    func grossTotal(format: PlayFormat) -> Int {
+        playedHoles(format: format).compactMap { $0.grossStrokes }.reduce(0, +)
+    }
+
+    func netTotal(format: PlayFormat) -> Int {
+        playedHoles(format: format).compactMap { $0.netStrokes }.reduce(0, +)
+    }
+
+    func holesCompleted(format: PlayFormat) -> Int {
+        playedHoles(format: format).filter { ($0.grossStrokes ?? 0) > 0 }.count
+    }
+
+    mutating func recalculateStrokeAllocation(course: Course, format: PlayFormat = .full18) {
+        let courseHandicap = courseHandicap(fallbackTee: nil, format: format) ?? 0
+        let playedHoleNumbers = Set(playedHoles(format: format).map(\.holeNumber))
+        let playedCourseHoles = course.holes.filter { playedHoleNumbers.contains($0.number) }
+        let allocation = HandicapCalculator.allocateStrokes(
+            courseHandicap: courseHandicap,
+            holes: playedCourseHoles
+        )
+        let allocationByHoleNumber = Dictionary(
+            uniqueKeysWithValues: zip(playedCourseHoles.map(\.number), allocation)
+        )
+        for i in holes.indices {
+            holes[i].strokesReceived = allocationByHoleNumber[holes[i].holeNumber] ?? 0
+            holes[i].recalculateNet()
+        }
+    }
+}
+
+struct GroupPlayerHoleScore: Codable, Identifiable, Equatable {
+    let id: UUID
+    var holeNumber: Int
+    var par: Int
+    var handicapIndex: Int
+    var strokesReceived: Int
+    var grossStrokes: Int?
+    var netStrokes: Int?
+
+    init(
+        id: UUID = UUID(),
+        holeNumber: Int,
+        par: Int,
+        handicapIndex: Int,
+        strokesReceived: Int = 0,
+        grossStrokes: Int? = nil
+    ) {
+        self.id = id
+        self.holeNumber = holeNumber
+        self.par = par
+        self.handicapIndex = handicapIndex
+        self.strokesReceived = strokesReceived
+        self.grossStrokes = grossStrokes
+        self.netStrokes = nil
+        recalculateNet()
+    }
+
+    mutating func recalculateNet() {
+        if let grossStrokes {
+            netStrokes = grossStrokes - strokesReceived
         } else {
             netStrokes = nil
         }

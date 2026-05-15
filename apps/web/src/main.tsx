@@ -47,12 +47,15 @@ function ClerkAuthBridge({ children }: { children: React.ReactNode }) {
     async function syncClerkSession() {
       const token = await getToken()
       if (!token || cancelled) return
-      setTokens(token, null)
       const response = await fetch(`${API_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (!response.ok || cancelled) return
+      if (!response.ok || cancelled) {
+        logout()
+        return
+      }
       const apiUser = await response.json()
+      setTokens(token, null)
       setUser(mapApiUser(apiUser))
     }
 

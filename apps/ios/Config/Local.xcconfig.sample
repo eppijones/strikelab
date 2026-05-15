@@ -1,5 +1,7 @@
-// Copy to Local.xcconfig (gitignored) and edit. Run:
-//   ifconfig | grep 'inet ' | grep -v 127.0.0.1
-// on your Mac to find the LAN IP your phone should hit.
+// Copy to Local.xcconfig (gitignored) only for private build settings.
+// The iPhone and Watch app use https://strikelab.golf/api by default.
 
-DEV_HOST = 192.168.1.42
+// Use a Clerk publishable key locally. For App Store archives, provide the
+// production pk_live value through an uncommitted Local.xcconfig, CI, or
+// Xcode Cloud build setting. Never put CLERK_SECRET_KEY in iOS config.
+CLERK_PUBLISHABLE_KEY = pk_test_replace_me

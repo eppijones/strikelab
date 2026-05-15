@@ -29,17 +29,20 @@ class WorkoutManager: NSObject, ObservableObject {
     private var builder: HKLiveWorkoutBuilder?
     private var startDate: Date?
     private var timer: Timer?
+    private var latestHeartRateQuery: HKAnchoredObjectQuery?
+    private var authorizationRequested = false
     
     // MARK: - Initialization
     
     override init() {
         super.init()
-        requestAuthorization()
     }
     
     // MARK: - Authorization
     
-    private func requestAuthorization() {
+    func requestAuthorizationIfNeeded() {
+        guard !authorizationRequested else { return }
+        authorizationRequested = true
         // Define the types we want to read and write
         let typesToShare: Set<HKSampleType> = [
             HKObjectType.workoutType()
@@ -68,6 +71,11 @@ class WorkoutManager: NSObject, ObservableObject {
 
                 let workoutType = HKObjectType.workoutType()
                 self?.authorizationStatus = self?.healthStore.authorizationStatus(for: workoutType) ?? .notDetermined
+                if success, self?.isWorkoutActive == false, self?.session == nil {
+                    self?.startWorkout()
+                } else if success {
+                    self?.startLatestHeartRateQuery()
+                }
             }
         }
     }
@@ -75,8 +83,15 @@ class WorkoutManager: NSObject, ObservableObject {
     // MARK: - Workout Control
     
     func startWorkout() {
+        requestAuthorizationIfNeeded()
+        if authorizationStatus == .notDetermined && session == nil {
+            startDate = startDate ?? Date()
+            startTimer()
+            return
+        }
         guard !isWorkoutActive, session == nil else {
             startTimer()
+            startLatestHeartRateQuery()
             return
         }
         // Create workout configuration
@@ -103,6 +118,7 @@ class WorkoutManager: NSObject, ObservableObject {
                         self?.startDate = start
                         self?.isWorkoutActive = true
                         self?.startTimer()
+                        self?.startLatestHeartRateQuery()
                     } else if let error = error {
                         self?.errorMessage = "Failed to start workout: \(error.localizedDescription)"
                     }
@@ -128,12 +144,16 @@ class WorkoutManager: NSObject, ObservableObject {
     func endWorkout() {
         session?.end()
         stopTimer()
+        stopLatestHeartRateQuery()
     }
     
     // MARK: - Timer
     
     private func startTimer() {
         stopTimer()
+        if let start = startDate {
+            elapsedTime = Date().timeIntervalSince(start)
+        }
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             Task { @MainActor [weak self] in
                 guard let self, let start = self.startDate else { return }
@@ -145,6 +165,44 @@ class WorkoutManager: NSObject, ObservableObject {
     private func stopTimer() {
         timer?.invalidate()
         timer = nil
+    }
+
+    private func startLatestHeartRateQuery() {
+        guard latestHeartRateQuery == nil,
+              HKHealthStore.isHealthDataAvailable(),
+              let type = HKQuantityType.quantityType(forIdentifier: .heartRate)
+        else { return }
+
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        let query = HKAnchoredObjectQuery(
+            type: type,
+            predicate: nil,
+            anchor: nil,
+            limit: HKObjectQueryNoLimit
+        ) { [weak self] _, samples, _, _, _ in
+            Task { @MainActor [weak self] in
+                self?.applyHeartRateSamples(samples, unit: unit)
+            }
+        }
+        query.updateHandler = { [weak self] _, samples, _, _, _ in
+            Task { @MainActor [weak self] in
+                self?.applyHeartRateSamples(samples, unit: unit)
+            }
+        }
+        healthStore.execute(query)
+        latestHeartRateQuery = query
+    }
+
+    private func stopLatestHeartRateQuery() {
+        if let query = latestHeartRateQuery {
+            healthStore.stop(query)
+            latestHeartRateQuery = nil
+        }
+    }
+
+    private func applyHeartRateSamples(_ samples: [HKSample]?, unit: HKUnit) {
+        guard let sample = (samples as? [HKQuantitySample])?.last else { return }
+        heartRate = sample.quantity.doubleValue(for: unit)
     }
     
     // MARK: - Formatting

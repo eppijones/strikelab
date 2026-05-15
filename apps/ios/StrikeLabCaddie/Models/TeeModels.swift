@@ -19,6 +19,10 @@ struct TeeHourlyCondition: Codable, Hashable, Identifiable {
     let sun: Double
     let cloud: Double
     let rain: Double
+    let gust: Double?
+    let humidity: Double?
+    let uv: Double?
+    let apparent: Double?
 }
 
 struct TeeCourseConditions: Codable, Hashable {
@@ -39,6 +43,211 @@ struct TeeCourseConditions: Codable, Hashable {
     let sunset: String?
     let goldenStart: String?
     let source: String
+}
+
+// MARK: - StrikeLab Open Golf API
+
+struct PublicAttribution: Codable, Hashable, Identifiable {
+    var id: String { sourceId }
+    let sourceId: String
+    let name: String
+    let licenseName: String
+    let licenseUrl: String?
+    let attribution: String
+    let sourceUrl: String?
+}
+
+struct PublicCourse: Codable, Hashable, Identifiable {
+    let id: UUID
+    let name: String
+    let city: String?
+    let region: String?
+    let country: String?
+    let countryCode: String?
+    let courseType: String?
+    let par: Int?
+    let holesCount: Int?
+    let slopeRating: Double?
+    let courseRating: Double?
+    let totalMeters: Int?
+    let holes: [PublicHole]?
+    let latitude: Double?
+    let longitude: Double?
+    let hasDrivingRange: Bool?
+    let hasPracticeArea: Bool?
+    let hasPuttingGreen: Bool?
+    let hasPar3Course: Bool?
+    let hasSimulator: Bool?
+    let website: String?
+    let ngfClubId: String?
+    let osmId: String?
+    let golfcourseapiId: String?
+    let isVerified: Bool
+    let geometrySummary: [String: JSONValue]?
+    let dataSources: [PublicAttribution]
+    let updatedAt: Date?
+}
+
+struct PublicHole: Codable, Hashable {
+    let number: Int
+    let par: Int?
+    let handicap: Int?
+    let yards: Int?
+    let meters: Int?
+}
+
+struct PublicCourseGeometry: Codable, Hashable {
+    let courseId: UUID
+    let geometryVersion: String
+    let features: PublicFeatureCollection
+    let summary: [String: JSONValue]?
+    let validation: [String: JSONValue]?
+    let confidence: Double?
+    let attribution: String?
+    let source: PublicAttribution?
+}
+
+struct PublicFeatureCollection: Codable, Hashable {
+    let type: String
+    let features: [PublicCourseFeature]
+}
+
+struct PublicCourseFeature: Codable, Hashable, Identifiable {
+    let id: String
+    let kind: String
+    let name: String?
+    let hole: Int?
+    let center: PublicCoordinate
+    let tags: [String: String]?
+}
+
+struct PublicCoordinate: Codable, Hashable {
+    let lat: Double
+    let lon: Double
+}
+
+struct PublicCoursePackage: Codable, Hashable, Identifiable {
+    var id: UUID { course.id }
+    let course: PublicCourse
+    let geometry: PublicCourseGeometry?
+    let conditions: TeeCourseConditions?
+    let cachedAt: Date
+}
+
+struct GolfCourseAPIProviderStatus: Codable, Hashable {
+    let provider: String
+    let configured: Bool
+    let authenticated: Bool?
+    let sampleQuery: String?
+    let sampleCount: Int?
+    let norwaySampleCount: Int?
+    let rateLimitPlanHint: String
+    let recommendation: String
+}
+
+struct GolfCourseAPIProviderSearch: Codable, Hashable {
+    let provider: String
+    let query: String
+    let count: Int
+    let courses: [PublicCourse]
+    let note: String?
+}
+
+extension PublicCoursePackage {
+    func toLocalCourse(existing: Course? = nil) -> Course {
+        let localHoles: [HoleInfo]
+        if let holes = course.holes, !holes.isEmpty {
+            localHoles = holes.map {
+                HoleInfo(
+                    number: $0.number,
+                    par: $0.par ?? 4,
+                    handicapIndex: $0.handicap ?? $0.number
+                )
+            }
+        } else {
+            localHoles = existing?.holes ?? (1...max(course.holesCount ?? 18, 9)).map {
+                HoleInfo(number: $0, par: 4, handicapIndex: $0)
+            }
+        }
+
+        return Course(
+            id: course.id,
+            name: course.name,
+            location: [course.city, course.region, course.country].compactMap { $0 }.joined(separator: ", "),
+            holes: localHoles,
+            tees: existing?.tees ?? [
+                Tee(name: "Club", slope: course.slopeFallback, courseRating: course.ratingFallback, par: course.par)
+            ],
+            holeLayouts: geometry?.toHoleLayouts() ?? existing?.holeLayouts,
+            apiCourseId: existing?.apiCourseId,
+            latitude: course.latitude,
+            longitude: course.longitude,
+            isCustom: false
+        )
+    }
+}
+
+private extension PublicCourse {
+    var slopeFallback: Double? { slopeRating }
+    var ratingFallback: Double? { courseRating }
+}
+
+extension PublicCourseGeometry {
+    func toHoleLayouts() -> [HoleLayout] {
+        let grouped = Dictionary(grouping: features.features) { $0.hole ?? 0 }
+        return grouped.compactMap { hole, items in
+            guard hole > 0 else { return nil }
+            var layout = HoleLayout(holeNumber: hole)
+            for item in items {
+                let coord = Coordinate(latitude: item.center.lat, longitude: item.center.lon)
+                switch item.kind {
+                case "tee":
+                    layout.teeBox = layout.teeBox ?? coord
+                case "green", "pin":
+                    layout.greenCenter = layout.greenCenter ?? coord
+                case "bunker":
+                    layout.hazards.append(Hazard(type: .bunker, coordinate: coord, name: item.name))
+                case "water_hazard", "lateral_water_hazard":
+                    layout.hazards.append(Hazard(type: .water, coordinate: coord, name: item.name))
+                default:
+                    break
+                }
+            }
+            return layout.hasGPSData || layout.teeBox != nil ? layout : nil
+        }
+        .sorted { $0.holeNumber < $1.holeNumber }
+    }
+}
+
+enum JSONValue: Codable, Hashable {
+    case string(String)
+    case double(Double)
+    case bool(Bool)
+    case array([JSONValue])
+    case object([String: JSONValue])
+    case null
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if c.decodeNil() { self = .null }
+        else if let v = try? c.decode(Bool.self) { self = .bool(v) }
+        else if let v = try? c.decode(Double.self) { self = .double(v) }
+        else if let v = try? c.decode(String.self) { self = .string(v) }
+        else if let v = try? c.decode([JSONValue].self) { self = .array(v) }
+        else { self = .object((try? c.decode([String: JSONValue].self)) ?? [:]) }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .string(let v): try c.encode(v)
+        case .double(let v): try c.encode(v)
+        case .bool(let v): try c.encode(v)
+        case .array(let v): try c.encode(v)
+        case .object(let v): try c.encode(v)
+        case .null: try c.encodeNil()
+        }
+    }
 }
 
 // MARK: - Tee sheet
@@ -146,7 +355,7 @@ struct TeeBookingPreferences: Codable, Hashable {
     var showToPairs: Bool
     var handicapVisible: Bool
 
-    /// Defaults used when `api.strikelab.golf` is unreachable so Preferences
+    /// Defaults used when the StrikeLab API is unreachable so Preferences
     /// stays usable; changes are local until the API is available again.
     static func localDraftDefaults() -> TeeBookingPreferences {
         TeeBookingPreferences(

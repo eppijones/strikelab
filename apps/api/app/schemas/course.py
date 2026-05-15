@@ -33,6 +33,7 @@ class CourseBase(BaseModel):
     established: Optional[int] = None
     ngf_club_id: Optional[str] = None
     osm_id: Optional[str] = None
+    golfcourseapi_id: Optional[str] = None
 
 
 class CourseCreate(CourseBase):

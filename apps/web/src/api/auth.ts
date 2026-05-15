@@ -133,6 +133,19 @@ export function useLogout() {
   })
 }
 
+export function useDeleteAccount() {
+  const { logout } = useAuthStore()
+
+  return useMutation({
+    mutationFn: async () => {
+      await apiClient.delete<void>('/auth/me')
+    },
+    onSuccess: () => {
+      logout()
+    },
+  })
+}
+
 export function useCreateInvite() {
   return useMutation({
     mutationFn: async (data: InviteRequest) => {

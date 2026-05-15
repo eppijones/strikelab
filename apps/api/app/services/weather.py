@@ -5,7 +5,8 @@ for any course inside Norway, falls back to OpenMeteo for the rest of the
 world. Both responses are normalized into the `course_conditions.hourly` JSON
 shape used everywhere downstream:
 
-    [{ "h": 14, "t": 22, "w": 5, "dir": "SW", "sun": 0.92, "cloud": 0.1, "rain": 0.0 }, ...]
+    [{ "h": 14, "t": 22, "w": 5, "dir": "SW", "sun": 0.92, "cloud": 0.1, "rain": 0.0,
+       "gust": 8, "humidity": 62, "uv": 3, "apparent": 21 }, ...]
 
 Caches into the `course_conditions` table with a 30-minute TTL so repeated
 recommender runs don't hammer the upstream APIs.
@@ -48,6 +49,10 @@ class HourSample:
     sun: float
     cloud: float
     rain: float
+    gust: Optional[float] = None
+    humidity: Optional[float] = None
+    uv: Optional[float] = None
+    apparent: Optional[float] = None
 
 
 def _wind_dir_compass(deg: Optional[float]) -> Optional[str]:
@@ -122,6 +127,8 @@ def _normalize_metno(data: dict, target_date: date) -> list[HourSample]:
             sun=0.0,  # filled in once we know sunrise/sunset
             cloud=cloud,
             rain=rain_pct,
+            gust=details.get("wind_speed_of_gust"),
+            humidity=details.get("relative_humidity"),
         )
 
     # Fill in 5..21 with whatever we have, interpolate gaps from neighbours.
@@ -139,7 +146,7 @@ def _fetch_openmeteo(
                 params={
                     "latitude": f"{lat:.4f}",
                     "longitude": f"{lon:.4f}",
-                    "hourly": "temperature_2m,cloud_cover,wind_speed_10m,wind_direction_10m,precipitation_probability",
+                    "hourly": "temperature_2m,apparent_temperature,relative_humidity_2m,cloud_cover,wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation_probability,uv_index",
                     "wind_speed_unit": "ms",
                     "start_date": iso,
                     "end_date": iso,
@@ -181,6 +188,10 @@ def _fetch_openmeteo(
             sun=0.0,
             cloud=cloud,
             rain=rain,
+            gust=float((hourly.get("wind_gusts_10m") or [0])[i]),
+            humidity=float((hourly.get("relative_humidity_2m") or [0])[i]),
+            uv=float((hourly.get("uv_index") or [0])[i]),
+            apparent=float((hourly.get("apparent_temperature") or [temp])[i]),
         )
     return _densify(samples)
 
@@ -209,6 +220,10 @@ def _densify(samples: dict[int, HourSample]) -> list[HourSample]:
                     sun=0.0,
                     cloud=a.cloud + (b.cloud - a.cloud) * ratio,
                     rain=a.rain + (b.rain - a.rain) * ratio,
+                    gust=_lerp_optional(a.gust, b.gust, ratio),
+                    humidity=_lerp_optional(a.humidity, b.humidity, ratio),
+                    uv=_lerp_optional(a.uv, b.uv, ratio),
+                    apparent=_lerp_optional(a.apparent, b.apparent, ratio),
                 )
             )
         elif before is not None:
@@ -216,6 +231,16 @@ def _densify(samples: dict[int, HourSample]) -> list[HourSample]:
         elif after is not None:
             out.append(samples[after])
     return out
+
+
+def _lerp_optional(a: Optional[float], b: Optional[float], ratio: float) -> Optional[float]:
+    if a is None and b is None:
+        return None
+    if a is None:
+        return b
+    if b is None:
+        return a
+    return a + (b - a) * ratio
 
 
 def _fetch_sun_times(lat: float, lon: float, target_date: date) -> dict[str, str]:
@@ -278,6 +303,10 @@ def _synthesize(
                 sun=max(0.0, sun_factor * (1 - cloud * 0.5)),
                 cloud=cloud,
                 rain=rain,
+                gust=round(wind * 1.5, 1),
+                humidity=65 if is_north else 55,
+                uv=max(0.0, round(sun_factor * 4, 1)),
+                apparent=round(temp - max(0.0, wind - 4) * 0.3, 1),
             )
         )
     sun_times = {
@@ -364,6 +393,10 @@ def get_conditions(
                 "sun": round(s.sun, 3),
                 "cloud": round(s.cloud, 3),
                 "rain": round(s.rain, 3),
+                "gust": round(s.gust, 1) if s.gust is not None else None,
+                "humidity": round(s.humidity, 1) if s.humidity is not None else None,
+                "uv": round(s.uv, 1) if s.uv is not None else None,
+                "apparent": round(s.apparent, 1) if s.apparent is not None else None,
             }
             for s in samples
         ],

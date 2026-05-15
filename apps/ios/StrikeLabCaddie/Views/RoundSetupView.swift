@@ -21,52 +21,63 @@ struct RoundSetupView: View {
     @State private var showingActiveRound = false
     @State private var showAddCourse = false
     @State private var showCourseSearch = false
+    @State private var selectedPublicPackage: PublicCoursePackage?
+    @State private var isLoadingPublicPackage = false
+    @State private var groupGuests: [SetupGuest] = []
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Header
-                headerSection
-                    .padding(.top, 4)
-                
-                // Active round banner (if exists)
-                if persistenceManager.currentRound != nil {
-                    activeRoundBanner
-                }
-                
-                // Course selection
-                courseSection
-                
-                // Tee selection
-                if let course = selectedCourse {
-                    teeSection(course: course)
-                }
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 14) {
+                    // Header
+                    headerSection
+                    
+                    // Active round banner (if exists)
+                    if persistenceManager.currentRound != nil {
+                        activeRoundBanner
+                    }
+                    
+                    // Course selection
+                    courseSection(scrollProxy: proxy)
+                    
+                    // Tee selection
+                    if let course = selectedCourse {
+                        teeSection(course: course, scrollProxy: proxy)
+                            .id("teeSection")
+                    }
 
-                // Play format — Full 18 / Front 9 / Back 9
-                if selectedCourse != nil {
-                    formatSection
-                }
+                    // Play format — Full 18 / Front 9 / Back 9
+                    if selectedCourse != nil {
+                        formatSection
+                            .id("formatSection")
+                    }
 
-                // Conditions card — fetches when a course is selected
-                if selectedCourse != nil {
-                    conditionsCard
-                }
+                    // Conditions card — fetches when a course is selected
+                    if selectedCourse != nil {
+                        conditionsCard
+                    }
 
-                // Handicap info
-                if selectedTee != nil {
-                    handicapSection
+                    // Handicap info
+                    if selectedTee != nil {
+                        handicapSection
+                    }
+
+                    if selectedCourse != nil {
+                        groupSection
+                    }
+                    
+                    // Start button
+                    if selectedCourse != nil {
+                        startRoundButton
+                    }
+                    
+                    // Extra space so the floating tab bar does not cover tee rows / start button.
+                    Spacer(minLength: 100)
                 }
-                
-                // Start button
-                if selectedCourse != nil {
-                    startRoundButton
-                }
-                
-                // Extra space so the floating tab bar does not cover tee rows / start button.
-                Spacer(minLength: 100)
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
+                .padding(.bottom, 28)
             }
-            .padding()
-            .padding(.bottom, 28)
         }
         .nordicBackground()
         .navigationTitle("")
@@ -113,34 +124,41 @@ struct RoundSetupView: View {
         }
         .onAppear {
             if selectedCourse == nil {
-                selectedCourse = persistenceManager.courses.first
+                selectedCourse = visibleCourses.first
             }
             fetchWeatherIfNeeded()
+            fetchPublicPackageIfNeeded()
         }
         .onChange(of: selectedCourse) { _, _ in
             fetchWeatherIfNeeded()
+            fetchPublicPackageIfNeeded()
+            groupGuests = groupGuests.map { guest in
+                var updated = guest
+                updated.tee = selectedTee
+                return updated
+            }
+        }
+        .onChange(of: selectedTee) { _, newTee in
+            groupGuests = groupGuests.map { guest in
+                var updated = guest
+                updated.tee = newTee
+                return updated
+            }
         }
     }
     
     // MARK: - Header
     
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("STRIKELABCADDIE")
-                .font(Theme.labelFont(11))
-                .tracking(2.0)
-                .foregroundColor(Theme.accent)
+        VStack(alignment: .leading, spacing: 10) {
+            StrikeLabLogoLockup(subtitle: "Caddie", title: "STRIKELAB")
 
             Text("Get dialed in.")
                 .font(Theme.titleFont(28))
                 .foregroundColor(Theme.ink)
-
-            Text("Pick a course, lock the tee, and the watch syncs automatically.")
-                .font(Theme.bodyFont(13))
-                .foregroundColor(Theme.ink3)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, 10)
+        .padding(.bottom, 4)
     }
     
     // MARK: - Active Round Banner
@@ -188,7 +206,7 @@ struct RoundSetupView: View {
     
     // MARK: - Course Section
     
-    private var courseSection: some View {
+    private func courseSection(scrollProxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Button {
                 showCourseSearch = true
@@ -207,6 +225,7 @@ struct RoundSetupView: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 14)
                 .background(Theme.accent)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -229,13 +248,13 @@ struct RoundSetupView: View {
                 }
             }
 
-            let defaultCourses = persistenceManager.courses.filter { !$0.isFromAPI && !$0.isCustom }
-            let importedCourses = persistenceManager.courses.filter { $0.isFromAPI }
-            let customCourses = persistenceManager.courses.filter { $0.isCustom && !$0.isFromAPI }
+            let defaultCourses = visibleCourses.filter { !$0.isFromAPI && !$0.isCustom }
+            let importedCourses = visibleCourses.filter { $0.isFromAPI }
+            let customCourses = visibleCourses.filter { $0.isCustom && !$0.isFromAPI }
 
             if !defaultCourses.isEmpty {
                 ForEach(defaultCourses) { course in
-                    courseRow(course, badge: course.hasGPSData ? "location.fill" : nil)
+                    courseRow(course, badge: course.hasGPSData ? "location.fill" : nil, scrollProxy: scrollProxy)
                 }
             }
 
@@ -247,7 +266,7 @@ struct RoundSetupView: View {
                     .padding(.top, 4)
 
                 ForEach(importedCourses) { course in
-                    courseRow(course, badge: "globe")
+                    courseRow(course, badge: "globe", scrollProxy: scrollProxy)
                 }
             }
 
@@ -259,18 +278,37 @@ struct RoundSetupView: View {
                     .padding(.top, 4)
 
                 ForEach(customCourses) { course in
-                    courseRow(course, badge: "pencil")
+                    courseRow(course, badge: "pencil", scrollProxy: scrollProxy)
                 }
             }
         }
     }
 
-    private func courseRow(_ course: Course, badge: String?) -> some View {
-        let isSelected = selectedCourse?.id == course.id
-        return Button {
-            selectedCourse = course
+    private var visibleCourses: [Course] {
+        persistenceManager.courses.filter { !persistenceManager.isHiddenFromRoundSetup($0) }
+    }
+
+    private func removeFavorite(_ course: Course) {
+        persistenceManager.hideCourseFromRoundSetup(course)
+        if selectedCourse?.id == course.id {
+            selectedCourse = visibleCourses.first { $0.id != course.id }
             selectedTee = nil
-        } label: {
+        }
+    }
+
+    private func selectCourse(_ course: Course, scrollProxy: ScrollViewProxy) {
+        selectedCourse = course
+        selectedTee = nil
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                scrollProxy.scrollTo("teeSection", anchor: .top)
+            }
+        }
+    }
+
+    private func courseRow(_ course: Course, badge: String?, scrollProxy: ScrollViewProxy) -> some View {
+        let isSelected = selectedCourse?.id == course.id
+        return HStack(spacing: 12) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
@@ -306,8 +344,25 @@ struct RoundSetupView: View {
                 }
             }
             .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                selectCourse(course, scrollProxy: scrollProxy)
+            }
+
+            Button {
+                removeFavorite(course)
+            } label: {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Theme.accent)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Remove \(course.name) from My Courses")
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
         .background(
             Rectangle()
                 .fill(isSelected ? Theme.accent.opacity(0.08) : Theme.surface)
@@ -316,11 +371,12 @@ struct RoundSetupView: View {
             Rectangle()
                 .stroke(isSelected ? Theme.accent.opacity(0.6) : Theme.line, lineWidth: 1)
         )
+        .contentShape(Rectangle())
     }
     
     // MARK: - Tee Section
     
-    private func teeSection(course: Course) -> some View {
+    private func teeSection(course: Course, scrollProxy: ScrollViewProxy) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel(text: "Tee")
 
@@ -328,6 +384,11 @@ struct RoundSetupView: View {
                 let isSelected = selectedTee?.id == tee.id
                 Button {
                     selectedTee = tee
+                    DispatchQueue.main.async {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            scrollProxy.scrollTo("formatSection", anchor: .top)
+                        }
+                    }
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
@@ -349,6 +410,7 @@ struct RoundSetupView: View {
                         }
                     }
                     .padding()
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .background(
@@ -413,12 +475,17 @@ struct RoundSetupView: View {
 
     private var conditionsCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Conditions")
+            SectionLabel(
+                text: "Conditions",
+                trailing: selectedPublicPackage?.conditions?.source.uppercased() ?? "OPEN DATA"
+            )
 
-            if weatherManager.isLoading {
+            if let publicConditions = selectedPublicPackage?.conditions {
+                publicConditionsBody(publicConditions)
+            } else if isLoadingPublicPackage || weatherManager.isLoading {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("Loading weather…")
+                    Text("Loading open conditions…")
                         .font(Theme.labelFont(11))
                         .foregroundColor(Theme.ink3)
                 }
@@ -434,6 +501,53 @@ struct RoundSetupView: View {
                     .glassCard(cornerRadius: Theme.smallCornerRadius, padding: 0)
             }
         }
+    }
+
+    private func publicConditionsBody(_ c: TeeCourseConditions) -> some View {
+        let sample = c.hourly?.first(where: { $0.h == 14 }) ?? c.hourly?.first
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill((c.windMs ?? sample?.w ?? 0) < 10 && (c.rainPct ?? 0) < 0.3 ? Theme.accent : Theme.warn)
+                    .frame(width: 8, height: 8)
+                Text("OPEN GOLF CONDITIONS")
+                    .font(Theme.labelFont(11))
+                    .tracking(1.6)
+                    .foregroundColor(Theme.accent)
+                Spacer()
+                Text(c.source.uppercased())
+                    .font(Theme.labelFont(10))
+                    .tracking(1.2)
+                    .foregroundColor(Theme.ink3)
+            }
+
+            HStack(spacing: 12) {
+                conditionsTile(
+                    icon: "thermometer",
+                    label: "TEMP",
+                    value: "\(Int((sample?.t ?? c.tempC ?? 0).rounded()))°C"
+                )
+                conditionsTile(
+                    icon: "wind",
+                    label: "WIND",
+                    value: "\(Int((sample?.w ?? c.windMs ?? 0).rounded())) m/s",
+                    sub: sample?.dir
+                )
+                conditionsTile(
+                    icon: "drop.fill",
+                    label: "RAIN",
+                    value: "\(Int(((c.rainPct ?? sample?.rain ?? 0) * 100).rounded()))%"
+                )
+            }
+
+            HStack(spacing: 12) {
+                conditionsTile(icon: "sunrise.fill", label: "SUNRISE", value: c.sunrise ?? "—")
+                conditionsTile(icon: "sun.max.fill", label: "GOLDEN", value: c.goldenStart ?? "—")
+                conditionsTile(icon: "sunset.fill", label: "SUNSET", value: c.sunset ?? "—")
+            }
+        }
+        .padding()
+        .glassCard(cornerRadius: Theme.smallCornerRadius, padding: 0)
     }
 
     private func conditionsBody(_ c: WeatherConditions) -> some View {
@@ -505,6 +619,36 @@ struct RoundSetupView: View {
         Task { await weatherManager.fetchWeather(for: location) }
     }
 
+    private func fetchPublicPackageIfNeeded() {
+        guard let course = selectedCourse else {
+            selectedPublicPackage = nil
+            return
+        }
+        if let cached = persistenceManager.publicCoursePackage(for: course.id) {
+            selectedPublicPackage = cached
+            return
+        }
+
+        isLoadingPublicPackage = true
+        Task {
+            do {
+                let package = try await TeeAPIClient.shared.publicCoursePackage(courseId: course.id)
+                persistenceManager.cachePublicCoursePackage(package)
+                if selectedCourse?.id == course.id {
+                    selectedPublicPackage = package
+                    selectedCourse = persistenceManager.courses.first { $0.id == course.id } ?? course
+                }
+            } catch {
+                if selectedCourse?.id == course.id {
+                    selectedPublicPackage = nil
+                }
+            }
+            if selectedCourse?.id == course.id {
+                isLoadingPublicPackage = false
+            }
+        }
+    }
+
     private var handicapSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel(text: "Handicap")
@@ -531,6 +675,109 @@ struct RoundSetupView: View {
             .frame(maxWidth: .infinity)
             .glassCard()
         }
+    }
+
+    private var groupSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionLabel(text: "Group Scorecard", trailing: "\(groupGuests.count + 1)/4 players")
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(Theme.accent)
+                        .frame(width: 8, height: 8)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(persistenceManager.player.name)
+                            .font(Theme.labelFont(13))
+                            .tracking(1.0)
+                            .foregroundColor(Theme.ink)
+                        Text("PRIMARY · WATCH SHOTS + BIOMETRICS")
+                            .font(Theme.labelFont(9))
+                            .tracking(1.1)
+                            .foregroundColor(Theme.ink3)
+                    }
+                    Spacer()
+                    Text(persistenceManager.player.formattedHandicap)
+                        .font(Theme.statFont(14))
+                        .foregroundColor(Theme.accent)
+                }
+                .padding(12)
+                .background(Theme.surface2)
+                .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
+
+                ForEach($groupGuests) { $guest in
+                    setupGuestRow(guest: $guest)
+                }
+
+                if groupGuests.count < 3 {
+                    Button {
+                        groupGuests.append(SetupGuest(name: "Guest \(groupGuests.count + 1)", tee: selectedTee))
+                    } label: {
+                        HStack {
+                            Image(systemName: "person.badge.plus")
+                            Text("Add Guest")
+                            Spacer()
+                            Text("score only")
+                        }
+                        .font(Theme.labelFont(11))
+                        .tracking(1.4)
+                        .foregroundColor(Theme.accent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 12)
+                        .overlay(Rectangle().stroke(Theme.accent.opacity(0.45), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .glassCard(cornerRadius: Theme.smallCornerRadius, padding: 12)
+        }
+    }
+
+    private func setupGuestRow(guest: Binding<SetupGuest>) -> some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                TextField("Guest name", text: guest.name)
+                    .font(Theme.bodyFont(14))
+                    .foregroundColor(Theme.ink)
+                    .textInputAutocapitalization(.words)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 9)
+                    .background(Theme.surface3)
+                    .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
+
+                Button {
+                    groupGuests.removeAll { $0.id == guest.wrappedValue.id }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Theme.ink3)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.surface3)
+                        .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 10) {
+                TextField("HCP index", text: guest.handicapText)
+                    .keyboardType(.decimalPad)
+                    .font(Theme.statFont(14))
+                    .foregroundColor(Theme.ink)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 9)
+                    .background(Theme.surface3)
+                    .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
+
+                Text(guest.wrappedValue.strokePreview(fallbackTee: selectedTee))
+                    .font(Theme.labelFont(10))
+                    .tracking(1.1)
+                    .foregroundColor(Theme.warn)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .padding(12)
+        .background(Theme.surface2)
+        .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
     }
 
     private var hasCompleteHandicap: Bool {
@@ -572,7 +819,11 @@ struct RoundSetupView: View {
     // MARK: - Helpers
     
     private func calculateCourseHandicap() -> Int {
-        guard let tee = selectedTee,
+        guard let selectedTee else {
+            return 0
+        }
+        let tee = selectedTee.adjustedForPlayFormat(selectedFormat)
+        guard
               let slope = tee.slope,
               let rating = tee.courseRating,
               let par = tee.par else {
@@ -592,7 +843,8 @@ struct RoundSetupView: View {
         persistenceManager.startNewRound(
             course: course,
             tee: selectedTee,
-            playFormat: selectedFormat
+            playFormat: selectedFormat,
+            groupPlayers: buildGroupPlayers(for: course)
         )
 
         // Start location tracking
@@ -608,6 +860,53 @@ struct RoundSetupView: View {
         }
 
         showingActiveRound = true
+    }
+
+    private func buildGroupPlayers(for course: Course) -> [GroupPlayer] {
+        groupGuests.compactMap { guest in
+            let name = guest.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { return nil }
+            var player = GroupPlayer(
+                name: name,
+                handicapIndex: guest.handicapIndex,
+                tee: guest.tee ?? selectedTee,
+                holes: course.holes.map {
+                    GroupPlayerHoleScore(holeNumber: $0.number, par: $0.par, handicapIndex: $0.handicapIndex)
+                }
+            )
+            player.recalculateStrokeAllocation(course: course, format: selectedFormat)
+            return player
+        }
+    }
+}
+
+private struct SetupGuest: Identifiable, Equatable {
+    let id = UUID()
+    var name: String
+    var handicapText: String = ""
+    var tee: Tee?
+
+    var handicapIndex: Double? {
+        let normalized = handicapText.replacingOccurrences(of: ",", with: ".")
+        if normalized.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return nil }
+        return Double(normalized)
+    }
+
+    func strokePreview(fallbackTee: Tee?) -> String {
+        guard let handicapIndex else { return "Gross only" }
+        guard let tee = tee ?? fallbackTee,
+              let slope = tee.slope,
+              let rating = tee.courseRating,
+              let par = tee.par else {
+            return "HCP set · no tee rating"
+        }
+        let ch = HandicapCalculator.courseHandicap(
+            handicapIndex: handicapIndex,
+            slope: slope,
+            courseRating: rating,
+            par: par
+        )
+        return "CH \(ch) · strokes allocated"
     }
 }
 
