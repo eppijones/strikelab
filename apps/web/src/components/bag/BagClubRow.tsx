@@ -9,7 +9,7 @@ interface Props {
   onDelete?: () => void
 }
 
-const GRID = '60px 24px 1fr 60px 60px 80px 80px auto'
+const GRID = '60px 24px 1fr 74px 74px 58px 82px auto'
 
 export function BagClubRow({ club, stat, onEdit, onDelete }: Props) {
   return (
@@ -28,14 +28,12 @@ export function BagClubRow({ club, stat, onEdit, onDelete }: Props) {
           <span className="mono text-[10px] text-ink-3 ml-2">{club.year}</span>
         )}
       </button>
-      <span className="num text-[13px] text-ink-2">
-        {club.loft != null ? `${club.loft}°` : '—'}
-      </span>
-      <span className="mono text-[11px] text-ink-2">
-        {club.shaft_flex || '—'}
-      </span>
       <span className="num text-[13px]">{stat?.avg_carry?.toFixed(0) ?? '—'}</span>
       <span className="num text-[13px]">
+        {stat?.max_carry?.toFixed(0) ?? '—'}
+      </span>
+      <span className="num text-[13px] text-ink-2">{stat?.total_shots ?? '—'}</span>
+      <span className="num text-[13px] text-ink-2">
         {stat?.dispersion_radius?.toFixed(1) ?? '—'}
       </span>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -62,7 +60,7 @@ export function BagClubHeader() {
       className="grid items-center gap-3 pb-2 border-b border-line-strong mb-2"
       style={{ gridTemplateColumns: GRID }}
     >
-      {['LABEL', 'BRAND', 'MODEL', 'LOFT', 'SHAFT', 'AVG CARRY', 'σ', ''].map(
+      {['LABEL', 'BRAND', 'MODEL', 'AVG CARRY', 'BEST', 'SHOTS', 'σ', ''].map(
         (h) => (
           <span
             key={h}

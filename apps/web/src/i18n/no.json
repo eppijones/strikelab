@@ -365,6 +365,7 @@
     "bag": "Bag",
     "data": "Data",
     "play": "Spill",
+    "practice": "Tren",
     "tee": "Tee",
     "analyze": "Analyse",
     "lab": "Lab",
@@ -376,7 +377,7 @@
     "bay": "BAY 01"
   },
   "rangeLab": {
-    "lede": "Logg inn og kjør StrikeLab API slik at økter fra StrikeLab Caddie vises her automatisk. Du kan fortsatt importere JSON fra telefonen (del-ikon) som lokal kopi i nettleseren."
+    "lede": "Last opp din første rangeøkt. Slipp en eksport fra iPhone Caddie her, så holder StrikeLab orden på slag, køller og mønstre."
   },
   "command": {
     "priorityToday": "Prioritet · I dag",

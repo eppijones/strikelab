@@ -119,7 +119,7 @@ export default function RangeLabDetail() {
       if (!window.confirm('Delete this session from StrikeLab (server)?')) return
       try {
         await deleteRangeSession(decoded)
-        navigate('/lab/range')
+        navigate('/practice')
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Delete failed')
       }
@@ -127,15 +127,15 @@ export default function RangeLabDetail() {
     }
     if (!window.confirm('Remove this import from this browser only?')) return
     await RangeImportRepository.remove(session.id)
-    navigate('/lab/range')
+    navigate('/practice')
   }
 
   if (error && !session) {
     return (
       <div className="max-w-3xl space-y-4">
         <p className="text-bad">{error}</p>
-        <Link to="/lab/range" className="text-accent-fg underline mono text-[12px]">
-          ← Range lab
+        <Link to="/practice" className="text-accent-fg underline mono text-[12px]">
+          ← Practice
         </Link>
       </div>
     )
@@ -166,8 +166,8 @@ export default function RangeLabDetail() {
             HQ
           </Link>{' '}
           ›{' '}
-          <Link to="/lab/range" className="hover:text-ink">
-            RANGE LAB
+          <Link to="/practice" className="hover:text-ink">
+            PRACTICE
           </Link>{' '}
           › <span className="text-ink">SESSION</span>
         </div>

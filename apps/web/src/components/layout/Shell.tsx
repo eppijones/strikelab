@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useClerk } from '@clerk/clerk-react'
-import { useAuthStore, type Persona } from '@/stores/authStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useCourse } from '@/api/courses'
 import { SLLogo } from '@/components/ui'
@@ -13,60 +13,13 @@ interface NavItem {
   end?: boolean
 }
 
-const HQ_ITEM: NavItem = { path: '/', key: 'hq', end: true }
-
-/**
- * Persona-aware navigation — one bar, three zones:
- *   Left: round / range / course / equipment / data loop
- *   Center: HQ (home) — always visually anchored in the middle
- *   Right: social (friends)
- *
- * Performance no longer uses a second rail; everything lives in the left zone
- * so the header reads as one calm strip instead of two competing menus.
- */
-const PERSONA_NAV: Record<
-  Persona,
-  { left: NavItem[]; right: NavItem[] }
-> = {
-  beginner: {
-    left: [
-      { path: '/tee', key: 'tee' },
-      { path: '/courses', key: 'courses' },
-      { path: '/lab/range', key: 'rangelab' },
-    ],
-    right: [{ path: '/friends', key: 'friends' }],
-  },
-  improver: {
-    left: [
-      { path: '/tee', key: 'tee' },
-      { path: '/play', key: 'play' },
-      { path: '/sessions', key: 'sessions' },
-      { path: '/lab', key: 'analyze' },
-      { path: '/lab/range', key: 'rangelab' },
-      { path: '/training', key: 'plan' },
-      { path: '/courses', key: 'courses' },
-      { path: '/my-bag', key: 'bag' },
-      { path: '/connectors', key: 'data' },
-    ],
-    right: [{ path: '/friends', key: 'friends' }],
-  },
-  performance: {
-    left: [
-      { path: '/tee', key: 'tee' },
-      { path: '/play', key: 'play' },
-      { path: '/sessions', key: 'sessions' },
-      { path: '/coach', key: 'reports' },
-      { path: '/training', key: 'plan' },
-      { path: '/courses', key: 'courses' },
-      { path: '/lab', key: 'lab' },
-      { path: '/lab/range', key: 'rangelab' },
-      { path: '/stats', key: 'stats' },
-      { path: '/my-bag', key: 'bag' },
-      { path: '/connectors', key: 'data' },
-    ],
-    right: [{ path: '/friends', key: 'friends' }],
-  },
-}
+const PRIMARY_NAV: NavItem[] = [
+  { path: '/', key: 'hq', end: true },
+  { path: '/play', key: 'play' },
+  { path: '/practice', key: 'practice' },
+  { path: '/bag', key: 'bag' },
+  { path: '/courses', key: 'courses' },
+]
 
 export function Shell() {
   const { t, i18n } = useTranslation()
@@ -80,9 +33,6 @@ export function Shell() {
   const navigate = useNavigate()
 
   const { data: homeClub } = useCourse(user?.homeClubId ?? '')
-
-  const persona: Persona = (user?.persona as Persona) ?? 'improver'
-  const { left, right } = PERSONA_NAV[persona] ?? PERSONA_NAV.improver
 
   const navLinkClass = (isActive: boolean, withRightRule: boolean) =>
     clsx(
@@ -133,43 +83,15 @@ export function Shell() {
             ) : null}
           </div>
 
-          {/* Primary nav — spill · HQ · sosialt */}
+          {/* Primary nav — one stable consumer mental model. */}
           <nav className="flex flex-wrap items-stretch justify-center max-w-full min-w-0 justify-self-center border border-line-strong bg-surface-solid/30">
             <div className="flex flex-wrap min-w-0">
-              {left.map((item, i) => (
+              {PRIMARY_NAV.map((item, i) => (
                 <NavLink
                   key={item.key}
                   to={item.path}
                   end={item.end}
-                  className={({ isActive }) => navLinkClass(isActive, i < left.length - 1)}
-                >
-                  <span>{t(`shell.${item.key}`, { defaultValue: item.key.toUpperCase() })}</span>
-                </NavLink>
-              ))}
-            </div>
-
-            <div className="flex border-l border-r border-line-strong bg-bg-2/50 shrink-0">
-              <NavLink
-                to={HQ_ITEM.path}
-                end={HQ_ITEM.end}
-                className={({ isActive }) =>
-                  clsx(
-                    'mono text-[10px] uppercase tracking-micro px-4 sm:px-5 py-2.5 transition-colors flex items-center justify-center min-w-[52px] min-h-[40px] font-medium',
-                    isActive ? 'ui-selected' : 'text-ink hover:bg-bg-2',
-                  )
-                }
-              >
-                {t(`shell.${HQ_ITEM.key}`, { defaultValue: 'HQ' })}
-              </NavLink>
-            </div>
-
-            <div className="flex flex-wrap min-w-0">
-              {right.map((item, i) => (
-                <NavLink
-                  key={item.key}
-                  to={item.path}
-                  end={item.end}
-                  className={({ isActive }) => navLinkClass(isActive, i < right.length - 1)}
+                  className={({ isActive }) => navLinkClass(isActive, i < PRIMARY_NAV.length - 1)}
                 >
                   <span>{t(`shell.${item.key}`, { defaultValue: item.key.toUpperCase() })}</span>
                 </NavLink>
@@ -220,7 +142,7 @@ export function Shell() {
 
       {/* FOOTER STRIP */}
       <footer className="px-8 h-10 border-t border-line-strong flex items-center justify-between text-ink-4 mono text-[10px] uppercase tracking-micro">
-        <span>STRIKELAB · {persona.toUpperCase()} · v0.2</span>
+        <span>STRIKELAB · PLAYER WORKSPACE · v0.3</span>
         <span>{t('brand.tagline')}</span>
       </footer>
     </div>

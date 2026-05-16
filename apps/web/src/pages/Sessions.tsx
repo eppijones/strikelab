@@ -131,10 +131,10 @@ export default function Sessions() {
             ) : null}
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
-                to="/lab/range"
+                to="/practice"
                 className="mono text-[11px] text-accent-fg uppercase tracking-micro inline-block border border-accent-fg px-4 py-2 hover:bg-bg-2"
               >
-                Range Lab — import / view →
+                Practice — import / view →
               </Link>
               <Link
                 to="/connectors"

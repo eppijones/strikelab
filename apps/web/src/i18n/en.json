@@ -365,6 +365,7 @@
     "bag": "Bag",
     "data": "Data",
     "play": "Play",
+    "practice": "Practice",
     "tee": "Tee",
     "analyze": "Analyze",
     "lab": "Lab",
@@ -376,7 +377,7 @@
     "bay": "BAY 01"
   },
   "rangeLab": {
-    "lede": "Sign in and run the StrikeLab API so sessions from StrikeLab Caddie appear here automatically. You can still import JSON from the phone (share icon) for an offline copy in this browser."
+    "lede": "Upload your first range session. Drop an export from iPhone Caddie here, then StrikeLab keeps the shots, clubs, and patterns together."
   },
   "command": {
     "priorityToday": "Priority · Today",

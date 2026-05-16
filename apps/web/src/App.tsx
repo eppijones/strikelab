@@ -201,6 +201,7 @@ function App() {
           <Route path="coach/chat" element={<CoachChat />} />
           <Route path="training" element={<TrainingPlan />} />
           <Route path="my-bag" element={<MyBag />} />
+          <Route path="bag" element={<MyBag />} />
           <Route path="connectors" element={<Connectors />} />
           <Route path="open-api" element={<OpenGolfApiDocs />} />
 
@@ -224,6 +225,8 @@ function App() {
           {/* Legacy calendar fallback (kept for back-compat with older calendar links) */}
           <Route path="calendar/old" element={<Calendar />} />
 
+          <Route path="practice" element={<RangeLab />} />
+          <Route path="practice/:id" element={<RangeLabDetail />} />
           <Route path="lab/range" element={<RangeLab />} />
           <Route path="lab/range/:id" element={<RangeLabDetail />} />
           <Route path="lab" element={<SwingLabLibrary />} />

@@ -10,14 +10,16 @@ import {
 } from '@/api/courses'
 import { Panel, Tag } from '@/components/ui'
 import { CourseEditor } from '@/components/courses/CourseEditor'
+import { useRounds } from '@/api/rounds'
 
 type Tab = 'browse' | 'mine'
 
 export default function Courses() {
-  useTranslation()
-  const [tab, setTab] = useState<Tab>('browse')
+  const { i18n } = useTranslation()
+  const isNo = i18n.language === 'no'
+  const [tab, setTab] = useState<Tab>('mine')
   const [q, setQ] = useState('')
-  const [country, setCountry] = useState<string>('')
+  const [country, setCountry] = useState<string>('NO')
   const [region, setRegion] = useState<string>('')
   const [type, setType] = useState<string>('')
   const [drivingRangeOnly, setDrivingRangeOnly] = useState(false)
@@ -32,7 +34,7 @@ export default function Courses() {
 
   const browse = useCourses({
     q,
-    country_code: country || undefined,
+    country_code: country || 'NO',
     region: region || undefined,
     course_type: type || undefined,
     has_driving_range: drivingRangeOnly || undefined,
@@ -40,9 +42,15 @@ export default function Courses() {
     limit: 200,
   })
   const mine = useCourses({ mine: true, limit: 200 })
+  const { data: rounds = [] } = useRounds()
 
   const data = tab === 'browse' ? browse : mine
   const courses = data.data ?? []
+  const courseRoundCounts = rounds.reduce<Record<string, number>>((acc, round) => {
+    if (round.course_id) acc[round.course_id] = (acc[round.course_id] ?? 0) + 1
+    return acc
+  }, {})
+  const recentRounds = rounds.slice(0, 4)
 
   const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<Course | null>(null)
@@ -73,14 +81,14 @@ export default function Courses() {
     <div className="space-y-6">
       <header className="border-b border-line-strong pb-6 flex items-end justify-between gap-6 flex-wrap">
         <div>
-          <div className="micro mb-3">PLAY › COURSES</div>
-          <h1 className="display text-[64px] m-0">
-            The <em>library.</em>
+          <div className="micro mb-3">{isNo ? 'SPILL › BANER' : 'PLAY › COURSES'}</div>
+          <h1 className="display text-[clamp(3rem,8vw,5.75rem)] m-0">
+            {isNo ? 'Norske' : 'Norway'} <em>{isNo ? 'baner.' : 'courses.'}</em>
           </h1>
           <p className="text-body text-ink-2 mt-3 max-w-2xl">
-            Norway-first verified courses, OSM-enriched geometry, live
-            conditions, and legal source attribution. Add a course manually,
-            upload a CSV, or favorite catalog courses to plan rounds.
+            {isNo
+              ? 'Finn banene du spiller, se scorekortene dine, og planlegg neste runde. Katalogen starter med norske klubber og rangefasiliteter.'
+              : 'Find the courses you play, see your scorecards, and plan the next round. The catalog starts with Norwegian clubs and practice facilities.'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -117,8 +125,47 @@ export default function Courses() {
         </div>
       )}
 
+      <div className="grid lg:grid-cols-3 gap-4">
+        <Panel id="NO" title={isNo ? 'NORSK KATALOG' : 'NORWAY CATALOG'}>
+          <div className="display text-[32px]">{regions.reduce((sum, r) => sum + r.count, 0) || '156'}</div>
+          <p className="text-body text-ink-2 mt-2">
+            {isNo ? 'Klubber og baner fordelt på fylker.' : 'Clubs and courses grouped by region.'}
+          </p>
+        </Panel>
+        <Panel id="MINE" title={isNo ? 'MINE BANER' : 'MY COURSES'}>
+          <div className="display text-[32px]">{mine.data?.length ?? 0}</div>
+          <p className="text-body text-ink-2 mt-2">
+            {isNo ? 'Favoritter og baner du selv har lagt inn.' : 'Favorites and courses you have added.'}
+          </p>
+        </Panel>
+        <Panel id="SCORE" title={isNo ? 'SCOREKORT' : 'SCORECARDS'}>
+          <div className="display text-[32px]">{rounds.length}</div>
+          <Link to="/rounds" className="mono text-[10px] text-accent-fg uppercase tracking-micro mt-3 inline-block hover:underline">
+            {isNo ? 'Se runder' : 'View rounds'} →
+          </Link>
+        </Panel>
+      </div>
+
+      {recentRounds.length > 0 && (
+        <Panel id="RECENT" title={isNo ? 'SISTE SCOREKORT' : 'RECENT SCORECARDS'}>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {recentRounds.map((round) => (
+              <Link key={round.id} to={`/rounds/${round.id}`} className="border border-line-strong p-4 hover:border-accent-fg hover:bg-bg-2">
+                <div className="mono text-[10px] text-ink-3 uppercase tracking-micro">
+                  {new Date(round.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
+                </div>
+                <div className="text-[15px] text-ink mt-2 truncate">{round.course_name}</div>
+                <div className="mono text-[12px] text-ink-2 mt-3">
+                  {round.total_gross} / {round.total_par} · {round.is_complete ? (isNo ? 'FERDIG' : 'DONE') : (isNo ? 'PÅGÅR' : 'LIVE')}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Panel>
+      )}
+
       <div className="flex border border-line-strong w-fit">
-        {([['browse', 'BROWSE CATALOG'], ['mine', 'MY COURSES']] as const).map(
+        {([['mine', isNo ? 'MINE BANER' : 'MY COURSES'], ['browse', isNo ? 'NORSK KATALOG' : 'NORWAY CATALOG']] as const).map(
           ([id, label], i) => (
             <button
               key={id}
@@ -217,7 +264,7 @@ export default function Courses() {
 
       <Panel
         id="LIST"
-        title={tab === 'browse' ? 'CATALOG' : 'YOUR COURSES'}
+        title={tab === 'browse' ? (isNo ? 'KATALOG' : 'CATALOG') : (isNo ? 'DINE BANER' : 'YOUR COURSES')}
         right={
           <span className="micro">
             {courses.length} {courses.length === 1 ? 'COURSE' : 'COURSES'}
@@ -230,14 +277,14 @@ export default function Courses() {
         {!data.isLoading && courses.length === 0 && (
           <div className="py-12 text-center">
             <div className="display text-[24px]">
-              {tab === 'mine' ? 'No courses yet.' : 'No courses match.'}
+              {tab === 'mine' ? (isNo ? 'Ingen baner ennå.' : 'No courses yet.') : (isNo ? 'Ingen treff.' : 'No courses match.')}
             </div>
             {tab === 'mine' && (
               <button
                 onClick={startCreate}
                 className="mt-5 bg-accent text-accent-ink px-5 py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2"
               >
-                ADD A COURSE →
+                {isNo ? 'LEGG TIL BANE' : 'ADD A COURSE'} →
               </button>
             )}
           </div>
@@ -255,6 +302,7 @@ export default function Courses() {
                   {c.is_verified && <Tag tone="accent">VERIFIED</Tag>}
                   {c.holes_count != null && <Tag>{c.holes_count}H</Tag>}
                   {c.par != null && <Tag>PAR {c.par}</Tag>}
+                  {courseRoundCounts[c.id] ? <Tag tone="accent">{courseRoundCounts[c.id]} {isNo ? 'RUNDER' : 'ROUNDS'}</Tag> : null}
                 </div>
               </div>
               <div className="mono text-[11px] text-ink-3 mt-2 uppercase tracking-micro-tight">

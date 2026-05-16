@@ -14,6 +14,12 @@ export const CLUB_TYPES: ClubTypeDef[] = [
     defaultLabels: ['3W'],
   },
   {
+    id: '4_wood',
+    label: '4-Wood',
+    shortLabel: '4W',
+    defaultLabels: ['4W'],
+  },
+  {
     id: '5_wood',
     label: '5-Wood',
     shortLabel: '5W',
@@ -43,6 +49,7 @@ export const CLUB_TYPES: ClubTypeDef[] = [
     shortLabel: 'WDG',
     defaultLabels: ['GW', 'SW', 'LW', '50°', '52°', '54°', '56°', '58°', '60°'],
   },
+  { id: 'utility', label: 'Utility / Chipper', shortLabel: 'UTL', defaultLabels: ['Utility', 'Chipper'] },
   { id: 'putter', label: 'Putter', shortLabel: 'PUT', defaultLabels: ['Putter'] },
 ]
 

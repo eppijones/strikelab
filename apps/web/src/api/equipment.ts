@@ -234,6 +234,21 @@ export function useQuickAddClubs() {
   })
 }
 
+export function useQuickAddToMyBag() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (clubs: QuickAddClubData[]) => {
+      const bag = await fetchMyBag()
+      return quickAddClubs(bag.id, clubs)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-bag'] })
+      queryClient.invalidateQueries({ queryKey: ['bags'] })
+    },
+  })
+}
+
 export function useUpdateClub() {
   const queryClient = useQueryClient()
   

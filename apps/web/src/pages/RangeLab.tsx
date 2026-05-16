@@ -83,7 +83,7 @@ export default function RangeLab() {
       schemaVersion: env.schemaVersion,
       rawJson,
     })
-    let msg = `Imported ${session.shots.length} shots — saved in this browser (IndexedDB).`
+    let msg = `Imported ${session.shots.length} shots — saved in this browser.`
     if (accessToken) {
       try {
         await putRangeSessionSync(env)
@@ -144,26 +144,37 @@ export default function RangeLab() {
   ].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       <header className="border-b border-line-strong pb-6">
         <div className="micro mb-3">
           <Link to="/" className="hover:text-ink">
             HQ
           </Link>{' '}
-          › <span className="text-ink">RANGE LAB</span>
+          › <span className="text-ink">PRACTICE</span>
         </div>
-        <h1 className="display text-[40px] m-0">
-          Range <em>lab.</em>
+        <h1 className="display text-[clamp(3rem,8vw,5.5rem)] m-0">
+          Practice <em>sessions.</em>
         </h1>
-        <p className="text-body text-ink-2 mt-3">
+        <p className="text-body text-ink-2 mt-4 max-w-2xl">
           {t('rangeLab.lede', {
             defaultValue:
-              'Sign in and run the StrikeLab API to see sessions synced from StrikeLab Caddie. You can still import JSON from the phone (share icon) for an offline copy in this browser.',
+              'Upload your first range session. Drop an export from iPhone Caddie here, then StrikeLab keeps the shots, clubs, and patterns together.',
           })}
         </p>
       </header>
 
-      <Panel id="R1" title="IMPORT">
+      <Panel id="P1" title="UPLOAD OR SYNC">
+        <div className="grid lg:grid-cols-[1fr_auto] gap-5 items-start mb-5">
+          <div>
+            <div className="display text-[28px]">
+              Keep every <em>range bucket.</em>
+            </div>
+            <p className="text-body text-ink-2 mt-2 max-w-xl">
+              Import the JSON export from StrikeLab Caddie, or let the iPhone sync sessions to the API when you are signed in. Club distances in your bag get better as you add more shots.
+            </p>
+          </div>
+          <Tag tone={accessToken ? 'accent' : 'default'}>{accessToken ? 'SIGNED IN' : 'LOCAL COPY'}</Tag>
+        </div>
         <div className="flex flex-wrap gap-3 items-center">
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onFile} />
           <button
@@ -171,7 +182,7 @@ export default function RangeLab() {
             onClick={() => fileRef.current?.click()}
             className="bg-accent text-accent-ink px-5 py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2"
           >
-            Choose JSON file
+            Choose export
           </button>
           <button
             type="button"
@@ -185,32 +196,39 @@ export default function RangeLab() {
             onClick={() => void backupAll()}
             className="border border-line-strong text-ink px-5 py-3 mono text-[11px] uppercase tracking-micro hover:bg-bg-2"
           >
-            Download backup (local imports)
+            Download local backup
           </button>
         </div>
         {message ? <p className="text-body text-ink-2 mt-4">{message}</p> : null}
       </Panel>
 
-      <Panel id="R2" title="SESSIONS">
+      <Panel id="P2" title="PRACTICE SESSIONS">
         {loading ? (
           <p className="text-ink-3 mono text-[12px]">Loading…</p>
         ) : (
           <>
             {!accessToken ? (
               <p className="text-ink-3 mono text-[12px] mb-4">
-                Sign in to load sessions from the StrikeLab API (synced from your iPhone when it has a bearer token).
+                Sign in to load sessions synced from StrikeLab Caddie on iPhone.
               </p>
             ) : cloudError ? (
               <p className="text-warn mono text-[12px] mb-4">{cloudError}</p>
             ) : null}
             {merged.length === 0 ? (
-              <p className="text-ink-3 mono text-[12px]">No sessions yet. Import JSON or complete a range session on the phone while signed in.</p>
+              <div className="py-12 text-center">
+                <div className="display text-[26px]">
+                  Upload your first <em>range session.</em>
+                </div>
+                <p className="text-body text-ink-3 mt-2 max-w-md mx-auto">
+                  Drop an iPhone export here after practice. We will keep the shots, clubs, and distances ready for your bag.
+                </p>
+              </div>
             ) : (
               <ul className="space-y-2">
                 {merged.map((r) => (
                   <li key={`${r.kind}-${r.id}`} className="flex flex-wrap items-stretch gap-2 border border-line-strong">
                     <Link
-                      to={`/lab/range/${encodeURIComponent(r.id)}`}
+                      to={`/practice/${encodeURIComponent(r.id)}`}
                       className="flex flex-1 flex-wrap items-baseline justify-between gap-2 px-4 py-3 hover:bg-bg-2 min-w-0"
                     >
                       <span className="text-ink truncate">{r.label}</span>
