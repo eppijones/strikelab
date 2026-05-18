@@ -25,7 +25,7 @@ export function Panel({
   return (
     <div className={clsx('panel relative', className)} style={style} {...rest}>
       {hasHeader && (
-        <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-line-strong">
+        <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-line-strong tee-editorial:border-line">
           <div className="flex items-center gap-2.5">
             {id && <span className="mono text-[10px] text-ink-4">{id}</span>}
             {title && <span className="micro text-ink-2">{title}</span>}
@@ -33,7 +33,7 @@ export function Panel({
           {right}
         </div>
       )}
-      <div className={clsx(padded && 'p-3.5', bodyClassName)}>{children}</div>
+      <div className={clsx(padded && 'p-3.5 tee-editorial:p-4', bodyClassName)}>{children}</div>
     </div>
   )
 }

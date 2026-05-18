@@ -24,6 +24,7 @@ struct RoundSetupView: View {
     @State private var selectedPublicPackage: PublicCoursePackage?
     @State private var isLoadingPublicPackage = false
     @State private var groupGuests: [SetupGuest] = []
+    @State private var showLocationPreflight = false
     
     var body: some View {
         ScrollViewReader { proxy in
@@ -122,6 +123,12 @@ struct RoundSetupView: View {
                 CourseSearchView()
             }
         }
+        .alert("Allow Location During Rounds?", isPresented: $showLocationPreflight) {
+            Button("Continue") { startRound(usesLocation: true) }
+            Button("Not now", role: .cancel) { startRound(usesLocation: false) }
+        } message: {
+            Text("StrikeLab uses location only during an active round to measure shot distances, show course context, and keep your Watch caddie in sync.")
+        }
         .onAppear {
             if selectedCourse == nil {
                 selectedCourse = visibleCourses.first
@@ -150,12 +157,14 @@ struct RoundSetupView: View {
     // MARK: - Header
     
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             StrikeLabLogoLockup(subtitle: "Caddie", title: "STRIKELAB")
 
-            Text("Get dialed in.")
-                .font(Theme.titleFont(28))
-                .foregroundColor(Theme.ink)
+            SLHeroHeader(
+                eyebrow: "Round module",
+                title: "Get dialed in.",
+                subtitle: "Pick a course, set the group, and hand the session to your Watch."
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 4)
@@ -805,11 +814,19 @@ struct RoundSetupView: View {
     
     private var startRoundButton: some View {
         Button {
-            startRound()
+            if locationManager.authorizationStatus == .notDetermined {
+                showLocationPreflight = true
+            } else {
+                startRound(usesLocation: true)
+            }
         } label: {
             HStack {
                 Image(systemName: "flag.fill")
                 Text("Start Round")
+                Spacer()
+                Text(selectedFormat.shortLabel)
+                    .font(Theme.labelFont(10))
+                    .tracking(1.4)
             }
             .primaryButton()
         }
@@ -837,7 +854,7 @@ struct RoundSetupView: View {
         )
     }
     
-    private func startRound() {
+    private func startRound(usesLocation: Bool = true) {
         guard let course = selectedCourse else { return }
 
         persistenceManager.startNewRound(
@@ -847,9 +864,14 @@ struct RoundSetupView: View {
             groupPlayers: buildGroupPlayers(for: course)
         )
 
-        // Start location tracking
-        locationManager.clearHistory()
-        locationManager.startTracking()
+        // Start location tracking only after the user has seen the review-safe
+        // rationale and chosen to continue with GPS-backed shot distances.
+        if usesLocation {
+            locationManager.clearHistory()
+            locationManager.startTracking()
+        } else {
+            locationManager.hasDeferredRoundLocation = true
+        }
 
         // Notify watch
         connectivityManager.sendRoundStatus(isActive: true, courseName: course.name)

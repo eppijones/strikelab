@@ -246,6 +246,11 @@ export default function Login() {
             Opprett en her →
           </Link>
         </p>
+        <div className="flex items-center justify-center gap-4 mono text-[10px] uppercase tracking-micro text-ink-3">
+          <Link to="/privacy" className="hover:text-ink">Privacy</Link>
+          <Link to="/terms" className="hover:text-ink">Terms</Link>
+          <Link to="/support" className="hover:text-ink">Support</Link>
+        </div>
       </div>
     </div>
   )

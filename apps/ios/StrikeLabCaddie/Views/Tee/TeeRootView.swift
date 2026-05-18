@@ -18,8 +18,8 @@ final class TeeNavigation: ObservableObject {
         case courseHero(courseId: UUID, date: Date)
         case sheet(courseId: UUID, date: Date)
         case window(courseId: UUID, date: Date)
-        case group(holdId: UUID, courseId: UUID?)
-        case pay(holdId: UUID, courseId: UUID?)
+        case group(hold: TeeHoldResponse)
+        case pay(hold: TeeHoldResponse, splitMode: String)
         case pass(bookingId: UUID)
         case preferences
     }
@@ -29,7 +29,12 @@ final class TeeNavigation: ObservableObject {
 }
 
 struct TeeRootView: View {
+    @Binding var openBookingId: UUID?
     @StateObject private var nav = TeeNavigation()
+
+    init(openBookingId: Binding<UUID?> = .constant(nil)) {
+        self._openBookingId = openBookingId
+    }
 
     var body: some View {
         NavigationStack(path: $nav.path) {
@@ -42,10 +47,10 @@ struct TeeRootView: View {
                         TeeSheetGridView(courseId: id, date: date)
                     case let .window(id, date):
                         TeeWindowView(courseId: id, date: date)
-                    case let .group(holdId, courseId):
-                        TeeGroupView(holdId: holdId, courseId: courseId)
-                    case let .pay(holdId, courseId):
-                        TeePayView(holdId: holdId, courseId: courseId)
+                    case let .group(hold):
+                        TeeGroupView(hold: hold)
+                    case let .pay(hold, splitMode):
+                        TeePayView(hold: hold, splitMode: splitMode)
                     case let .pass(bookingId):
                         TeePassView(bookingId: bookingId)
                     case .preferences:
@@ -56,6 +61,12 @@ struct TeeRootView: View {
         .environmentObject(nav)
         .tint(Theme.accent)
         .background(Theme.bg)
+        .onChange(of: openBookingId) { _, bookingId in
+            guard let bookingId else { return }
+            nav.popToRoot()
+            nav.push(.pass(bookingId: bookingId))
+            openBookingId = nil
+        }
     }
 }
 

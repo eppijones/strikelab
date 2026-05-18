@@ -105,23 +105,29 @@ export default function TeeGroup() {
   const kind: HeroKind = KIND_MAP[course?.course_type ?? ''] ?? 'parkland'
 
   return (
-    <div className="space-y-6">
-      <header className="border-b border-line-strong pb-4">
+    <div className="max-w-[860px] mx-auto space-y-6">
+      <header className="tee-card p-5 sm:p-6">
         <Link
           to={courseId ? `/tee/courses/${courseId}/sheet` : '/tee'}
-          className="mono text-[10px] uppercase tracking-micro text-ink-3 hover:text-ink"
+          className="tee-pill hover:border-ink-3"
         >
           ← {t('tee.back')}
         </Link>
-        <div className="micro mt-3">2 / 3</div>
-        <h1 className="display text-[40px] m-0 mt-1">
-          {t('tee.yourGroup')} <em>—</em>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="tee-pill bg-[var(--ink)] text-[var(--surface-solid)] border-transparent">BETA CHECKOUT</span>
+          <span className="tee-pill">2 / 3</span>
+        </div>
+        <h1 className="display text-[clamp(3rem,7vw,5rem)] m-0 mt-3">
+          Bring your <em>group.</em>
         </h1>
+        <p className="text-[15px] text-ink-2 mt-3 max-w-2xl">
+          This booking checkout is a demo flow while club integrations are WIP.
+        </p>
       </header>
 
       {course && (
-        <div className="flex items-center gap-3 panel p-3.5">
-          <div className="w-14 h-14 overflow-hidden rounded-[2px] flex-shrink-0">
+        <div className="flex items-center gap-3 tee-card p-3.5">
+          <div className="w-16 h-16 overflow-hidden rounded-[18px] flex-shrink-0">
             <HeroLandscape kind={kind} height={56} />
           </div>
           <div className="flex-1">
@@ -177,7 +183,7 @@ export default function TeeGroup() {
                   }
                   className="flex flex-col items-center gap-1 w-16 hover:opacity-90"
                 >
-                  <div className="w-12 h-12 mono text-[14px] flex items-center justify-center bg-surface-2 border border-line-strong">
+              <div className="w-12 h-12 mono text-[14px] flex items-center justify-center bg-surface-2 border border-line-strong rounded-full">
                     {name
                       .split(/\s+/)
                       .map((s) => s[0])
@@ -209,9 +215,9 @@ export default function TeeGroup() {
                     handicap: f.handicap_index ?? null,
                   })
                 }
-                className="flex items-center gap-2 border border-line-strong p-2 text-left hover:border-ink-3"
+                className="flex items-center gap-2 border border-line-strong p-2 text-left hover:border-ink-3 rounded-[16px] bg-surface-solid"
               >
-                <div className="w-8 h-8 bg-surface-2 mono text-[11px] flex items-center justify-center">
+                <div className="w-8 h-8 bg-surface-2 mono text-[11px] flex items-center justify-center rounded-full">
                   {f.display_name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -241,8 +247,8 @@ export default function TeeGroup() {
               onClick={() => setSplitMode(id)}
               className={
                 splitMode === id
-                  ? 'flex-1 bg-accent text-accent-ink mono text-[11px] uppercase tracking-micro py-3'
-                  : 'flex-1 border border-line-strong text-ink-2 mono text-[11px] uppercase tracking-micro py-3 hover:text-ink'
+                  ? 'flex-1 bg-accent text-accent-ink mono text-[11px] uppercase tracking-micro py-3 first:rounded-l-pill last:rounded-r-pill'
+                  : 'flex-1 border border-line-strong text-ink-2 mono text-[11px] uppercase tracking-micro py-3 hover:text-ink first:rounded-l-pill last:rounded-r-pill'
               }
             >
               {label}
@@ -265,7 +271,7 @@ export default function TeeGroup() {
         onClick={() =>
           navigate(`/tee/booking/${holdId}/pay?course_id=${courseId}`)
         }
-        className="w-full bg-accent text-accent-ink py-4 mono text-[12px] uppercase tracking-micro hover:bg-accent-2"
+        className="w-full tee-cta py-4 mono text-[12px] uppercase tracking-micro"
       >
         {t('tee.continueToPay')} → {Math.round(total).toLocaleString('nb-NO')} kr
       </button>

@@ -24,15 +24,15 @@ struct LoginView: View {
             VStack(spacing: 20) {
                 Spacer()
 
-                VStack(spacing: 6) {
-                    Text("STRIKELAB")
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .tracking(2)
-                        .foregroundColor(Theme.ink3)
-                    Text(mode == .signIn ? "Sign in" : "Create account")
-                        .font(Theme.titleFont(28))
-                        .foregroundColor(Theme.ink)
-                }
+                SLLogoMark(accent: false)
+                    .frame(width: 54, height: 54)
+
+                SLHeroHeader(
+                    eyebrow: "StrikeLab Caddie",
+                    title: mode == .signIn ? "Sign in." : "Create account.",
+                    subtitle: "Performance golf, live rounds, and Tee Beta booking in one instrument."
+                )
+                .padding(.horizontal, 24)
 
                 VStack(spacing: 12) {
                     socialButton(.google, title: "CONTINUE WITH GOOGLE") {
@@ -79,14 +79,9 @@ struct LoginView: View {
                     .toggleStyle(SwitchToggleStyle(tint: Theme.accent))
                     .padding(.horizontal, 24)
 
-                    HStack(spacing: 14) {
-                        Link("Terms", destination: ReleasePolicy.termsURL)
-                        Link("Privacy", destination: ReleasePolicy.privacyURL)
-                    }
-                    .font(Theme.labelFont(10))
-                    .tracking(1)
-                    .foregroundColor(Theme.accent)
                 }
+
+                legalLinks
 
                 Button(action: submit) {
                     HStack {
@@ -160,6 +155,17 @@ struct LoginView: View {
         } else {
             rememberedSignInEmail = ""
         }
+    }
+
+    private var legalLinks: some View {
+        HStack(spacing: 14) {
+            Link("Terms", destination: ReleasePolicy.termsURL)
+            Link("Privacy", destination: ReleasePolicy.privacyURL)
+            Link("Support", destination: ReleasePolicy.supportURL)
+        }
+        .font(Theme.labelFont(10))
+        .tracking(1)
+        .foregroundColor(Theme.accent)
     }
 
     @ViewBuilder

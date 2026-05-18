@@ -61,6 +61,8 @@ struct TeeCountdownView: View {
                     Text(state.uppercased())
                         .font(.system(size: 9, weight: .semibold, design: .monospaced))
                         .foregroundColor(weatherColor(state))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
             }
             Text(formatCountdown(seconds: max(0, Int(booking.teeTime.timeIntervalSince(now)))))
@@ -69,7 +71,8 @@ struct TeeCountdownView: View {
             Text(booking.courseName)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.white)
-                .lineLimit(1)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
             HStack(spacing: 6) {
                 Text(format(booking.teeTime))
                     .font(.system(size: 11, design: .monospaced))

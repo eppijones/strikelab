@@ -2,70 +2,91 @@
 @tailwind components;
 @tailwind utilities;
 
-/* StrikeLab — performance instrument tokens.
- * Mirrors packages/design-tokens/tokens.css; loaded inline so apps/web has no
- * package-link dependency at build time.
+/* StrikeLab — editorial golf tokens.
+ * Warm paper, moss, olive, and graphite tones drive the whole web app.
  */
 
 :root,
-:root[data-theme='dark'] {
-  --bg: #0a0b0a;
-  --bg-2: #111312;
-  --surface: #15181680;
-  --surface-solid: #151816;
-  --surface-2: #1c1f1d;
-  --line: #25292680;
-  --line-strong: #2d322f;
+:root[data-theme='light'] {
+  --bg: #f4f0e8;
+  --bg-2: #e8ddc4;
+  --surface: #fbfaf6cc;
+  --surface-solid: #fbfaf6;
+  --surface-2: #efe6d2;
+  --line: rgba(14, 20, 16, 0.1);
+  --line-strong: rgba(14, 20, 16, 0.16);
 
-  --ink: #ede8de;
-  --ink-2: #b9b6ac;
-  --ink-3: #76746b;
-  --ink-4: #4a4842;
+  --ink: #0e1410;
+  --ink-2: #2a332b;
+  --ink-3: #5a615c;
+  --ink-4: #8b8e83;
 
-  --accent: oklch(0.88 0.18 125);
-  --accent-ink: #0a0b0a;
-  --accent-2: oklch(0.78 0.18 125);
-  /* Text + hairlines on canvas (links, tags, focus) — same hue as accent on dark */
-  --accent-fg: oklch(0.88 0.18 125);
-  --accent-fg-hover: oklch(0.93 0.15 125);
-  --warn: oklch(0.78 0.16 65);
-  --bad: oklch(0.68 0.20 28);
+  --accent: #2d4a2b;
+  --accent-ink: #fbfaf6;
+  --accent-2: #5c7e4f;
+  --accent-fg: #2d4a2b;
+  --accent-fg-hover: #1f351e;
+  --warn: #b8542e;
+  --bad: #9f3525;
   --good: var(--accent);
+
+  --tee-sky: #e8ddc4;
+  --tee-sky-2: #f3e9d2;
+  --tee-grass: #5c7e4f;
+  --tee-grass-2: #a8be9a;
+  --tee-tree: #2a3a22;
+  --tee-sand: #c9b894;
+  --tee-water: #3e5562;
+  --tee-water-2: #7e94a0;
+  --tee-flag: #b8542e;
+  --tee-sun: #e8b547;
 
   --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
-  --font-serif: 'Instrument Serif', 'Times New Roman', serif;
+  --font-serif: 'Newsreader', 'Instrument Serif', 'Times New Roman', serif;
 
   --motion-launch: cubic-bezier(0.2, 0.9, 0.3, 1);
   --motion-settle: cubic-bezier(0.16, 1, 0.3, 1);
   --motion-trace: cubic-bezier(0.65, 0, 0.35, 1);
   --motion-micro: ease-out;
 
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-:root[data-theme='light'] {
-  --bg: #ede8de;
-  --bg-2: #e3ddd0;
-  --surface: #f5f1e780;
-  --surface-solid: #f5f1e7;
-  --surface-2: #ebe5d6;
-  --line: #c8c2b240;
-  --line-strong: #b6af9c;
-  --ink: #141614;
-  --ink-2: #4a4842;
-  --ink-3: #76746b;
-  --ink-4: #b6af9c;
-  /* Filled controls stay signal lime; text on cream needs a darker green */
-  --accent: oklch(0.88 0.18 125);
-  --accent-ink: #0a0b0a;
-  --accent-2: oklch(0.78 0.18 125);
-  --accent-fg: oklch(0.42 0.12 150);
-  --accent-fg-hover: oklch(0.36 0.11 150);
-  --warn: oklch(0.55 0.18 50);
-  --bad: oklch(0.55 0.20 28);
+:root[data-theme='dark'] {
+  --bg: #0e1410;
+  --bg-2: #182018;
+  --surface: #22291fcc;
+  --surface-solid: #252c22;
+  --surface-2: #303827;
+  --line: rgba(251, 250, 246, 0.1);
+  --line-strong: rgba(251, 250, 246, 0.16);
 
-  color-scheme: light;
+  --ink: #fbfaf6;
+  --ink-2: #d8d0bf;
+  --ink-3: #a79f8f;
+  --ink-4: #716d64;
+
+  --accent: #e8ddc4;
+  --accent-ink: #0e1410;
+  --accent-2: #c9b894;
+  --accent-fg: #e8ddc4;
+  --accent-fg-hover: #fbfaf6;
+  --warn: #e8b547;
+  --bad: #d86f52;
+
+  --tee-sky: #252c22;
+  --tee-sky-2: #303827;
+  --tee-grass: #5c7e4f;
+  --tee-grass-2: #a8be9a;
+  --tee-tree: #11170f;
+  --tee-sand: #c9b894;
+  --tee-water: #3e5562;
+  --tee-water-2: #7e94a0;
+  --tee-flag: #e8b547;
+  --tee-sun: #e8b547;
+
+  color-scheme: dark;
 }
 
 @layer base {
@@ -75,7 +96,9 @@
     height: 100%;
   }
   body {
-    background: var(--bg);
+    background:
+      radial-gradient(circle at 12% 0%, rgba(232, 181, 71, 0.16), transparent 30rem),
+      linear-gradient(180deg, var(--bg) 0%, var(--surface-2) 100%);
     color: var(--ink);
     font-family: var(--font-sans);
     font-feature-settings: 'ss01', 'cv11';
@@ -121,10 +144,10 @@
     color: var(--ink-3);
   }
   .display {
-    font-family: var(--font-sans);
-    font-weight: 500;
-    letter-spacing: -0.04em;
-    line-height: 0.95;
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.03em;
+    line-height: 0.98;
   }
   .display em {
     font-family: var(--font-serif);
@@ -150,8 +173,12 @@
   /* Reticule / panel chrome */
   .panel {
     background: var(--surface-solid);
-    border: 1px solid var(--line-strong);
-    border-radius: 2px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow:
+      0 1px 0 rgba(14, 20, 16, 0.04),
+      0 18px 48px -34px rgba(14, 20, 16, 0.35);
+    overflow: hidden;
   }
 
   /**
@@ -161,6 +188,110 @@
   .ui-selected {
     background: var(--accent);
     color: var(--accent-ink);
+  }
+
+  .tee-editorial {
+    background:
+      radial-gradient(circle at 12% 0%, rgba(232, 181, 71, 0.16), transparent 30rem),
+      linear-gradient(180deg, var(--bg) 0%, var(--surface-2) 100%);
+    color: var(--ink);
+  }
+
+  .tee-editorial .display {
+    font-family: 'Newsreader', 'Instrument Serif', Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.03em;
+    line-height: 0.98;
+  }
+
+  .tee-editorial .display em,
+  .tee-editorial .serif {
+    font-family: 'Newsreader', 'Instrument Serif', Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+  }
+
+  .tee-editorial .micro {
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .tee-editorial .panel {
+    background: var(--surface-solid);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow:
+      0 1px 0 rgba(14, 20, 16, 0.04),
+      0 18px 48px -34px rgba(14, 20, 16, 0.35);
+    overflow: hidden;
+  }
+
+  .tee-editorial .ui-selected {
+    background: var(--ink);
+    color: var(--surface-solid);
+  }
+
+  .tee-card {
+    background: var(--surface-solid);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    box-shadow:
+      0 1px 0 rgba(14, 20, 16, 0.04),
+      0 18px 48px -34px rgba(14, 20, 16, 0.35);
+  }
+
+  .tee-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 9999px;
+    border: 1px solid var(--line);
+    background: rgba(251, 250, 246, 0.76);
+    color: var(--ink-2);
+    padding: 0.45rem 0.75rem;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .tee-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    background: var(--ink);
+    color: var(--surface-solid);
+    box-shadow: 0 16px 34px -18px rgba(14, 20, 16, 0.55);
+    transition:
+      transform 120ms ease,
+      opacity 120ms ease,
+      background 120ms ease;
+  }
+
+  .tee-cta:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+  }
+
+  .tee-map {
+    background:
+      radial-gradient(circle at 30% 80%, rgba(62, 85, 98, 0.4), transparent 20%),
+      radial-gradient(circle at 50% 60%, rgba(62, 85, 98, 0.25), transparent 14%),
+      radial-gradient(circle at 70% 30%, rgba(62, 85, 98, 0.18), transparent 10%),
+      radial-gradient(circle at 25% 25%, rgba(58, 82, 54, 0.18), transparent 28%),
+      radial-gradient(circle at 80% 75%, rgba(58, 82, 54, 0.14), transparent 22%),
+      #e5e0cf;
+  }
+
+  .tee-dark-card {
+    background: var(--ink);
+    color: var(--surface-solid);
+    box-shadow: 0 30px 80px -30px rgba(14, 20, 16, 0.5);
   }
 }
 

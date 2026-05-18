@@ -13,10 +13,13 @@ struct HoleGPSView: View {
     let holeNumber: Int
     let par: Int
     let holeLayout: HoleLayout?
+    @Binding var round: Round
     var shots: [Shot] = []
     @ObservedObject var locationManager: LocationManager
     @ObservedObject var weatherManager: WeatherManager
     @EnvironmentObject var unitsManager: UnitsManager
+    @EnvironmentObject var persistenceManager: PersistenceManager
+    @EnvironmentObject var connectivityManager: WatchConnectivityManager
 
     @State private var gpsData: HoleGPSData?
     @State private var showExpandedMap = false
@@ -43,7 +46,7 @@ struct HoleGPSView: View {
                 showExpandedMap = true
             }
             
-            if let layout = holeLayout, let location = locationManager.currentLocation {
+            if let layout = scoringLayout, let location = locationManager.currentLocation {
                 let calculator = HoleDistanceCalculator(
                     currentLocation: Coordinate(from: location.coordinate),
                     holeLayout: layout
@@ -121,7 +124,7 @@ struct HoleGPSView: View {
                     .fill(locationManager.isTracking ? Theme.nordicSage : Theme.neutral)
                     .frame(width: 8, height: 8)
                 
-                Text(locationManager.isTracking ? "GPS Active" : "GPS Off")
+                Text(locationManager.isTracking ? locationManager.accuracyLabel : "GPS Off")
                     .font(Theme.labelFont(11))
                     .foregroundColor(Theme.nordicForest.opacity(0.6))
             }
@@ -135,7 +138,7 @@ struct HoleGPSView: View {
             // Main distance (to center)
             if let center = calculator.distanceToCenter {
                 VStack(spacing: 4) {
-                    Text("TO PIN")
+                    Text(distanceSourceLabel)
                         .font(Theme.labelFont(10))
                         .foregroundColor(Theme.nordicForest.opacity(0.5))
                     
@@ -148,6 +151,8 @@ struct HoleGPSView: View {
                         .foregroundColor(Theme.nordicForest.opacity(0.6))
                 }
             }
+
+            pinOverrideControls
             
             // Front/Center/Back row
             HStack(spacing: 0) {
@@ -204,6 +209,82 @@ struct HoleGPSView: View {
                 .foregroundColor(color.opacity(0.6))
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private var scoringLayout: HoleLayout? {
+        guard var layout = holeLayout else { return nil }
+        if let pin = round.pinOverridesByHole[holeNumber] {
+            layout.greenCenter = pin
+        }
+        return layout
+    }
+
+    private var distanceSourceLabel: String {
+        if round.pinOverridesByHole[holeNumber] != nil { return "LIVE GPS TO PIN" }
+        return "LIVE GPS TO GREEN CENTER"
+    }
+
+    private var pinOverrideControls: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text(round.pinOverridesByHole[holeNumber] == nil ? "USING COURSE GREEN CENTER" : "PIN SET FOR THIS ROUND")
+                    .font(Theme.labelFont(10))
+                    .tracking(1.2)
+                    .foregroundColor(round.pinOverridesByHole[holeNumber] == nil ? Theme.ink3 : Theme.accent)
+                Spacer()
+                Text(locationManager.accuracyLabel.uppercased())
+                    .font(Theme.labelFont(10))
+                    .tracking(1.2)
+                    .foregroundColor(locationManager.isCurrentLocationStale ? Theme.warn : Theme.ink3)
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    setPinToCurrentLocation()
+                } label: {
+                    Text("SET PIN HERE")
+                        .font(Theme.labelFont(11))
+                        .tracking(1.3)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Theme.accent)
+                        .foregroundColor(Theme.accentInk)
+                }
+                .buttonStyle(.plain)
+                .disabled(locationManager.currentLocation == nil)
+
+                Button {
+                    clearPinOverride()
+                } label: {
+                    Text("CLEAR")
+                        .font(Theme.labelFont(11))
+                        .tracking(1.3)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Theme.surface2)
+                        .foregroundColor(Theme.ink2)
+                        .overlay(Rectangle().stroke(Theme.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(round.pinOverridesByHole[holeNumber] == nil)
+            }
+        }
+    }
+
+    private func setPinToCurrentLocation() {
+        guard let loc = locationManager.currentLocation else { return }
+        let coordinate = Coordinate(from: loc.coordinate)
+        round.setPinOverride(coordinate, for: holeNumber)
+        persistenceManager.commitCurrentRound({ liveRound in
+            liveRound.setPinOverride(coordinate, for: holeNumber)
+        }, connectivity: connectivityManager)
+    }
+
+    private func clearPinOverride() {
+        round.clearPinOverride(for: holeNumber)
+        persistenceManager.commitCurrentRound({ liveRound in
+            liveRound.clearPinOverride(for: holeNumber)
+        }, connectivity: connectivityManager)
     }
     
     // MARK: - Hazards Card
@@ -433,8 +514,11 @@ struct CompactGPSDisplay: View {
                     Hazard(type: .bunker, coordinate: Coordinate(latitude: 38.4099, longitude: -0.5102), name: "Greenside bunker")
                 ]
             ),
+            round: .constant(Round(course: CourseData.sampleCourse, player: Player.defaultPlayer)),
             locationManager: LocationManager(),
             weatherManager: WeatherManager()
         )
+        .environmentObject(PersistenceManager())
+        .environmentObject(WatchConnectivityManager())
     }
 }

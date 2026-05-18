@@ -36,7 +36,10 @@ final class APIClient {
         let container = try decoder.singleValueContainer()
         let value = try container.decode(String.self)
 
-        if let date = iso8601WithFractionalSeconds.date(from: value) ?? iso8601.date(from: value) {
+        if let date = iso8601WithFractionalSeconds.date(from: value)
+            ?? iso8601.date(from: value)
+            ?? apiDateWithFractionalSeconds.date(from: value)
+            ?? apiDateWithoutFractionalSeconds.date(from: value) {
             return date
         }
 
@@ -55,6 +58,22 @@ final class APIClient {
     private static let iso8601: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    private static let apiDateWithFractionalSeconds: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+        return formatter
+    }()
+
+    private static let apiDateWithoutFractionalSeconds: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         return formatter
     }()
 

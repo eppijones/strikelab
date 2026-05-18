@@ -69,8 +69,8 @@ export interface CreateBagData {
 export interface CreateClubData {
   club_type: string
   club_label?: string
-  brand_id: string
-  model_name: string
+  brand_id?: string
+  model_name?: string
   year?: number
   shaft_brand?: string
   shaft_model?: string
@@ -87,8 +87,8 @@ export interface CreateClubData {
 export interface QuickAddClubData {
   club_type: string
   club_label: string
-  brand_id: string
-  model_name: string
+  brand_id?: string
+  model_name?: string
 }
 
 // API Functions

@@ -56,7 +56,10 @@ final class WatchLocationManager: NSObject, ObservableObject {
     func startBriefly() {
         switch authorizationStatus {
         case .notDetermined:
-            manager.requestWhenInUseAuthorization()
+            // Do not show a system location prompt just because the Watch
+            // app opened. The round/range start flow presents the in-app
+            // sensor explanation first, then continuous mode requests auth.
+            return
         case .denied, .restricted:
             return
         default:

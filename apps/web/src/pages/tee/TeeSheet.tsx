@@ -29,7 +29,7 @@ export default function TeeSheetPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const date = params.get('date') ?? new Date().toISOString().slice(0, 10)
-  const view = (params.get('view') as View) ?? 'grid'
+  const view = (params.get('view') as View) ?? 'window'
 
   const { data: course } = useCourse(id)
   const { data: sheet } = useTeeSheet(id, date)
@@ -93,19 +93,23 @@ export default function TeeSheetPage() {
   const best = windows?.[0]
 
   return (
-    <div className="space-y-5">
-      <header className="flex items-baseline justify-between gap-4 border-b border-line-strong pb-4">
+    <div className="max-w-[1180px] mx-auto space-y-5">
+      <header className="tee-card p-5 sm:p-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Link
             to={`/tee/courses/${id}`}
-            className="mono text-[10px] uppercase tracking-micro text-ink-3 hover:text-ink"
+            className="tee-pill hover:border-ink-3"
           >
             ← {course.name}
           </Link>
-          <h1 className="display text-[40px] m-0 mt-2">
-            {view === 'window' ? <em>The Window</em> : <em>Day grid</em>}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="tee-pill bg-[var(--ink)] text-[var(--surface-solid)] border-transparent">DEMO SHEET</span>
+            <span className="tee-pill">{visibleSlots.length} open slots</span>
+          </div>
+          <h1 className="display text-[clamp(3rem,7vw,5.5rem)] m-0 mt-3">
+            {view === 'window' ? <>Choose the <em>moment.</em></> : <>All <em>times.</em></>}
           </h1>
-          <div className="mono text-[11px] text-ink-3 mt-1">
+          <div className="mono text-[11px] text-ink-3 mt-3">
             {new Date(date).toLocaleDateString(undefined, {
               weekday: 'long',
               day: 'numeric',
@@ -114,7 +118,7 @@ export default function TeeSheetPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             type="date"
             value={date}
@@ -122,9 +126,9 @@ export default function TeeSheetPage() {
               params.set('date', e.target.value)
               setParams(params, { replace: true })
             }}
-            className="bg-bg-2 border border-line-strong text-ink mono text-[12px] px-3 py-2"
+            className="bg-surface-solid border border-line-strong text-ink mono text-[12px] px-3 py-2 rounded-pill"
           />
-          <div className="flex border border-line-strong">
+          <div className="flex border border-line-strong rounded-pill overflow-hidden bg-surface-solid">
             {(
               [
                 ['grid', t('tee.viewGrid')],
@@ -196,9 +200,9 @@ export default function TeeSheetPage() {
 
       {/* Sticky bottom selection bar */}
       {selectedSlot && (
-        <div className="sticky bottom-4 bg-surface-solid border border-line-strong rounded-[2px] p-4 flex items-center gap-4">
+        <div className="sticky bottom-4 tee-card p-4 flex flex-col gap-4 sm:flex-row sm:items-center">
           <div className="flex-1">
-            <div className="micro">SELECTED</div>
+            <div className="micro">Selected demo tee time</div>
             <div className="display text-[28px] mt-1">
               {new Date(selectedSlot.tee_time).toLocaleTimeString(undefined, {
                 hour: '2-digit',
@@ -214,7 +218,7 @@ export default function TeeSheetPage() {
             type="button"
             disabled={hold.isPending}
             onClick={continueToGroup}
-            className="bg-accent text-accent-ink px-6 py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2 disabled:opacity-50"
+            className="tee-cta px-6 py-3 mono text-[11px] uppercase tracking-micro disabled:opacity-50"
           >
             {t('tee.next')} →
           </button>

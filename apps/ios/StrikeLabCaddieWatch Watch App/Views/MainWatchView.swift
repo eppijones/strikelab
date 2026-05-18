@@ -26,6 +26,8 @@ struct MainWatchView: View {
     @State private var showMore = false
     @State private var showGuestScores = false
     @State private var showClubOverlay = false
+    @State private var showSensorPreflight = false
+    @State private var pendingStartAction: StartAction?
     @State private var pendingAutoShot = false
     @State private var clubOverlayLogsShot = false
     @State private var activeShotClub: ClubWatch?
@@ -54,6 +56,7 @@ struct MainWatchView: View {
     /// silently changing the score during a round.
     @State private var crownArmed = false
     @State private var armTimer: Timer?
+    @State private var puttsReturnTimer: Timer?
 
     /// 1Hz timer that ticks the SwingConfirmer so it can expire stale
     /// candidates and clear the "just confirmed" flash.
@@ -65,6 +68,7 @@ struct MainWatchView: View {
     @State private var showEndRoundAlert = false
 
     enum HoleField: Hashable { case strokes, putts }
+    private enum StartAction { case nearbyRound(WatchCourseEntry), genericRound, range }
 
     var body: some View {
         NavigationStack {
@@ -113,15 +117,17 @@ struct MainWatchView: View {
                 }
                 .alert("End Round?", isPresented: $showEndRoundAlert) {
                     Button("End", role: .destructive) {
-                        endWorkout()
-                        // Pop back to start. The user can finalise /
-                        // save the round on the iPhone — the watch's
-                        // job is done.
-                        showingRound = false
+                        requestEndRoundFromWatch()
                     }
                     Button("Cancel", role: .cancel) { }
                 } message: {
-                    Text("Stops auto-detect and the workout. You can still save and review the round on the iPhone.")
+                    Text("Saves and completes the round on iPhone, then stops watch sensors.")
+                }
+                .alert("Watch Sensors Used During Play", isPresented: $showSensorPreflight) {
+                    Button("Continue") { runPendingStartAction() }
+                    Button("Cancel", role: .cancel) { pendingStartAction = nil }
+                } message: {
+                    Text("StrikeLab starts a golf workout, reads heart rate, uses motion to detect swings, and uses location during rounds for course context. Microphone capture stays off unless you enable Mic-confirmed impact in Profile.")
                 }
                 .onAppear {
                     setupMotionDetection()
@@ -165,7 +171,7 @@ struct MainWatchView: View {
                     }
                 }
                 .onChange(of: selectedHole) { oldHole, newHole in
-                    if oldHole != newHole {
+                    if oldHole != newHole, connectivityManager.playFormat.range.contains(newHole) {
                         connectivityManager.sendHoleChange(to: newHole)
                         activeShotClub = nil
                         temporaryDistanceUnits = nil
@@ -175,6 +181,12 @@ struct MainWatchView: View {
                     }
                 }
                 .onChange(of: activeField) { _, _ in
+                    if activeField == .strokes {
+                        puttsReturnTimer?.invalidate()
+                        puttsReturnTimer = nil
+                    } else {
+                        scheduleReturnToStrokes()
+                    }
                     syncCrown()
                     disarmCrown()
                 }
@@ -183,6 +195,8 @@ struct MainWatchView: View {
                 }
                 .onDisappear {
                     disarmCrown()
+                    puttsReturnTimer?.invalidate()
+                    puttsReturnTimer = nil
                     stopElapsedTick()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: WKExtension.applicationWillResignActiveNotification)) { _ in
@@ -242,9 +256,7 @@ struct MainWatchView: View {
                 // Primary: GPS-detected start, or generic Round CTA.
                 if let nearby = nearbyCourse {
                     Button {
-                        connectivityManager.requestStartRound(courseId: nearby.id)
-                        startWorkout()
-                        showingRound = true
+                        beginStartAction(.nearbyRound(nearby))
                     } label: {
                         VStack(spacing: 2) {
                             Text("START AT")
@@ -264,8 +276,7 @@ struct MainWatchView: View {
                     .buttonStyle(.plain)
                 } else {
                     Button {
-                        startWorkout()
-                        showingRound = true
+                        beginStartAction(.genericRound)
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "flag.fill")
@@ -281,8 +292,7 @@ struct MainWatchView: View {
 
                 // Secondary: Range / driving range session.
                 Button {
-                    startRangeSession()
-                    showingRange = true
+                    beginStartAction(.range)
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "scope")
@@ -304,8 +314,18 @@ struct MainWatchView: View {
                     Text(startHint)
                         .font(SLW.mono(9))
                         .foregroundColor(SLW.ink3)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.75)
+                }
+
+                if showsPhoneContextHint {
+                    Text("Open StrikeLab on iPhone to pick a course, sync your bag, or send the next tee time.")
+                        .font(SLW.mono(8))
+                        .foregroundColor(SLW.ink3)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.75)
+                        .padding(.horizontal, 4)
                 }
             }
             .padding(.horizontal, 8)
@@ -339,6 +359,42 @@ struct MainWatchView: View {
         if let nearby = nearbyCourse { return "Detected · \(nearby.name)" }
         if let course = connectivityManager.courseName { return course }
         return "Pick course on iPhone"
+    }
+
+    private var showsPhoneContextHint: Bool {
+        connectivityManager.nextTeeBooking == nil
+            && connectivityManager.rangeSession == nil
+            && !connectivityManager.isRoundActive
+            && nearbyCourse == nil
+            && connectivityManager.courseName == nil
+    }
+
+    private func beginStartAction(_ action: StartAction) {
+        pendingStartAction = action
+        guard watchSettings.hasSeenSensorPreflight else {
+            showSensorPreflight = true
+            return
+        }
+        runPendingStartAction()
+    }
+
+    private func runPendingStartAction() {
+        watchSettings.hasSeenSensorPreflight = true
+        guard let action = pendingStartAction else { return }
+        pendingStartAction = nil
+
+        switch action {
+        case .nearbyRound(let nearby):
+            connectivityManager.requestStartRound(courseId: nearby.id)
+            startWorkout()
+            showingRound = true
+        case .genericRound:
+            startWorkout()
+            showingRound = true
+        case .range:
+            startRangeSession()
+            showingRange = true
+        }
     }
 
     /// Big "Resume <session>" pill shown on the start screen when a
@@ -384,12 +440,129 @@ struct MainWatchView: View {
                 holePage(for: hole)
                     .tag(hole.holeNumber)
             }
+            roundFinishPage
+                .tag(finishPageTag)
         }
         .tabViewStyle(.verticalPage)
         .containerBackground(SLW.bg, for: .navigation)
         .onAppear {
             ensureRoundSensorsRunning()
         }
+    }
+
+    private var finishPageTag: Int {
+        connectivityManager.playFormat.range.upperBound + 1
+    }
+
+    private var roundFinishPage: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("SUMMARY")
+                .font(SLW.mono(9, weight: .semibold))
+                .tracking(1.6)
+                .foregroundColor(SLW.accent)
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(connectivityManager.formattedToPar)
+                    .font(SLW.num(42))
+                    .foregroundColor(summaryScoreColor)
+                Text("vs PAR")
+                    .font(SLW.mono(9))
+                    .tracking(1.5)
+                    .foregroundColor(SLW.ink3)
+            }
+
+            Text((connectivityManager.courseName ?? "ROUND").uppercased())
+                .font(SLW.display(12))
+                .foregroundColor(SLW.ink)
+                .lineLimit(1)
+
+            HStack(spacing: 5) {
+                summaryCell(label: "HOLES", value: "\(connectivityManager.playedHoles.filter { ($0.grossStrokes ?? 0) > 0 }.count)/\(connectivityManager.playFormat.range.count)")
+                summaryCell(label: "GROSS", value: "\(connectivityManager.grossTotal)")
+                summaryCell(label: "TIME", value: formattedRoundElapsed)
+            }
+
+            Text("Swipe up to return to the last hole, or end when the card is complete.")
+                .font(SLW.mono(8))
+                .foregroundColor(SLW.ink3)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+
+            completeRoundStatusLabel
+
+            Button {
+                showEndRoundAlert = true
+            } label: {
+                Text(completeRoundButtonTitle)
+                    .font(SLW.mono(10, weight: .semibold))
+                    .tracking(1.8)
+                    .foregroundColor(SLW.accentInk)
+                    .frame(maxWidth: .infinity, minHeight: 30)
+            }
+            .background(SLW.accent)
+            .buttonStyle(.plain)
+            .disabled(isCompleteRoundPending)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(SLW.bg)
+    }
+
+    private var isCompleteRoundPending: Bool {
+        if case .pending = connectivityManager.completeRoundStatus { return true }
+        return false
+    }
+
+    private var completeRoundButtonTitle: String {
+        isCompleteRoundPending ? "SAVING..." : "END ROUND"
+    }
+
+    private var completeRoundStatusLabel: some View {
+        let text: String
+        let tint: Color
+        switch connectivityManager.completeRoundStatus {
+        case .idle:
+            text = connectivityManager.isPhoneReachable ? "READY TO SAVE ON IPHONE" : "IPHONE OFFLINE · WILL QUEUE"
+            tint = connectivityManager.isPhoneReachable ? SLW.ink3 : SLW.warn
+        case .pending:
+            text = "SAVING ON IPHONE..."
+            tint = SLW.warn
+        case .completed(let detail):
+            text = detail.uppercased()
+            tint = SLW.accent
+        case .failed(let detail):
+            text = detail.uppercased()
+            tint = SLW.bad
+        }
+        return Text(text)
+            .font(SLW.mono(8, weight: .semibold))
+            .tracking(1.1)
+            .foregroundColor(tint)
+            .lineLimit(2)
+            .minimumScaleFactor(0.75)
+    }
+
+    private var summaryScoreColor: Color {
+        let diff = connectivityManager.grossTotal - connectivityManager.parToCurrent
+        if diff < 0 { return SLW.accent }
+        if diff > 0 { return SLW.warn }
+        return SLW.ink
+    }
+
+    private func summaryCell(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label)
+                .font(SLW.mono(7))
+                .tracking(1.2)
+                .foregroundColor(SLW.ink3)
+            Text(value)
+                .font(SLW.num(13))
+                .foregroundColor(SLW.ink2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(5)
+        .background(SLW.surface)
+        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
     }
 
     // MARK: - Hole page
@@ -713,10 +886,7 @@ struct MainWatchView: View {
         // Committing-and-advancing is a ground-truth signal too; clear
         // any in-flight auto-detect so we don't carry it onto the next hole.
         swingConfirmer.cancelPending()
-        let range = connectivityManager.playFormat.range
-        if hole.holeNumber < range.upperBound {
-            selectedHole = hole.holeNumber + 1
-        }
+        disarmCrown()
     }
 
     private func puttsHero(for hole: WatchHoleState) -> some View {
@@ -764,6 +934,7 @@ struct MainWatchView: View {
                             holeNumber: hole.holeNumber,
                             putts: intValue
                         )
+                        scheduleReturnToStrokes()
                     }
                     rearmDisarmTimer()
                 }
@@ -798,6 +969,7 @@ struct MainWatchView: View {
         connectivityManager.setPutts(holeNumber: hole.holeNumber, putts: next)
         Haptics.play(.click)
         syncCrown()
+        scheduleReturnToStrokes()
     }
 
     private func decrementPutts(hole: WatchHoleState) {
@@ -807,6 +979,7 @@ struct MainWatchView: View {
         connectivityManager.setPutts(holeNumber: hole.holeNumber, putts: next)
         Haptics.play(.click)
         syncCrown()
+        scheduleReturnToStrokes()
     }
 
     // MARK: - Footer (totals + actions)
@@ -834,7 +1007,7 @@ struct MainWatchView: View {
         ZStack {
             VStack {
                 HStack(alignment: .top) {
-                    scoreVitalChip(icon: "timer", value: formattedRoundElapsed, tint: SLW.accent)
+                    handicapCornerChip(for: hole)
                     Spacer()
                     if watchSettings.showHeartRateOnWatch {
                         scoreVitalChip(icon: "heart.fill", value: formattedLiveHeartRate, tint: SLW.bad)
@@ -844,7 +1017,7 @@ struct MainWatchView: View {
                 }
                 Spacer()
                 HStack(alignment: .bottom) {
-                    handicapCornerChip(for: hole)
+                    scoreVitalChip(icon: "timer", value: formattedRoundElapsed, tint: SLW.accent)
                     Spacer()
                     scoreVitalChip(icon: "location.fill", value: distanceToPinLabel(for: hole), tint: SLW.warn)
                         .hidden()
@@ -855,6 +1028,12 @@ struct MainWatchView: View {
             VStack {
                 Spacer()
                 HStack {
+                    Text(compactGpsStatusLabel.uppercased())
+                        .font(SLW.mono(7, weight: .semibold))
+                        .tracking(0.9)
+                        .foregroundColor(SLW.ink3)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Spacer()
                     Button {
                         toggleTemporaryDistanceUnits()
@@ -1028,6 +1207,11 @@ struct MainWatchView: View {
                     .tracking(1.6)
                     .foregroundColor(SLW.ink3)
 
+                Text(connectivityManager.isPhoneReachable ? "SYNC LIVE" : "OFFLINE · WILL QUEUE")
+                    .font(SLW.mono(8, weight: .semibold))
+                    .tracking(1.1)
+                    .foregroundColor(connectivityManager.isPhoneReachable ? SLW.accent : SLW.warn)
+
                 if connectivityManager.groupPlayers.isEmpty {
                     Text("Add guests on iPhone")
                         .font(SLW.mono(11))
@@ -1075,15 +1259,33 @@ struct MainWatchView: View {
 
             HStack(spacing: 8) {
                 Button {
-                    guard gross > 1 else { return }
+                    guard gross > 0 else { return }
                     connectivityManager.setGuestScore(
                         playerId: guest.id,
                         holeNumber: selectedHole,
-                        grossStrokes: gross - 1
+                        grossStrokes: max(0, gross - 1)
                     )
                 } label: {
                     Image(systemName: "minus")
                         .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(SLW.ink)
+                        .frame(maxWidth: .infinity, minHeight: 30)
+                        .background(SLW.surface2)
+                        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(gross <= 0)
+
+                Button {
+                    connectivityManager.setGuestScore(
+                        playerId: guest.id,
+                        holeNumber: selectedHole,
+                        grossStrokes: score?.par ?? connectivityManager.currentHole.par
+                    )
+                } label: {
+                    Text("PAR")
+                        .font(SLW.mono(9, weight: .semibold))
+                        .tracking(1.2)
                         .foregroundColor(SLW.ink)
                         .frame(maxWidth: .infinity, minHeight: 30)
                         .background(SLW.surface2)
@@ -1228,6 +1430,18 @@ struct MainWatchView: View {
         }
     }
 
+    private func scheduleReturnToStrokes() {
+        puttsReturnTimer?.invalidate()
+        puttsReturnTimer = Timer.scheduledTimer(withTimeInterval: 8.0, repeats: false) { _ in
+            Task { @MainActor in
+                guard activeField == .putts else { return }
+                activeField = .strokes
+                syncCrown()
+                disarmCrown()
+            }
+        }
+    }
+
     // MARK: - Workout / motion plumbing
 
     private func startWorkout() {
@@ -1268,6 +1482,11 @@ struct MainWatchView: View {
         stopConfirmerTick()
         stopElapsedTick()
         swingConfirmer.reset()
+    }
+
+    private func requestEndRoundFromWatch() {
+        endWorkout()
+        connectivityManager.requestCompleteRound()
     }
 
     private func toggleAutoDetect() {
@@ -1474,6 +1693,13 @@ struct MainWatchView: View {
         case .meters:
             return "\(Int(meters.rounded()))m"
         }
+    }
+
+    private var compactGpsStatusLabel: String {
+        if !connectivityManager.caddieGpsStatus.isEmpty {
+            return connectivityManager.caddieGpsStatus
+        }
+        return locationManager.lastLocation == nil ? "No GPS" : "Watch GPS"
     }
 }
 

@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import func
 
 from app.config import get_settings
+from app.database import SessionLocal
+from app.models import Course
 from app.routers import (
     auth,
     sessions,
@@ -21,6 +24,7 @@ from app.routers import (
     range_sessions,
     realtime,
 )
+from app.seed.catalog import seed_catalog
 
 settings = get_settings()
 dev_origin_regex = (
@@ -50,6 +54,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+def ensure_public_course_catalog_seeded() -> None:
+    db = SessionLocal()
+    try:
+        norway_courses = db.query(func.count(Course.id)).filter(Course.country_code == "NO").scalar() or 0
+        if norway_courses == 0:
+            seed_catalog(db)
+    finally:
+        db.close()
+
 
 # Core authoring + analytics
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])

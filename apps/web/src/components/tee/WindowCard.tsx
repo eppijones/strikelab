@@ -10,7 +10,7 @@ interface Props {
 
 /**
  * "Best Window" hero card — Morning Calm / Golden Hour / Twilight.
- * Dark surface, signal-lime accent for golden, ink-2 for moss/fjord.
+ * Soft editorial treatment for the booking beta.
  */
 export function WindowCard({ window, onClick, language = 'en', selected }: Props) {
   const dotColor =
@@ -25,7 +25,7 @@ export function WindowCard({ window, onClick, language = 'en', selected }: Props
       type="button"
       onClick={onClick}
       className={clsx(
-        'flex-shrink-0 text-left bg-surface-solid border rounded-[2px] p-3.5 w-[220px] transition-colors',
+        'flex-shrink-0 text-left tee-card p-4 w-[220px] transition-colors',
         selected
           ? 'border-accent-fg'
           : 'border-line-strong hover:border-ink-3',
@@ -35,7 +35,7 @@ export function WindowCard({ window, onClick, language = 'en', selected }: Props
         <span className={clsx('w-1.5 h-1.5 rounded-full', dotColor)} />
         <span className="micro text-ink-3">{label.toUpperCase()}</span>
       </div>
-      <div className="text-[20px] mono text-ink leading-tight">{window.range}</div>
+      <div className="display text-[26px] text-ink leading-tight">{window.range}</div>
       <div className="mt-2 pt-2 border-t border-line-strong flex items-center justify-between mono text-[10.5px]">
         <span className="text-ink-2">{window.conditions_summary}</span>
         <span className="text-ink-3">

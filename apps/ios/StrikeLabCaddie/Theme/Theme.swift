@@ -32,6 +32,7 @@ enum Theme {
     static let accentInk = Color(red: 0x0A / 255, green: 0x0B / 255, blue: 0x0A / 255)
     static let warn = Color(red: 0.945, green: 0.624, blue: 0.282)
     static let bad = Color(red: 0.886, green: 0.349, blue: 0.227)
+    static let info = Color(red: 0.49, green: 0.68, blue: 0.86)
 
     // MARK: - Aliases for migration (legacy callers)
     static let nordicPaper = bg
@@ -61,6 +62,9 @@ enum Theme {
     }
     static func microFont(_ size: CGFloat = 10) -> Font {
         .system(size: size, weight: .medium, design: .monospaced)
+    }
+    static func displayFont(_ size: CGFloat = 34) -> Font {
+        .system(size: size, weight: .medium, design: .default)
     }
 
     // MARK: - Shape
@@ -110,6 +114,18 @@ extension View {
             .padding(.vertical, 14)
             .overlay(Rectangle().stroke(Theme.lineStrong, lineWidth: 1))
     }
+
+    func betaSecondaryButton() -> some View {
+        self
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .tracking(1.8)
+            .textCase(.uppercase)
+            .foregroundColor(Theme.ink)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Theme.surfaceSolid)
+            .overlay(Rectangle().stroke(Theme.lineStrong, lineWidth: 1))
+    }
 }
 
 // MARK: - Section Label
@@ -133,5 +149,172 @@ struct SectionLabel: View {
                     .foregroundColor(Theme.ink3)
             }
         }
+    }
+}
+
+// MARK: - Booking Beta Primitives
+
+struct BetaBadge: View {
+    var label: String = "Beta"
+    var tone: Tone = .warn
+
+    enum Tone {
+        case warn, accent, neutral
+    }
+
+    var body: some View {
+        Text(label)
+            .font(Theme.labelFont(9))
+            .tracking(1.8)
+            .textCase(.uppercase)
+            .foregroundColor(foreground)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(background)
+            .overlay(Rectangle().stroke(border, lineWidth: 1))
+            .accessibilityLabel("\(label) feature")
+    }
+
+    private var foreground: Color {
+        switch tone {
+        case .warn: return Theme.warn
+        case .accent: return Theme.accent
+        case .neutral: return Theme.ink2
+        }
+    }
+
+    private var background: Color {
+        switch tone {
+        case .warn: return Theme.warn.opacity(0.08)
+        case .accent: return Theme.accent.opacity(0.08)
+        case .neutral: return Color.clear
+        }
+    }
+
+    private var border: Color {
+        switch tone {
+        case .warn: return Theme.warn.opacity(0.65)
+        case .accent: return Theme.accent.opacity(0.65)
+        case .neutral: return Theme.lineStrong
+        }
+    }
+}
+
+struct SLPanel<Content: View>: View {
+    var id: String?
+    var title: String?
+    var trailing: String?
+    var padded: Bool = true
+    private let content: Content
+
+    init(
+        id: String? = nil,
+        title: String? = nil,
+        trailing: String? = nil,
+        padded: Bool = true,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.id = id
+        self.title = title
+        self.trailing = trailing
+        self.padded = padded
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if id != nil || title != nil || trailing != nil {
+                HStack(spacing: 10) {
+                    if let id {
+                        Text(id)
+                            .font(Theme.labelFont(10))
+                            .foregroundColor(Theme.ink4)
+                    }
+                    if let title {
+                        Text(title.uppercased())
+                            .font(Theme.labelFont(10))
+                            .tracking(1.8)
+                            .foregroundColor(Theme.ink2)
+                    }
+                    Spacer()
+                    if let trailing {
+                        Text(trailing.uppercased())
+                            .font(Theme.labelFont(10))
+                            .tracking(1.4)
+                            .foregroundColor(Theme.ink3)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(Theme.lineStrong).frame(height: 1)
+                }
+            }
+
+            content
+                .padding(padded ? 14 : 0)
+        }
+        .background(Theme.surfaceSolid)
+        .overlay(Rectangle().stroke(Theme.lineStrong, lineWidth: 1))
+    }
+}
+
+struct SLMetric: View {
+    let label: String
+    let value: String
+    var unit: String?
+    var tint: Color = Theme.ink
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(Theme.labelFont(9))
+                .tracking(1.6)
+                .foregroundColor(Theme.ink3)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(value)
+                    .font(Theme.statFont(24))
+                    .foregroundColor(tint)
+                if let unit {
+                    Text(unit.uppercased())
+                        .font(Theme.labelFont(9))
+                        .tracking(1.2)
+                        .foregroundColor(Theme.ink3)
+                }
+            }
+        }
+    }
+}
+
+struct SLHeroHeader: View {
+    var eyebrow: String
+    var title: String
+    var subtitle: String?
+    var beta: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text(eyebrow.uppercased())
+                    .font(Theme.labelFont(10))
+                    .tracking(1.8)
+                    .foregroundColor(Theme.ink3)
+                if beta {
+                    BetaBadge()
+                }
+            }
+            Text(title)
+                .font(Theme.displayFont(36))
+                .kerning(-1.25)
+                .foregroundColor(Theme.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            if let subtitle {
+                Text(subtitle)
+                    .font(Theme.bodyFont(14))
+                    .foregroundColor(Theme.ink2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

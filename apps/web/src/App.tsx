@@ -210,7 +210,7 @@ function App() {
           <Route path="rounds/:id" element={<RoundDetail />} />
           <Route path="rounds/:id/plan" element={<RoundPlan />} />
           <Route path="calendar" element={<Navigate to="/tee" replace />} />
-          <Route path="courses" element={<Courses />} />
+          <Route path="courses" element={<Navigate to="/tee" replace />} />
           <Route path="courses/:id" element={<CourseDetail />} />
 
           {/* StrikeLab Tee — booking surface */}

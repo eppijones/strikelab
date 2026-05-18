@@ -41,7 +41,7 @@ export default {
         sans: ['Geist', 'system-ui', '-apple-system', 'sans-serif'],
         display: ['Geist', 'system-ui', 'sans-serif'],
         mono: ['"Geist Mono"', 'ui-monospace', 'monospace'],
-        serif: ['"Instrument Serif"', '"Times New Roman"', 'serif'],
+        serif: ['Newsreader', '"Instrument Serif"', '"Times New Roman"', 'serif'],
       },
       fontSize: {
         // Performance-instrument scale from primitives.jsx

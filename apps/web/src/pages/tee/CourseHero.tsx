@@ -45,27 +45,33 @@ export default function TeeCourseHero() {
   const best = windows?.[0]
 
   return (
-    <div className="space-y-6">
-      <div className="relative -mx-8 -mt-8">
-        <HeroLandscape kind={kind} height={280} />
+    <div className="max-w-[1180px] mx-auto space-y-6">
+      <div className="relative overflow-hidden tee-card">
+        <HeroLandscape kind={kind} height={360} />
         <div
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(180deg, rgba(10,11,10,0) 0%, rgba(10,11,10,0.5) 60%, var(--bg) 100%)',
+              'linear-gradient(180deg, rgba(14,20,16,0.06) 0%, rgba(14,20,16,0.08) 45%, rgba(244,240,232,0.94) 100%)',
           }}
         />
-        <div className="absolute left-8 right-8 bottom-6">
+        <div className="absolute left-5 right-5 bottom-6 sm:left-8 sm:right-8">
           <Link
             to="/tee"
-            className="mono text-[11px] uppercase tracking-micro text-ink-2 hover:text-ink"
+            className="tee-pill hover:border-ink-3"
           >
             ← {t('tee.discover')}
           </Link>
-          <div className="micro mt-3">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="tee-pill bg-[var(--ink)] text-[var(--surface-solid)] border-transparent">BOOKING BETA</span>
+            <span className="tee-pill">
+              {[course.city, course.region].filter(Boolean).join(' · ')}
+            </span>
+          </div>
+          <div className="micro mt-4">
             {[course.city, course.region].filter(Boolean).join(' · ').toUpperCase()}
           </div>
-          <h1 className="display text-[64px] m-0 mt-1">{course.name}</h1>
+          <h1 className="display text-[clamp(3rem,8vw,6.5rem)] m-0 mt-1">{course.name}</h1>
           <div className="mt-2 flex items-center gap-3 mono text-[12px] text-ink-2">
             {course.par != null && <span>PAR {course.par}</span>}
             {course.total_meters != null && <span>· {course.total_meters} m</span>}
@@ -113,7 +119,7 @@ export default function TeeCourseHero() {
           </p>
           <Link
             to={`/tee/courses/${id}/sheet?date=${date}`}
-            className="mt-4 inline-flex items-center gap-2 bg-accent text-accent-ink px-4 py-2.5 mono text-[11px] uppercase tracking-micro hover:bg-accent-2"
+            className="mt-4 tee-cta px-5 py-3 mono text-[11px] uppercase tracking-micro"
           >
             {t('tee.openSheet')} →
           </Link>
@@ -136,22 +142,26 @@ export default function TeeCourseHero() {
         </div>
       </Panel>
 
-      <div className="flex items-center gap-3">
+      <div className="sticky bottom-4 tee-card p-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex-1">
+          <div className="micro">Demo booking</div>
+          <div className="text-[14px] text-ink-2 mt-1">Availability and partner integrations are beta while this flow matures.</div>
+        </div>
         <Link
           to={`/tee/courses/${id}/sheet?date=${date}&view=grid`}
-          className="bg-accent text-accent-ink px-4 py-2.5 mono text-[11px] uppercase tracking-micro hover:bg-accent-2"
+          className="tee-cta px-5 py-3 mono text-[11px] uppercase tracking-micro"
         >
           {t('tee.openSheet')} →
         </Link>
         <Link
           to={`/tee/courses/${id}/sheet?date=${date}&view=window`}
-          className="border border-line-strong px-4 py-2.5 mono text-[11px] uppercase tracking-micro text-ink-2 hover:text-ink hover:border-ink-3"
+          className="tee-pill justify-center"
         >
           {t('tee.openWindow')} →
         </Link>
         <Link
           to={`/courses/${id}`}
-          className="ml-auto mono text-[10px] uppercase tracking-micro text-ink-3 hover:text-ink"
+          className="sm:ml-auto mono text-[10px] uppercase tracking-micro text-ink-3 hover:text-ink"
         >
           {t('tee.signature')} →
         </Link>

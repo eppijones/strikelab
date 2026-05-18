@@ -54,7 +54,7 @@ struct TeeDiscoverView: View {
                                 ForEach(d.todayWindow.prefix(4)) { slot in
                                     TeeRecommendedCard(slot: slot)
                                         .onTapGesture {
-                                            nav.push(.sheet(
+                                            nav.push(.courseHero(
                                                 courseId: slot.courseId,
                                                 date: slot.teeTime
                                             ))
@@ -69,7 +69,7 @@ struct TeeDiscoverView: View {
                                 ForEach(d.bestNow.prefix(4)) { slot in
                                     TeeRecommendedCard(slot: slot)
                                         .onTapGesture {
-                                            nav.push(.sheet(
+                                            nav.push(.courseHero(
                                                 courseId: slot.courseId,
                                                 date: slot.teeTime
                                             ))
@@ -84,7 +84,7 @@ struct TeeDiscoverView: View {
                                 ForEach(d.tonight.prefix(3)) { slot in
                                     TeeRecommendedCard(slot: slot)
                                         .onTapGesture {
-                                            nav.push(.sheet(
+                                            nav.push(.courseHero(
                                                 courseId: slot.courseId,
                                                 date: slot.teeTime
                                             ))
@@ -99,7 +99,7 @@ struct TeeDiscoverView: View {
                                 ForEach(d.weekend.prefix(3)) { slot in
                                     TeeRecommendedCard(slot: slot)
                                         .onTapGesture {
-                                            nav.push(.sheet(
+                                            nav.push(.courseHero(
                                                 courseId: slot.courseId,
                                                 date: slot.teeTime
                                             ))
@@ -139,15 +139,21 @@ struct TeeDiscoverView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            TeeMicroLabel(text: "PLAY · TEE")
-            Text("Where to play.")
-                .font(.system(size: 36, weight: .medium))
-                .foregroundColor(Theme.ink)
-                .kerning(-1.2)
-            Text("Spill mer. Bestill mindre.")
-                .font(.system(size: 14))
-                .foregroundColor(Theme.ink2)
+        VStack(alignment: .leading, spacing: 12) {
+            SLHeroHeader(
+                eyebrow: "Play · Tee",
+                title: "Where to play.",
+                subtitle: "Spill mer. Bestill mindre. Internal availability and simulated checkout for this beta.",
+                beta: true
+            )
+            Text(ReleasePolicy.teeBetaDisclosure)
+                .font(Theme.labelFont(10))
+                .tracking(1.2)
+                .foregroundColor(Theme.warn)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.warn.opacity(0.08))
+                .overlay(Rectangle().stroke(Theme.warn.opacity(0.5), lineWidth: 1))
         }
         .padding(.top, 8)
     }

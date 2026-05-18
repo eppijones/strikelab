@@ -65,6 +65,13 @@ final class WatchSettings: ObservableObject {
         didSet { defaults.set(anonymousDataSharing, forKey: Self.shareKey) }
     }
 
+    /// One-time App Review/user preflight for Watch sensor prompts. The
+    /// system permission dialogs still come from HealthKit/CoreLocation/etc.;
+    /// this only explains why before the first round or range session.
+    @Published var hasSeenSensorPreflight: Bool {
+        didSet { defaults.set(hasSeenSensorPreflight, forKey: Self.sensorPreflightKey) }
+    }
+
     private let defaults = UserDefaults.standard
 
     // Keys.
@@ -76,6 +83,7 @@ final class WatchSettings: ObservableObject {
     private static let pressureKey     = "strikelab.pressure.warnings.v1"
     private static let showHeartRateKey = "strikelab.watch.showHeartRate.v1"
     private static let shareKey        = "strikelab.share.anonymous.v1"
+    private static let sensorPreflightKey = "strikelab.review.sensorPreflight.v1"
 
     private init() {
         hapticsEnabled       = Self.read(defaults: .standard, key: Self.hapticsKey,    fallback: true)
@@ -86,6 +94,7 @@ final class WatchSettings: ObservableObject {
         pressureWarnings     = Self.read(defaults: .standard, key: Self.pressureKey,   fallback: true)
         showHeartRateOnWatch = Self.read(defaults: .standard, key: Self.showHeartRateKey, fallback: true)
         anonymousDataSharing = Self.read(defaults: .standard, key: Self.shareKey,      fallback: false)
+        hasSeenSensorPreflight = Self.read(defaults: .standard, key: Self.sensorPreflightKey, fallback: false)
     }
 
     private static func read(defaults: UserDefaults, key: String, fallback: Bool) -> Bool {

@@ -83,14 +83,14 @@ function PayMethodOption({
     <button
       type="button"
       onClick={onSelect}
-      className={clsx(
-        'flex items-center gap-3 p-3 border bg-surface-solid text-left transition-colors',
+        className={clsx(
+        'flex items-center gap-3 p-3 border bg-surface-solid text-left transition-colors tee-editorial:rounded-[18px] tee-editorial:p-4',
         selected ? 'border-accent-fg' : 'border-line-strong hover:border-ink-3',
       )}
     >
       <div
         className={clsx(
-          'w-10 h-10 flex items-center justify-center text-[15px] font-semibold rounded-[2px]',
+          'w-10 h-10 flex items-center justify-center text-[15px] font-semibold rounded-[2px] tee-editorial:rounded-full',
           accentClass,
         )}
       >

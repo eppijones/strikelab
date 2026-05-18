@@ -16,6 +16,7 @@ struct HoleDetailView: View {
     @EnvironmentObject var weatherManager: WeatherManager
     @EnvironmentObject var locationManager: LocationManager
     @EnvironmentObject var connectivityManager: WatchConnectivityManager
+    @EnvironmentObject var persistenceManager: PersistenceManager
 
     @State private var lastCaddieYards: Double?
     @State private var lastCaddieHole: Int?
@@ -161,7 +162,7 @@ struct HoleDetailView: View {
         let calculator = locationManager.currentLocation.map {
             HoleDistanceCalculator(
                 currentLocation: Coordinate(from: $0.coordinate),
-                holeLayout: layout
+                holeLayout: scoringLayout(from: layout)
             )
         }
         let front = calculator?.distanceToFront.map { Int($0.rounded()) }
@@ -186,7 +187,9 @@ struct HoleDetailView: View {
             hazardNote: hazardNote,
             source: source,
             confidence: confidence,
-            windMph: windMph
+            windMph: windMph,
+            gpsStatus: locationManager.accuracyLabel,
+            distanceLabel: distanceSourceLabel(layout: layout)
         )
     }
 
@@ -197,28 +200,52 @@ struct HoleDetailView: View {
 
     /// Yards to green center — live GPS when available, else tee-to-center.
     private func yardsToPin(layout: HoleLayout) -> Double {
+        let target = round.pinCoordinate(for: roundHole.holeNumber)
         if let loc = locationManager.currentLocation {
-            let calc = HoleDistanceCalculator(
-                currentLocation: Coordinate(from: loc.coordinate),
-                holeLayout: layout
-            )
-            if let y = calc.distanceToCenter { return y }
+            let current = Coordinate(from: loc.coordinate)
+            if let target { return current.distance(to: target) * 1.09361 }
         }
         let tee = layout.teeBox
-        let center = layout.greenCenter
-        if let tb = tee, let gc = center {
-            return tb.distance(to: gc) * 1.09361
+        if let tb = tee, let target {
+            return tb.distance(to: target) * 1.09361
         }
         return 0
     }
 
+    private func scoringLayout(from layout: HoleLayout) -> HoleLayout {
+        guard let pin = round.pinCoordinate(for: roundHole.holeNumber) else { return layout }
+        var copy = layout
+        copy.greenCenter = pin
+        return copy
+    }
+
+    private func distanceSourceLabel(layout: HoleLayout) -> String {
+        if round.pinOverridesByHole[roundHole.holeNumber] != nil {
+            return locationManager.currentLocation == nil ? "TEE TO SET PIN" : "LIVE GPS TO PIN"
+        }
+        if locationManager.currentLocation == nil {
+            return "TEE DISTANCE FALLBACK"
+        }
+        return layout.greenCenter == nil ? "LIVE GPS TO GREEN" : "LIVE GPS TO GREEN CENTER"
+    }
+
     private func commitChanges() {
+        let holeId = roundHole.id
         roundHole.grossStrokes = grossStrokes
         roundHole.putts = putts
         roundHole.notes = notes.isEmpty ? nil : notes
         roundHole.fairwayHit = fairwayHit
         roundHole.greenInRegulation = greenInRegulation
         roundHole.recalculateNet()
+        persistenceManager.commitCurrentRound({ liveRound in
+            guard let idx = liveRound.holes.firstIndex(where: { $0.id == holeId }) else { return }
+            liveRound.holes[idx].grossStrokes = grossStrokes
+            liveRound.holes[idx].putts = putts
+            liveRound.holes[idx].notes = notes.isEmpty ? nil : notes
+            liveRound.holes[idx].fairwayHit = fairwayHit
+            liveRound.holes[idx].greenInRegulation = greenInRegulation
+            liveRound.holes[idx].recalculateNet()
+        }, connectivity: connectivityManager)
     }
     
     // MARK: - Hole Header
@@ -547,10 +574,21 @@ struct HoleDetailView: View {
         let center = layout.greenCenter
         let front = layout.greenFront
         let back = layout.greenBack
+        let scoringLayout = scoringLayout(from: layout)
+        let liveCalculator = locationManager.currentLocation.map {
+            HoleDistanceCalculator(
+                currentLocation: Coordinate(from: $0.coordinate),
+                holeLayout: scoringLayout
+            )
+        }
 
         let yardsCenter = yardsToPin(layout: layout)
-        let yardsFront = teebox.flatMap { tb in front.map { gc in tb.distance(to: gc) * 1.09361 } } ?? 0
-        let yardsBack = teebox.flatMap { tb in back.map { gc in tb.distance(to: gc) * 1.09361 } } ?? 0
+        let yardsFront = liveCalculator?.distanceToFront
+            ?? teebox.flatMap { tb in front.map { gc in tb.distance(to: gc) * 1.09361 } }
+            ?? 0
+        let yardsBack = liveCalculator?.distanceToBack
+            ?? teebox.flatMap { tb in back.map { gc in tb.distance(to: gc) * 1.09361 } }
+            ?? 0
 
         let recommendation = SmartCaddie.recommendClub(input: CaddieInput(
             distanceToTarget: yardsCenter,
@@ -588,10 +626,26 @@ struct HoleDetailView: View {
                 Text(unitsManager.format(yards: yardsCenter, includesUnit: false))
                     .font(Theme.statFont(56))
                     .foregroundColor(Theme.ink)
-                Text("\(unitsManager.unitCapsLabel) · TO PIN")
+                Text("\(unitsManager.unitCapsLabel) · \(distanceSourceLabel(layout: layout))")
                     .font(Theme.labelFont(11))
                     .tracking(1.6)
                     .foregroundColor(Theme.ink3)
+            }
+
+            HStack(spacing: 6) {
+                Image(systemName: locationManager.isCurrentLocationStale ? "location.slash" : "location.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(locationManager.isCurrentLocationStale ? Theme.warn : Theme.accent)
+                Text(locationManager.accuracyLabel.uppercased())
+                    .font(Theme.labelFont(10))
+                    .tracking(1.2)
+                    .foregroundColor(locationManager.isCurrentLocationStale ? Theme.warn : Theme.ink3)
+                if round.pinOverridesByHole[roundHole.holeNumber] != nil {
+                    Text("PIN SET")
+                        .font(Theme.labelFont(10))
+                        .tracking(1.2)
+                        .foregroundColor(Theme.accent)
+                }
             }
 
             HStack(spacing: 8) {

@@ -72,6 +72,7 @@ struct Round: Codable, Identifiable, Equatable {
     var isComplete: Bool
     var currentHoleNumber: Int      // 1-18, tracks which hole player is on
     var groupPlayers: [GroupPlayer] // Optional guest scorecards; no shot/biometric data.
+    var pinOverridesByHole: [Int: Coordinate] // Round-day pin locations, keyed by hole number.
     /// Optional in storage so older saved rounds (before PlayFormat
     /// existed) decode without a custom init. Read via `playFormat`.
     var playFormatRaw: PlayFormat?
@@ -214,6 +215,7 @@ struct Round: Codable, Identifiable, Equatable {
         self.isComplete = false
         self.currentHoleNumber = 1
         self.groupPlayers = []
+        self.pinOverridesByHole = [:]
         
         // Initialize holes from course data
         self.holes = course.holes.map { holeInfo in
@@ -230,7 +232,7 @@ struct Round: Codable, Identifiable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case id, date, completedAt, course, selectedTee, player, holes, shots, plannedShots
-        case isComplete, currentHoleNumber, playFormatRaw, groupPlayers
+        case isComplete, currentHoleNumber, playFormatRaw, groupPlayers, pinOverridesByHole
     }
 
     init(from decoder: Decoder) throws {
@@ -248,6 +250,7 @@ struct Round: Codable, Identifiable, Equatable {
         currentHoleNumber = try c.decodeIfPresent(Int.self, forKey: .currentHoleNumber) ?? 1
         playFormatRaw = try c.decodeIfPresent(PlayFormat.self, forKey: .playFormatRaw)
         groupPlayers = try c.decodeIfPresent([GroupPlayer].self, forKey: .groupPlayers) ?? []
+        pinOverridesByHole = try c.decodeIfPresent([Int: Coordinate].self, forKey: .pinOverridesByHole) ?? [:]
     }
     
     // MARK: - Methods
@@ -294,6 +297,22 @@ struct Round: Codable, Identifiable, Equatable {
     /// Get hole by number
     func hole(number: Int) -> RoundHole? {
         holes.first { $0.holeNumber == number }
+    }
+
+    func pinCoordinate(for holeNumber: Int) -> Coordinate? {
+        if let override = pinOverridesByHole[holeNumber] {
+            return override
+        }
+        return course.layout(forHole: holeNumber)?.greenCenter
+            ?? course.layout(forHole: holeNumber)?.greenFront
+    }
+
+    mutating func setPinOverride(_ coordinate: Coordinate, for holeNumber: Int) {
+        pinOverridesByHole[holeNumber] = coordinate
+    }
+
+    mutating func clearPinOverride(for holeNumber: Int) {
+        pinOverridesByHole.removeValue(forKey: holeNumber)
     }
 
     mutating func extendFrontNineToFull18() {

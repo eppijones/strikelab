@@ -18,7 +18,7 @@ export function Tag({ children, tone = 'default', className }: TagProps) {
     <span
       className={clsx(
         'mono inline-block px-1.5 py-0.5 border rounded-panel uppercase',
-        'text-[9px] tracking-micro',
+        'text-[9px] tracking-micro tee-editorial:rounded-pill tee-editorial:px-2.5 tee-editorial:py-1 tee-editorial:font-sans tee-editorial:text-[10.5px] tee-editorial:font-semibold tee-editorial:tracking-[0.08em]',
         tones[tone],
         className,
       )}

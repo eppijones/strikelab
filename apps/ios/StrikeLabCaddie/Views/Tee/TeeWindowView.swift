@@ -18,6 +18,7 @@ struct TeeWindowView: View {
     @State private var selectedSlotId: UUID?
     @State private var players = 2
     @State private var holdInFlight = false
+    @State private var error: String?
 
     private let startH = 5
     private let endH = 21
@@ -53,12 +54,38 @@ struct TeeWindowView: View {
         .background(Theme.bg.ignoresSafeArea())
         .navigationTitle("The Window")
         .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .top) {
+            betaStrip
+        }
         .task { await load() }
     }
 
     private var currentSlot: TeeSheetSlot? {
         guard let id = selectedSlotId else { return nil }
         return sheet?.slots.first(where: { $0.id == id })
+    }
+
+    private var betaStrip: some View {
+        HStack(spacing: 8) {
+            BetaBadge()
+            Text("Internal windows · simulated checkout")
+                .font(Theme.labelFont(10))
+                .tracking(1.2)
+                .foregroundColor(Theme.ink3)
+            Spacer()
+            if let error {
+                Text(error)
+                    .font(Theme.labelFont(10))
+                    .foregroundColor(Theme.bad)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Theme.bg)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Theme.lineStrong).frame(height: 1)
+        }
     }
 
     private var landscape: some View {
@@ -235,9 +262,9 @@ struct TeeWindowView: View {
                 currency: slot.currency
             )
             let resp = try await TeeAPIClient.shared.hold(payload)
-            nav.push(.group(holdId: resp.id, courseId: sheet.courseId))
+            nav.push(.group(hold: resp))
         } catch {
-            print("hold error: \(error)")
+            self.error = TeeUserFacingError.message(for: error)
         }
     }
 
@@ -248,7 +275,7 @@ struct TeeWindowView: View {
             self.sheet = try await s
             self.windows = try await w
         } catch {
-            print("window load error: \(error)")
+            self.error = TeeUserFacingError.message(for: error)
         }
     }
 

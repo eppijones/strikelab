@@ -34,18 +34,24 @@ export default function TeePay() {
   }
 
   return (
-    <div className="space-y-5">
-      <header className="border-b border-line-strong pb-4">
+    <div className="max-w-[760px] mx-auto space-y-5">
+      <header className="tee-card p-5 sm:p-6">
         <Link
           to={`/tee/booking/${holdId}/group?course_id=${courseId}`}
-          className="mono text-[10px] uppercase tracking-micro text-ink-3 hover:text-ink"
+          className="tee-pill hover:border-ink-3"
         >
           ← {t('tee.back')}
         </Link>
-        <div className="micro mt-3">3 / 3</div>
-        <h1 className="display text-[40px] m-0 mt-1">
-          {t('tee.lastStep')} <em>—</em>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="tee-pill bg-[var(--ink)] text-[var(--surface-solid)] border-transparent">DEMO PAYMENT</span>
+          <span className="tee-pill">3 / 3</span>
+        </div>
+        <h1 className="display text-[clamp(3rem,7vw,5rem)] m-0 mt-3">
+          {t('tee.lastStep')} <em>.</em>
         </h1>
+        <p className="text-[15px] text-ink-2 mt-3">
+          Payment methods are shown as beta checkout patterns for launch testing.
+        </p>
       </header>
 
       <Panel id="R1" title="RECEIPT">
@@ -92,8 +98,8 @@ export default function TeePay() {
         onClick={handlePay}
         className={
           method === 'vipps'
-            ? 'w-full py-4 mono text-[12px] uppercase tracking-micro bg-warn text-bg hover:opacity-90 disabled:opacity-50'
-            : 'w-full py-4 mono text-[12px] uppercase tracking-micro bg-accent text-accent-ink hover:bg-accent-2 disabled:opacity-50'
+            ? 'w-full py-4 mono text-[12px] uppercase tracking-micro bg-warn text-bg hover:opacity-90 disabled:opacity-50 rounded-pill'
+            : 'w-full tee-cta py-4 mono text-[12px] uppercase tracking-micro disabled:opacity-50'
         }
       >
         {confirm.isPending

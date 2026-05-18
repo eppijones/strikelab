@@ -9,7 +9,7 @@ interface Props {
 
 /**
  * Live conditions row — temp / wind / stimp / mowed.
- * Mono numbers, micro labels, single-row pill grid. No paper warmth.
+ * Compact condition pills for the editorial booking surface.
  */
 export function ConditionsRow({ conditions, hour, className }: Props) {
   if (!conditions) return null
@@ -40,11 +40,11 @@ export function ConditionsRow({ conditions, hour, className }: Props) {
     },
   ]
   return (
-    <div className={clsx('flex flex-wrap items-baseline gap-x-6 gap-y-2', className)}>
+    <div className={clsx('flex flex-wrap items-center gap-2', className)}>
       {items.map((it) => (
-        <div key={it.label} className="flex items-baseline gap-2">
+        <div key={it.label} className="tee-pill">
           <span className="micro">{it.label}</span>
-          <span className="mono text-[13px] text-ink">{it.value}</span>
+          <span className="mono text-[12.5px] text-ink">{it.value}</span>
         </div>
       ))}
     </div>

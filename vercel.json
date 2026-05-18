@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "cd apps/web && npm ci && npm run build",
+  "buildCommand": "cd apps/web && npm run build:vercel",
   "outputDirectory": "apps/web/dist",
-  "installCommand": "cd apps/web && npm ci",
+  "installCommand": "cd apps/web && npm ci --omit=dev",
   "functions": {
     "api/index.py": {
       "maxDuration": 30

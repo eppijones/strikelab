@@ -49,12 +49,13 @@ struct TeePassView: View {
             HStack(spacing: 6) {
                 Circle().fill(Theme.accent).frame(width: 6, height: 6)
                 TeeMicroLabel(text: pass.status.uppercased())
+                BetaBadge(tone: .accent)
             }
             Text("You're in.")
                 .font(.system(size: 38, weight: .medium))
                 .foregroundColor(Theme.ink)
                 .kerning(-1.4)
-            Text("We'll remind you 1 hour before.")
+            Text("Beta pass confirmed with internal availability. Show the check-in code during testing.")
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundColor(Theme.ink3)
         }
@@ -141,7 +142,7 @@ struct TeePassView: View {
             Button {
                 addToWallet(pass: pass)
             } label: {
-                Text("ADD TO WALLET")
+                    Text("SHARE PASS")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .tracking(1.6)
                     .foregroundColor(Theme.ink)
@@ -170,12 +171,12 @@ struct TeePassView: View {
     private func systemLoop(pass: TeePassResponse) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             TeeMicroLabel(text: "STRIKELAB")
-            Text("Coach prepared a 12-min warmup based on conditions.")
+            Text("Coach prepared a 12-min warmup based on conditions. Tee Beta can hand this booking to your scoring flow.")
                 .font(.system(size: 14))
                 .foregroundColor(Theme.ink2)
             HStack(spacing: 10) {
                 NavigationLink(value: TeeNavigation.Route.preferences) {
-                    Text("OPEN TRAINING →")
+                    Text("OPEN PREFERENCES →")
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .tracking(1.6)
                         .foregroundColor(Theme.accentInk)

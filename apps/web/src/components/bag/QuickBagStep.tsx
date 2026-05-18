@@ -1,11 +1,8 @@
 import { useState } from 'react'
 
-import { useBrands } from '@/api/catalog'
-import { BrandLogo } from '@/components/brand/BrandLogo'
-import { brandHasLogo } from '@/components/brand/logoAssets'
 import type { QuickAddClubData } from '@/api/equipment'
 
-const QUICK_SLOTS: Array<{ club_type: string; club_label: string }> = [
+const QUICK_SLOTS = [
   { club_type: 'driver', club_label: 'Driver' },
   { club_type: '3_wood', club_label: '3W' },
   { club_type: 'hybrid', club_label: '4H' },
@@ -19,51 +16,84 @@ const QUICK_SLOTS: Array<{ club_type: string; club_label: string }> = [
   { club_type: 'wedge', club_label: '56°' },
   { club_type: 'wedge', club_label: '60°' },
   { club_type: 'putter', club_label: 'Putter' },
-]
+].map((slot) => ({
+  ...slot,
+  group:
+    slot.club_type === 'driver' ? 'Driver'
+    : slot.club_type.includes('wood') ? 'Wood'
+    : slot.club_type === 'hybrid' ? 'Hybrid'
+    : slot.club_type === 'wedge' ? 'Wedge'
+    : slot.club_type === 'putter' ? 'Putter'
+    : 'Iron',
+}))
 
 interface Props {
-  /** Latest brand selections per slot index. */
-  value: Array<string | null>
-  onChange: (value: Array<string | null>) => void
+  /** Selected slots per index. Details can be added later in the bag editor. */
+  value: boolean[]
+  onChange: (value: boolean[]) => void
 }
 
 /**
- * Compact bag picker for onboarding. Pick a brand for each common slot;
- * "Skip" is allowed by leaving slots empty.
+ * Compact bag picker for onboarding. Golfers pick the clubs they carry first;
+ * brand, loft, shaft, grip, and notes stay optional details for later.
  */
 export function QuickBagStep({ value, onChange }: Props) {
-  const { data: brands = [] } = useBrands()
-  const [activeSlot, setActiveSlot] = useState<number | null>(null)
+  const selectedCount = value.filter(Boolean).length
 
-  const update = (idx: number, brandId: string | null) => {
+  const update = (idx: number, selected: boolean) => {
     const next = [...value]
-    while (next.length < QUICK_SLOTS.length) next.push(null)
-    next[idx] = brandId
+    while (next.length < QUICK_SLOTS.length) next.push(false)
+    next[idx] = selected
     onChange(next.slice(0, QUICK_SLOTS.length))
-    setActiveSlot(null)
+  }
+
+  const selectStarterSet = () => {
+    onChange(QUICK_SLOTS.map(() => true))
+  }
+
+  const clearAll = () => {
+    onChange(QUICK_SLOTS.map(() => false))
   }
 
   return (
     <div>
       <p className="text-body text-ink-2 mb-4">
-        Tap a slot, pick the brand. Skip any you don't carry — you can fine-tune
-        every club later in the bag editor.
+        Pick the clubs you carry. Skip any that do not fit your bag. Brand,
+        loft, lie, shaft, grip, and notes can be added later only if you care.
       </p>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <button
+          type="button"
+          onClick={selectStarterSet}
+          className="bg-accent text-accent-ink px-4 py-2.5 mono text-[10px] uppercase tracking-micro hover:bg-accent-2"
+        >
+          Select starter set
+        </button>
+        <button
+          type="button"
+          onClick={clearAll}
+          className="border border-line-strong text-ink-2 px-4 py-2.5 mono text-[10px] uppercase tracking-micro hover:border-ink-3"
+        >
+          Clear
+        </button>
+        <span className="mono text-[10px] text-ink-3 uppercase tracking-micro">
+          {selectedCount}/14 clubs selected
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {QUICK_SLOTS.map((slot, idx) => {
-          const brandId = value[idx] ?? null
-          const brand = brands.find((b) => b.id === brandId)
+          const selected = value[idx] ?? false
           return (
             <button
               key={idx}
-              onClick={() => setActiveSlot(idx)}
+              type="button"
+              onClick={() => update(idx, !selected)}
               className={`text-left p-3 border ${
-                activeSlot === idx
-                  ? 'border-accent-fg text-accent-fg'
-                  : brand
-                  ? 'border-line-strong text-ink hover:border-ink-3'
-                  : 'border-line text-ink-3 hover:border-ink-3'
+                selected
+                  ? 'border-accent-fg bg-bg-2 text-accent-fg'
+                  : 'border-line text-ink-3 hover:border-ink-3 hover:text-ink'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -71,66 +101,33 @@ export function QuickBagStep({ value, onChange }: Props) {
                   {slot.club_label.toUpperCase()}
                 </span>
                 <span className="mono text-[9px] text-ink-4 tracking-micro-tight">
-                  {slot.club_type.toUpperCase()}
+                  {slot.group.toUpperCase()}
                 </span>
               </div>
-              <div className="mt-2 h-6 flex items-center">
-                {brand ? (
-                  <BrandLogo id={brand.id} brand={brand} size={20} compact />
-                ) : (
-                  <span className="mono text-[10px] text-ink-4 tracking-micro">
-                    TAP TO PICK
-                  </span>
-                )}
+              <div className="mt-2 mono text-[10px] tracking-micro">
+                {selected ? 'IN MY BAG' : 'TAP TO ADD'}
               </div>
             </button>
           )
         })}
       </div>
-
-      {activeSlot !== null && (
-        <div className="mt-4 border border-line-strong p-3">
-          <div className="flex items-baseline justify-between mb-3">
-            <div className="micro">
-              SLOT {QUICK_SLOTS[activeSlot].club_label.toUpperCase()} · BRAND
-            </div>
-            <button
-              onClick={() => update(activeSlot, null)}
-              className="mono text-[10px] text-ink-3 uppercase tracking-micro hover:text-bad"
-            >
-              CLEAR
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {brands.filter((b) => brandHasLogo(b.id)).map((b) => (
-              <button
-                key={b.id}
-                onClick={() => update(activeSlot, b.id)}
-                className="border border-line-strong p-2 hover:border-accent-fg text-left"
-              >
-                <BrandLogo id={b.id} brand={b} size={20} />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
 export function quickBagToPayload(
-  selections: Array<string | null>
+  selections: boolean[]
 ): QuickAddClubData[] {
   const out: QuickAddClubData[] = []
-  selections.forEach((brandId, idx) => {
-    if (!brandId) return
+  selections.forEach((selected, idx) => {
+    if (!selected) return
     const slot = QUICK_SLOTS[idx]
     if (!slot) return
     out.push({
       club_type: slot.club_type,
       club_label: slot.club_label,
-      brand_id: brandId,
-      model_name: '—',
+      brand_id: 'custom',
+      model_name: slot.club_label,
     })
   })
   return out

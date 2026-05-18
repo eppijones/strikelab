@@ -19,6 +19,25 @@ class LocationManager: NSObject, ObservableObject {
     @Published var isTracking = false
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published var locationError: String?
+    @Published var hasDeferredRoundLocation = false
+
+    var currentLocationAge: TimeInterval? {
+        currentLocation.map { Date().timeIntervalSince($0.timestamp) }
+    }
+
+    var isCurrentLocationStale: Bool {
+        guard let age = currentLocationAge else { return true }
+        return age > 30
+    }
+
+    var accuracyLabel: String {
+        guard let location = currentLocation, location.horizontalAccuracy > 0 else {
+            return "No GPS fix"
+        }
+        let meters = Int(location.horizontalAccuracy.rounded())
+        let age = Int(max(0, Date().timeIntervalSince(location.timestamp)).rounded())
+        return isCurrentLocationStale ? "GPS stale · \(age)s old" : "GPS ±\(meters)m"
+    }
     
     /// All recorded locations during the round
     @Published var locationHistory: [CLLocation] = []
@@ -31,6 +50,7 @@ class LocationManager: NSObject, ObservableObject {
     private let locationManager = CLLocationManager()
     private let clusteringAlgorithm = ClusteringAlgorithm()
     private var cancellables = Set<AnyCancellable>()
+    private var shouldStartTrackingAfterAuthorization = false
     
     // MARK: - Initialization
     
@@ -65,6 +85,13 @@ class LocationManager: NSObject, ObservableObject {
     
     /// Start tracking location
     func startTracking() {
+        if authorizationStatus == .notDetermined {
+            hasDeferredRoundLocation = false
+            shouldStartTrackingAfterAuthorization = true
+            requestPermission()
+            return
+        }
+
         guard authorizationStatus == .authorizedWhenInUse || 
               authorizationStatus == .authorizedAlways else {
             locationError = "Location permission required"
@@ -73,6 +100,7 @@ class LocationManager: NSObject, ObservableObject {
         
         locationManager.startUpdatingLocation()
         isTracking = true
+        hasDeferredRoundLocation = false
         locationError = nil
     }
     
@@ -170,7 +198,12 @@ extension LocationManager: CLLocationManagerDelegate {
             switch authorizationStatus {
             case .authorizedWhenInUse, .authorizedAlways:
                 locationError = nil
+                if shouldStartTrackingAfterAuthorization {
+                    shouldStartTrackingAfterAuthorization = false
+                    startTracking()
+                }
             case .denied, .restricted:
+                shouldStartTrackingAfterAuthorization = false
                 locationError = "Location access denied. Enable in Settings."
             case .notDetermined:
                 break

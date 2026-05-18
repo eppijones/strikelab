@@ -20,6 +20,7 @@ struct TeeSheetGridView: View {
     @State private var emptyOnly: Bool = false
     @State private var filter: SheetFilter = .all
     @State private var holdInFlight = false
+    @State private var error: String?
 
     enum SheetFilter: String, CaseIterable, Hashable {
         case all = "ALL", empty = "EMPTY", morning = "MORNING", golden = "GOLDEN"
@@ -54,6 +55,9 @@ struct TeeSheetGridView: View {
                 }
                 .tint(Theme.ink2)
             }
+        }
+        .safeAreaInset(edge: .top) {
+            betaStrip
         }
         .task { await load() }
     }
@@ -122,6 +126,29 @@ struct TeeSheetGridView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
+        }
+    }
+
+    private var betaStrip: some View {
+        HStack(spacing: 8) {
+            BetaBadge()
+            Text("Internal tee sheet · simulated checkout")
+                .font(Theme.labelFont(10))
+                .tracking(1.2)
+                .foregroundColor(Theme.ink3)
+            Spacer()
+            if let error {
+                Text(error)
+                    .font(Theme.labelFont(10))
+                    .foregroundColor(Theme.bad)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Theme.bg)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Theme.lineStrong).frame(height: 1)
         }
     }
 
@@ -298,9 +325,9 @@ struct TeeSheetGridView: View {
                 currency: slot.currency
             )
             let resp = try await TeeAPIClient.shared.hold(payload)
-            nav.push(.group(holdId: resp.id, courseId: sheet.courseId))
+            nav.push(.group(hold: resp))
         } catch {
-            print("hold error: \(error)")
+            self.error = TeeUserFacingError.message(for: error)
         }
     }
 
@@ -308,7 +335,7 @@ struct TeeSheetGridView: View {
         do {
             self.sheet = try await TeeAPIClient.shared.teeSheet(courseId: courseId, date: date)
         } catch {
-            print("sheet load error: \(error)")
+            self.error = TeeUserFacingError.message(for: error)
         }
     }
 

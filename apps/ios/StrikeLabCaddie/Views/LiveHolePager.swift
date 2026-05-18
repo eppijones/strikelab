@@ -23,6 +23,7 @@ struct LiveHolePager: View {
     @State private var showScorecard = false
     @State private var showEndRoundAlert = false
     @State private var showGPS = false
+    @State private var showLocationPreflight = false
     @State private var summaryRound: Round?
     @State private var clockTick = Date()
 
@@ -98,6 +99,12 @@ struct LiveHolePager: View {
         } message: {
             Text("This saves your scorecard, shots, GPS-backed round data, and queues the export sync. You can still review it later from Round History.")
         }
+        .alert("Allow Location During Rounds?", isPresented: $showLocationPreflight) {
+            Button("Continue") { locationManager.startTracking() }
+            Button("Not now", role: .cancel) { }
+        } message: {
+            Text("StrikeLab uses location only during an active round to measure shot distances and keep course context current.")
+        }
         .fullScreenCover(item: $summaryRound) { snapshot in
             NavigationStack {
                 RoundSummaryView(round: snapshot, onClose: {
@@ -110,8 +117,12 @@ struct LiveHolePager: View {
             let range = round.playFormat.holeRange
             let hole = round.currentHoleNumber
             selectedHole = max(range.lowerBound, min(range.upperBound, hole))
-            if !locationManager.isTracking {
-                locationManager.startTracking()
+            if !locationManager.isTracking && !locationManager.hasDeferredRoundLocation {
+                if locationManager.authorizationStatus == .notDetermined {
+                    showLocationPreflight = true
+                } else {
+                    locationManager.startTracking()
+                }
             }
 
             // Best-effort weather fetch for the course centroid so the
@@ -231,6 +242,7 @@ struct LiveHolePager: View {
             holeNumber: holeNumber,
             par: hole?.par ?? 4,
             holeLayout: layout,
+            round: $round,
             shots: round.shots(forHole: holeNumber),
             locationManager: locationManager,
             weatherManager: weatherManager
@@ -328,6 +340,7 @@ struct LiveHolePager: View {
 
     private func completeRoundAndShowSummary() {
         summaryRound = persistenceManager.completeCurrentRound() ?? round
+        connectivityManager.sendRoundCleared()
     }
 }
 

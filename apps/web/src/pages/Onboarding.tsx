@@ -73,7 +73,7 @@ export default function Onboarding() {
     user?.handicapIndex?.toString() ?? ''
   )
   const [goal, setGoal] = useState<string>(user?.goalHandicap?.toString() ?? '')
-  const [bagSelections, setBagSelections] = useState<Array<string | null>>([])
+  const [bagSelections, setBagSelections] = useState<boolean[]>([])
 
   const steps = useMemo(() => stepsFor(persona), [persona])
   const stepIdx = steps.indexOf(step)

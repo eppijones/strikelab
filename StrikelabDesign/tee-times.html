@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>StrikeLab · Tee Times</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  html, body { margin: 0; padding: 0; background: #0a0b0a; min-height: 100vh; }
+  body { font-family: "Geist", system-ui, sans-serif; }
+  *, *::before, *::after { box-sizing: border-box; }
+  ::selection { background: oklch(0.88 0.18 125); color: #0a0b0a; }
+  /* hide spinners */
+  input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  /* scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2d322f; }
+  select option { background: #15181a; color: #ede8de; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="tee-times-shared.jsx"></script>
+<script type="text/babel" src="tee-times-find.jsx"></script>
+<script type="text/babel" src="tee-times-course.jsx"></script>
+<script type="text/babel" src="tee-times-book.jsx"></script>
+<script type="text/babel" src="tee-times-checkin.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// Inject theme CSS
+(() => {
+  const el = document.createElement('style');
+  el.textContent = window.TT_THEME_CSS;
+  document.head.appendChild(el);
+})();
+
+const App = () => {
+  const [view, setView] = useState('find'); // find | course | book | done | checkin
+  const [courseId, setCourseId] = useState('losby');
+  const [slot, setSlot] = useState(null);
+  const [lang, setLang] = useState('no');
+  const [mode, setMode] = useState('dark');
+
+  const t = window.useT(lang);
+
+  return (
+    <div className="tt-theme" data-mode={mode} data-screen-label="StrikeLab Tee Times" style={{ minHeight: '100vh' }}>
+      {/* ================= TOP BAR ================= */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 50,
+        background: 'var(--bg)', borderBottom: '1px solid var(--line-strong)',
+        display: 'grid', gridTemplateColumns: '260px 1fr auto', alignItems: 'stretch',
+      }}>
+        {/* Logo block */}
+        <div style={{ padding: '14px 20px', borderRight: '1px solid var(--line-strong)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <window.TTLogo size={22} />
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.05 }}>
+            <span style={{ fontFamily: 'Geist', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em' }}>StrikeLab</span>
+            <span className="mono" style={{ fontSize: 9, color: 'var(--ink-3)', letterSpacing: '0.22em', textTransform: 'uppercase', marginTop: 2 }}>{t('hq')} / {t('tee_times').toUpperCase()}</span>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ display: 'flex', alignItems: 'stretch' }}>
+          {[
+            ['find', t('nav_find')],
+            ['course', t('nav_book')],
+            ['book', t('nav_pay')],
+            ['checkin', t('nav_checkin')],
+            ['my', t('nav_my')],
+          ].map(([k, l], i) => (
+            <button key={k} onClick={() => setView(k === 'my' ? 'checkin' : k)} className="mono" style={{
+              background: 'transparent', color: view === k ? 'var(--ink)' : 'var(--ink-3)',
+              border: 0, padding: '0 22px', fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase',
+              cursor: 'pointer', position: 'relative', height: '100%',
+            }}>
+              <span className="mono" style={{ fontSize: 9, color: 'var(--ink-4)', marginRight: 8 }}>0{i + 1}</span>{l}
+              {view === k && <span style={{ position: 'absolute', bottom: -1, left: 16, right: 16, height: 2, background: 'var(--accent)' }} />}
+            </button>
+          ))}
+        </nav>
+
+        {/* Right cluster */}
+        <div style={{ display: 'flex', alignItems: 'stretch' }}>
+          <div style={{ padding: '0 14px', display: 'flex', alignItems: 'center', gap: 8, borderLeft: '1px solid var(--line-strong)' }}>
+            <span className="mono pulse" style={{ fontSize: 9, color: 'var(--accent)', letterSpacing: '0.2em' }}>● {t('live')}</span>
+            <span className="mono" style={{ fontSize: 10, color: 'var(--ink-3)', letterSpacing: '0.16em' }}>14:08 CET</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', borderLeft: '1px solid var(--line-strong)' }}>
+            {[['no','NO'],['en','EN']].map(([k, l], i) => (
+              <button key={k} onClick={() => setLang(k)} className="mono" style={{
+                background: lang === k ? 'var(--surface-2)' : 'transparent',
+                color: lang === k ? 'var(--ink)' : 'var(--ink-3)',
+                border: 0, borderRight: i === 0 ? '1px solid var(--line-strong)' : 0,
+                padding: '0 14px', fontSize: 10, letterSpacing: '0.18em', cursor: 'pointer', height: '100%',
+              }}>{l}</button>
+            ))}
+          </div>
+          <button onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} className="mono" style={{
+            background: 'transparent', color: 'var(--ink-3)', border: 0, borderLeft: '1px solid var(--line-strong)',
+            padding: '0 14px', fontSize: 10, letterSpacing: '0.18em', cursor: 'pointer',
+          }}>{mode === 'dark' ? '☾' : '☀'}</button>
+          <div style={{ padding: '0 18px', display: 'flex', alignItems: 'center', gap: 10, borderLeft: '1px solid var(--line-strong)' }}>
+            <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', color: 'var(--accent-ink)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Geist Mono', fontSize: 11 }}>DH</span>
+            <div style={{ lineHeight: 1.05 }}>
+              <div style={{ fontSize: 12 }}>D. Hassan</div>
+              <div className="mono" style={{ fontSize: 9, color: 'var(--ink-3)', letterSpacing: '0.16em', marginTop: 2 }}>HCP 7.2 · OSLO</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ================= MODULE BANNER ================= */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)',
+        borderBottom: '1px solid var(--line-strong)',
+        background: 'var(--bg-2)',
+      }}>
+        {[
+          ['00','RANGE'],
+          ['01','LESSONS'],
+          ['02','CADDIE'],
+          ['03','PUTTING'],
+          ['04','MENTAL'],
+          ['05','ANALYTICS'],
+          ['06', t('tee_times').toUpperCase()],
+        ].map(([n, l], i) => {
+          const active = i === 6;
+          return (
+            <div key={n} style={{
+              padding: '12px 16px',
+              borderRight: i < 6 ? '1px solid var(--line-strong)' : 0,
+              background: active ? 'var(--surface-solid)' : 'transparent',
+              borderTop: active ? '2px solid var(--accent)' : '2px solid transparent',
+              marginTop: active ? -1 : 0,
+            }}>
+              <div className="mono" style={{ fontSize: 9, color: active ? 'var(--accent)' : 'var(--ink-4)', letterSpacing: '0.22em' }}>{n}</div>
+              <div className="mono" style={{ fontSize: 11, color: active ? 'var(--ink)' : 'var(--ink-3)', letterSpacing: '0.16em', marginTop: 4 }}>{l}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ================= MAIN VIEW ================= */}
+      <main>
+        {view === 'find' && <window.FindCourse lang={lang} onSelect={(id) => { setCourseId(id); setView('course'); }} />}
+        {view === 'course' && <window.CourseDetail lang={lang} courseId={courseId} onBack={() => setView('find')} onBook={(s) => { setSlot(s); setView('book'); }} />}
+        {view === 'book' && <window.BookFlow lang={lang} courseId={courseId} slot={slot} onBack={() => setView('course')} onComplete={() => setView('checkin')} />}
+        {view === 'checkin' && <window.CheckinCard lang={lang} onBack={() => setView('find')} onStart={() => alert(lang === 'no' ? 'Åpner StrikeLab Caddie...' : 'Opening StrikeLab Caddie...')} />}
+      </main>
+
+      {/* ================= FOOTER ================= */}
+      <footer style={{ borderTop: '1px solid var(--line-strong)', padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-2)' }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <window.TTLogo size={16} />
+          <span className="mono" style={{ fontSize: 10, color: 'var(--ink-4)', letterSpacing: '0.22em' }}>STRIKELAB AS · ORG 998 412 333 · OSLO · MMXXVI</span>
+        </div>
+        <div style={{ display: 'flex', gap: 22 }}>
+          {['MODULE 06','API · v3.4','UPTIME 99.98%','SUPPORT 22 02 14 88'].map(l => (
+            <span key={l} className="mono" style={{ fontSize: 10, color: 'var(--ink-4)', letterSpacing: '0.18em' }}>{l}</span>
+          ))}
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>

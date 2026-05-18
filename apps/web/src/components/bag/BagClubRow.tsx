@@ -1,4 +1,3 @@
-import { BrandLogo } from '@/components/brand/BrandLogo'
 import { Tag } from '@/components/ui'
 import type { Club, ClubStats } from '@/api/equipment'
 
@@ -9,7 +8,7 @@ interface Props {
   onDelete?: () => void
 }
 
-const GRID = '60px 24px 1fr 74px 74px 58px 82px auto'
+const GRID = '64px 1fr 88px 74px 74px 58px 82px auto'
 
 export function BagClubRow({ club, stat, onEdit, onDelete }: Props) {
   return (
@@ -18,16 +17,18 @@ export function BagClubRow({ club, stat, onEdit, onDelete }: Props) {
       style={{ gridTemplateColumns: GRID }}
     >
       <Tag>{club.club_label || club.club_type.toUpperCase()}</Tag>
-      <BrandLogo id={club.brand_id} size={20} compact />
       <button
         onClick={onEdit}
         className="text-left text-[14px] text-ink hover:text-accent-fg transition-colors"
       >
-        {club.model_name}
+        {club.model_name || club.club_label || 'Club details'}
         {club.year && (
           <span className="mono text-[10px] text-ink-3 ml-2">{club.year}</span>
         )}
       </button>
+      <span className="mono text-[10px] text-ink-3 uppercase tracking-micro truncate">
+        {club.brand_id === 'custom' ? 'Optional' : club.brand_id}
+      </span>
       <span className="num text-[13px]">{stat?.avg_carry?.toFixed(0) ?? '—'}</span>
       <span className="num text-[13px]">
         {stat?.max_carry?.toFixed(0) ?? '—'}
@@ -60,7 +61,7 @@ export function BagClubHeader() {
       className="grid items-center gap-3 pb-2 border-b border-line-strong mb-2"
       style={{ gridTemplateColumns: GRID }}
     >
-      {['LABEL', 'BRAND', 'MODEL', 'AVG CARRY', 'BEST', 'SHOTS', 'σ', ''].map(
+      {['CLUB', 'DETAILS', 'BRAND', 'AVG CARRY', 'BEST', 'SHOTS', 'σ', ''].map(
         (h) => (
           <span
             key={h}

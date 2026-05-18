@@ -74,7 +74,7 @@ function Cell({ slot, selected, onSelect, conditionTint }: CellProps) {
       }
       disabled={blocked || isFull}
       className={clsx(
-        'h-7 px-1.5 flex items-center justify-between gap-1 border bg-bg-2 text-[10px] mono uppercase tracking-micro-tight transition-colors',
+        'h-7 px-1.5 flex items-center justify-between gap-1 border bg-bg-2 text-[10px] mono uppercase tracking-micro-tight transition-colors tee-editorial:rounded-pill',
         tone,
         selected && 'bg-accent text-accent-ink border-accent',
       )}
@@ -140,7 +140,7 @@ export function TeeSheetGrid({
   }
 
   return (
-    <div className="overflow-auto border border-line-strong rounded-[2px] bg-surface-solid">
+    <div className="overflow-auto border border-line-strong rounded-[18px] bg-surface-solid">
       <div
         className="grid"
         style={{
@@ -244,7 +244,7 @@ export function TeeSheetFilterBar({
     <div className="flex flex-wrap items-center gap-3 mb-3">
       <div className="flex items-center gap-2">
         <span className="micro">PLAYERS</span>
-        <div className="flex border border-line-strong">
+        <div className="flex border border-line-strong rounded-pill overflow-hidden bg-surface-solid">
           {[1, 2, 3, 4].map((n, i) => (
             <button
               key={n}
@@ -266,7 +266,7 @@ export function TeeSheetFilterBar({
 
       <div className="flex items-center gap-2">
         <span className="micro">HOLES</span>
-        <div className="flex border border-line-strong">
+        <div className="flex border border-line-strong rounded-pill overflow-hidden bg-surface-solid">
           {([9, 18] as const).map((n, i) => (
             <button
               key={n}
@@ -288,7 +288,7 @@ export function TeeSheetFilterBar({
 
       <div className="flex items-center gap-2">
         <span className="micro">VIEW</span>
-        <div className="flex border border-line-strong">
+        <div className="flex border border-line-strong rounded-pill overflow-hidden bg-surface-solid">
           {(
             [
               ['all', 'ALL'],

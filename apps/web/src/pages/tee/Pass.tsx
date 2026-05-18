@@ -17,18 +17,24 @@ export default function TeePass() {
 
   return (
     <div className="space-y-5 max-w-2xl mx-auto">
-      <header className="border-b border-line-strong pb-4">
+      <header className="tee-card p-5 sm:p-6">
         <Link
           to="/tee"
-          className="mono text-[10px] uppercase tracking-micro text-ink-3 hover:text-ink"
+          className="tee-pill hover:border-ink-3"
         >
           ← {t('tee.discover')}
         </Link>
-        <div className="micro mt-3 flex items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="tee-pill bg-[var(--ink)] text-[var(--surface-solid)] border-transparent">BETA PASS</span>
+          <span className="tee-pill">
+            Demo booking
+          </span>
+        </div>
+        <div className="micro mt-4 flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
           {t('tee.confirmed' satisfies string).toUpperCase()}
         </div>
-        <h1 className="display text-[44px] m-0 mt-1">
+        <h1 className="display text-[clamp(3rem,7vw,5.5rem)] m-0 mt-1">
           {t('tee.youreIn')} <em>.</em>
         </h1>
         <p className="mono text-[11px] text-ink-3 mt-2">
@@ -41,13 +47,13 @@ export default function TeePass() {
       <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
-          className="border border-line-strong text-ink-2 py-3 mono text-[11px] uppercase tracking-micro hover:text-ink hover:border-ink-3"
+          className="tee-pill justify-center py-3 mono text-[11px] uppercase tracking-micro hover:text-ink hover:border-ink-3"
         >
           {t('tee.addToWallet')}
         </button>
         <button
           type="button"
-          className="border border-line-strong text-ink-2 py-3 mono text-[11px] uppercase tracking-micro hover:text-ink hover:border-ink-3"
+          className="tee-pill justify-center py-3 mono text-[11px] uppercase tracking-micro hover:text-ink hover:border-ink-3"
         >
           {t('tee.driveTime')}{' '}
           {pass.drive_min != null ? `${pass.drive_min} MIN` : '—'}
@@ -62,13 +68,13 @@ export default function TeePass() {
           <div className="grid grid-cols-2 gap-3 mt-3">
             <Link
               to="/training"
-              className="bg-accent text-accent-ink px-4 py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2 text-center"
+              className="tee-cta px-4 py-3 mono text-[11px] uppercase tracking-micro text-center"
             >
               OPEN TRAINING →
             </Link>
             <Link
               to={`/rounds?course_id=${pass.course_id ?? ''}&start=${pass.tee_time}`}
-              className="border border-line-strong text-ink-2 px-4 py-3 mono text-[11px] uppercase tracking-micro hover:border-accent-fg hover:text-accent-fg text-center"
+              className="tee-pill justify-center px-4 py-3 mono text-[11px] uppercase tracking-micro hover:border-accent-fg hover:text-accent-fg text-center"
             >
               {t('tee.startRound')} →
             </Link>

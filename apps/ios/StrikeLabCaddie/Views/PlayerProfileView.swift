@@ -110,29 +110,33 @@ struct PlayerProfileView: View {
     // MARK: - Profile Header
     
     private var profileHeader: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                Rectangle()
-                    .fill(Theme.surface2)
-                    .frame(width: 84, height: 84)
-                    .overlay(Rectangle().stroke(Theme.lineStrong, lineWidth: 1))
+        SLPanel(id: "05", title: "Player Profile", trailing: persistenceManager.player.handicapCategory) {
+            HStack(alignment: .center, spacing: 14) {
+                ZStack {
+                    Rectangle()
+                        .fill(Theme.surface2)
+                        .frame(width: 72, height: 72)
+                        .overlay(Rectangle().stroke(Theme.lineStrong, lineWidth: 1))
 
-                Text(initials)
-                    .font(.system(size: 28, weight: .medium, design: .monospaced))
-                    .foregroundColor(Theme.accent)
+                    Text(initials)
+                        .font(.system(size: 24, weight: .medium, design: .monospaced))
+                        .foregroundColor(Theme.accent)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(persistenceManager.player.name)
+                        .font(Theme.displayFont(30))
+                        .kerning(-1)
+                        .foregroundColor(Theme.ink)
+
+                    Text("HCP \(persistenceManager.player.formattedHandicap) · \(unitsManager.system.displayName)")
+                        .font(Theme.labelFont(10))
+                        .tracking(1.6)
+                        .foregroundColor(Theme.ink3)
+                }
+                Spacer()
             }
-
-            Text(persistenceManager.player.name)
-                .font(Theme.titleFont(28))
-                .foregroundColor(Theme.ink)
-
-            Text(persistenceManager.player.handicapCategory.uppercased())
-                .font(Theme.labelFont(11))
-                .tracking(2.0)
-                .foregroundColor(Theme.ink3)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
     }
     
     private var initials: String {
@@ -555,7 +559,7 @@ struct PlayerProfileView: View {
             )
             toggleRow(
                 title: "Mic-confirmed impact",
-                    subtitle: "Off by default. When enabled, Apple Watch listens for impact timing and stores short clips for your swing review.",
+                subtitle: "Off by default. The Watch asks for microphone permission only after you enable this; short clips are stored only for your swing review.",
                 isOn: $settingsManager.micImpactConfirm
             )
             toggleRow(
@@ -852,7 +856,7 @@ struct PlayerProfileView: View {
                     icon: "trash",
                     iconTint: Theme.bad,
                     title: isDeletingAccount ? "Deleting account..." : "Delete account",
-                    subtitle: "Permanently remove your StrikeLab account and synced data"
+                    subtitle: "Permanently remove your account, synced rounds, range sessions and media"
                 )
             }
             .disabled(isDeletingAccount || !authStore.isAuthenticated)

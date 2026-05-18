@@ -36,6 +36,9 @@ Before pressing Build/Archive:
 - Both targets use the correct active StrikeLab signing team.
 - The production Clerk publishable key is available to the Release build.
 - `https://strikelab.golf/privacy`, `/terms`, `/support`, and `/api/health` are live.
+- A production review account exists and can sign in from both iPhone and web:
+  - Email: `demo@strikelab.golf`
+  - Password: `demo123`
 - App Store Connect app record exists for the bundle ID before uploading.
 
 ## Owner-Only TestFlight Smoke Test
@@ -53,6 +56,18 @@ Run on a real iPhone with paired Apple Watch:
 - Deny/allow Location, HealthKit, Motion, and Microphone permissions.
 - Delete the test account and confirm sign-out.
 
+## App Review Notes
+
+Give Apple the following notes with the binary:
+
+- Demo account: `demo@strikelab.golf` / `demo123`. Confirm this user exists in the production Clerk/API environment before submitting.
+- Legal/support links work without login at `https://strikelab.golf/privacy`, `https://strikelab.golf/terms`, and `https://strikelab.golf/support`; the iPhone login screen also exposes these links.
+- Account deletion path: iPhone app → Profile tab → Account → Delete account. Web path: Settings → Delete account.
+- Location is requested when starting or resuming an active round. It is used for shot distances, course context, and Watch caddie sync.
+- Apple Watch HealthKit, Motion, and Location prompts appear when starting a round or range session after an in-app explanation.
+- Microphone capture is optional and off by default. The Watch asks for microphone permission only after the user enables Profile → Swing Capture → Mic-confirmed impact.
+- First release hides mobile booking/payment checkout unless that surface is explicitly marked production-ready.
+
 ## App Store Connect Metadata Draft
 
 - Name: StrikeLab Caddie
@@ -61,7 +76,7 @@ Run on a real iPhone with paired Apple Watch:
 - Support URL: `https://strikelab.golf/support`
 - Marketing URL: `https://strikelab.golf/`
 - Privacy URL: `https://strikelab.golf/privacy`
-- Review notes: Use the provided demo account. Apple Watch pairing is recommended to test swing, workout, and range features. Microphone impact capture is optional and off by default. HealthKit is requested when starting a golf workout/range flow.
+- Review notes: Use demo account `demo@strikelab.golf` / `demo123`. Apple Watch pairing is recommended to test swing, workout, and range features. Microphone impact capture is optional and off by default. HealthKit, motion, and location are requested only after starting a round or range flow with in-app explanation.
 
 ## Privacy Label Draft
 
@@ -87,6 +102,7 @@ Data processors:
 ## Release Acceptance
 
 - Release build hides developer URL/token controls and demo reset.
+- Release build hides or neutralizes mobile Tee booking/payment checkout until production-ready.
 - Privacy manifests are present for iPhone and Watch targets.
 - In-app account deletion works from iPhone and web Settings.
 - Production Clerk and Vercel login/sync verified from TestFlight.

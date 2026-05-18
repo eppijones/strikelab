@@ -1,15 +1,11 @@
 import { CSSProperties } from 'react'
 
 /**
- * Editorial course hero, redrawn for StrikeLab's dark instrument theme.
+ * Editorial course hero for the booking surface.
  *
  * Each course type renders a different SVG composition (parkland / links /
- * championship / lakeside / farmland / mountain / fjord). The palette is
- * pulled from the `--ink-*` and `--accent` tokens so it sits naturally on
- * `--bg`/`--surface-solid` without warm paper undertones.
- *
- * The flag is the single signal-lime accent in the artwork; everything else
- * is graphite + ink ramp.
+ * championship / lakeside / farmland / mountain / fjord). The palette follows
+ * the warm paper, moss, sand, and water variables scoped by `.tee-editorial`.
  */
 
 export type HeroKind =
@@ -70,15 +66,17 @@ export function HeroLandscape({
   )
 }
 
-const FLAG = 'var(--accent)'
+const FLAG = 'var(--tee-flag, var(--accent))'
 const INK = 'var(--ink)'
-const INK_2 = 'var(--ink-2)'
-const INK_3 = 'var(--ink-3)'
-const INK_4 = 'var(--ink-4)'
+const INK_2 = 'var(--tee-grass-2, var(--ink-2))'
+const INK_3 = 'var(--tee-grass, var(--ink-3))'
+const INK_4 = 'var(--tee-sand, var(--ink-4))'
 const SURFACE = 'var(--surface-solid)'
-const BG = 'var(--bg)'
-const BG_2 = 'var(--bg-2)'
+const BG = 'var(--tee-sky-2, var(--bg))'
+const BG_2 = 'var(--tee-sky, var(--bg-2))'
 const LINE = 'var(--line-strong)'
+const WATER = 'var(--tee-water, var(--ink-4))'
+const WATER_2 = 'var(--tee-water-2, var(--ink-3))'
 
 function Sky({ id }: { id: string }) {
   return (
@@ -140,8 +138,8 @@ function LinksHero() {
       <defs>
         <Sky id="hero-lk-sky" />
         <linearGradient id="hero-lk-sea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={INK_3} stopOpacity="0.55" />
-          <stop offset="1" stopColor={INK_4} stopOpacity="0.45" />
+          <stop offset="0" stopColor={WATER_2} />
+          <stop offset="1" stopColor={WATER} />
         </linearGradient>
       </defs>
       <rect width={W} height={H} fill="url(#hero-lk-sky)" />
@@ -187,8 +185,8 @@ function ChampionshipHero() {
           <stop offset="1" stopColor={INK_4} stopOpacity="0.35" />
         </linearGradient>
         <radialGradient id="hero-ch-lake" cx="0.5" cy="0.5" r="0.7">
-          <stop offset="0" stopColor={INK_3} stopOpacity="0.6" />
-          <stop offset="1" stopColor={INK_4} stopOpacity="0.4" />
+          <stop offset="0" stopColor={WATER_2} />
+          <stop offset="1" stopColor={WATER} />
         </radialGradient>
       </defs>
       <rect width={W} height={H} fill="url(#hero-ch-sky)" />
@@ -227,8 +225,8 @@ function LakesideHero() {
       <defs>
         <Sky id="hero-lks-sky" />
         <linearGradient id="hero-lks-water" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={INK_3} stopOpacity="0.6" />
-          <stop offset="1" stopColor={INK_4} stopOpacity="0.55" />
+          <stop offset="0" stopColor={WATER_2} />
+          <stop offset="1" stopColor={WATER} />
         </linearGradient>
       </defs>
       <rect width={W} height={H} fill="url(#hero-lks-sky)" />
@@ -343,8 +341,8 @@ function FjordHero() {
         <Sky id="hero-fj-sky" />
       </defs>
       <rect width={W} height={H} fill="url(#hero-fj-sky)" />
-      <polygon points="0,160 60,90 120,130 200,70 280,110 360,80 400,110 400,160" fill={INK_4} opacity="0.7" />
-      <rect x="0" y="155" width={W} height="40" fill={INK_3} opacity="0.45" />
+      <polygon points="0,160 60,90 120,130 200,70 280,110 360,80 400,110 400,160" fill={WATER} opacity="0.7" />
+      <rect x="0" y="155" width={W} height="40" fill={WATER_2} opacity="0.55" />
       {[170, 180, 190].map((y, i) => (
         <line
           key={i}

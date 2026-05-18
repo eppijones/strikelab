@@ -831,6 +831,24 @@ class PersistenceManager: ObservableObject {
         currentRound = nil
         return round
     }
+
+    /// Single live-round commit path for score, guest score, hole, and pin
+    /// updates. Keeps disk, watch context, and backend live sync aligned.
+    func commitCurrentRound(
+        _ mutate: (inout Round) -> Void,
+        connectivity: WatchConnectivityManager? = nil,
+        syncNow: Bool = false
+    ) {
+        guard var round = currentRound else { return }
+        mutate(&round)
+        currentRound = round
+        connectivity?.sendRoundConfig(round)
+        if syncNow {
+            RoundLiveSync.syncNow(round: round, persistence: self)
+        } else {
+            RoundLiveSync.schedule(round: round, persistence: self)
+        }
+    }
     
     /// Discard the current round without saving
     func discardCurrentRound() {

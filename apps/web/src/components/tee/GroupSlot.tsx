@@ -23,7 +23,7 @@ export function GroupSlot({ index, player, onAdd, onRemove, isLast }: Props) {
   return (
     <div
       className={clsx(
-        'flex items-center gap-3 px-3.5 py-3',
+        'flex items-center gap-3 px-3.5 py-3 tee-editorial:px-4 tee-editorial:py-4',
         !isLast && 'border-b border-line-strong',
       )}
     >
@@ -31,10 +31,10 @@ export function GroupSlot({ index, player, onAdd, onRemove, isLast }: Props) {
         className={clsx(
           'w-9 h-9 flex items-center justify-center text-[13px] mono uppercase tracking-micro-tight',
           empty
-            ? 'border border-dashed border-line-strong text-ink-3'
+            ? 'border border-dashed border-line-strong text-ink-3 tee-editorial:rounded-full'
             : player.is_you
-            ? 'bg-accent text-accent-ink'
-            : 'bg-surface-2 text-ink-2 border border-line-strong',
+            ? 'bg-accent text-accent-ink tee-editorial:rounded-full'
+            : 'bg-surface-2 text-ink-2 border border-line-strong tee-editorial:rounded-full',
         )}
       >
         {empty ? '+' : player.initials}
@@ -53,7 +53,7 @@ export function GroupSlot({ index, player, onAdd, onRemove, isLast }: Props) {
             <div className="text-[14px] text-ink truncate flex items-center gap-2">
               {player.name}
               {player.is_you && (
-                <span className="mono text-[9px] uppercase tracking-micro bg-accent text-accent-ink px-1 py-0.5">
+                <span className="mono text-[9px] uppercase tracking-micro bg-accent text-accent-ink px-1 py-0.5 tee-editorial:rounded-pill tee-editorial:px-2">
                   {t('tee.you')}
                 </span>
               )}

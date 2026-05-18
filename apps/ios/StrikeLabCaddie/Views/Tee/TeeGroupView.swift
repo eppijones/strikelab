@@ -10,8 +10,7 @@ import SwiftUI
 
 struct TeeGroupView: View {
     @EnvironmentObject var nav: TeeNavigation
-    let holdId: UUID
-    let courseId: UUID?
+    let hold: TeeHoldResponse
 
     @State private var participants: [Participant] = []
     @State private var playmates: [TeePlaymate] = []
@@ -30,6 +29,7 @@ struct TeeGroupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                holdPanel
 
                 // 4 player slots
                 VStack(spacing: 0) {
@@ -82,7 +82,7 @@ struct TeeGroupView: View {
 
                 // Continue
                 Button {
-                    nav.push(.pay(holdId: holdId, courseId: courseId))
+                    nav.push(.pay(hold: hold, splitMode: splitMode))
                 } label: {
                     Text("CONTINUE TO PAY →")
                         .font(.system(size: 12, weight: .semibold, design: .monospaced))
@@ -104,11 +104,30 @@ struct TeeGroupView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            TeeMicroLabel(text: "2 / 3")
+            HStack(spacing: 8) {
+                TeeMicroLabel(text: "2 / 3")
+                BetaBadge()
+            }
             Text("Who's in?")
                 .font(.system(size: 32, weight: .medium))
                 .foregroundColor(Theme.ink)
                 .kerning(-1)
+        }
+    }
+
+    private var holdPanel: some View {
+        SLPanel(id: "Hold", title: hold.courseName, trailing: hold.status) {
+            HStack(alignment: .firstTextBaseline) {
+                SLMetric(label: "Tee time", value: hhmm(hold.teeTime), tint: Theme.accent)
+                Spacer()
+                SLMetric(label: "Players", value: "\(hold.players)", unit: "held")
+                Spacer()
+                SLMetric(
+                    label: "Total",
+                    value: "\(Int((hold.totalAmount ?? 0).rounded()))",
+                    unit: hold.currency
+                )
+            }
         }
     }
 
@@ -178,6 +197,12 @@ struct TeeGroupView: View {
 
     private func initials(_ s: String) -> String {
         s.split(separator: " ").prefix(2).compactMap { $0.first }.map(String.init).joined().uppercased()
+    }
+
+    private func hhmm(_ d: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f.string(from: d)
     }
 
     private func addPlaymate(_ p: TeePlaymate) {

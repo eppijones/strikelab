@@ -44,7 +44,7 @@ export function PassCard({ pass, compact }: Props) {
   const kind = KIND_MAP[pass.course_type ?? ''] ?? 'parkland'
 
   return (
-    <div className="bg-surface-solid border border-line-strong rounded-[2px] overflow-hidden relative">
+    <div className="tee-card overflow-hidden relative">
       <div className="relative" style={{ height: compact ? 60 : 100 }}>
         <HeroLandscape kind={kind} height={compact ? 60 : 100} />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-bg-2/80" />
@@ -57,7 +57,7 @@ export function PassCard({ pass, compact }: Props) {
       </div>
 
       <div className="px-4 pt-3">
-        <div className="display text-[24px] m-0">{pass.course_name}</div>
+          <div className="display text-[30px] m-0">{pass.course_name}</div>
         <div className="mt-3 py-3 border-t border-b border-line-strong flex items-baseline justify-between gap-4">
           <div>
             <div className="micro">{t('tee.yourTeeTime')}</div>
@@ -89,6 +89,7 @@ export function PassCard({ pass, compact }: Props) {
                     color: p.is_you ? 'var(--accent-ink)' : 'var(--ink)',
                     border: '2px solid var(--surface-solid)',
                     marginLeft: i === 0 ? 0 : -8,
+                    borderRadius: 999,
                   }}
                 >
                   {p.initials}

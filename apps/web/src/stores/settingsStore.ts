@@ -41,7 +41,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set, get) => ({
       language: detectInitialLanguage(),
       units: 'yards',
-      theme: 'dark',
+      theme: 'light',
       sidebarCollapsed: false,
 
       setLanguage: (language) => {
@@ -73,7 +73,7 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'strikelab-settings',
       onRehydrateStorage: () => (state) => {
-        applyTheme(state?.theme ?? 'dark')
+        applyTheme(state?.theme ?? 'light')
       },
     },
   ),

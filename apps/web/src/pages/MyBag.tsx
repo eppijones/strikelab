@@ -14,80 +14,113 @@ import { Panel, Tag, Stat } from '@/components/ui'
 import { BagClubHeader, BagClubRow } from '@/components/bag/BagClubRow'
 import { ClubEditorDrawer } from '@/components/bag/ClubEditorDrawer'
 
-const PRESETS: Array<{ id: string; title: string; body: string; clubs: QuickAddClubData[] }> = [
+const GENERIC_BRAND_ID = 'generic'
+
+interface ClubChoice {
+  type: string
+  label: string
+}
+
+const STARTER_LABELS = [
+  'Driver',
+  '5W',
+  '4H',
+  '5H',
+  '6i',
+  '7i',
+  '8i',
+  '9i',
+  'PW',
+  '50°',
+  '56°',
+  'Putter',
+]
+
+const PLAYER_LABELS = [
+  'Driver',
+  '3W',
+  '4i',
+  '5i',
+  '6i',
+  '7i',
+  '8i',
+  '9i',
+  'PW',
+  '50°',
+  '54°',
+  '58°',
+  'Putter',
+]
+
+const CLUB_GROUPS: Array<{ title: string; helper: string; clubs: ClubChoice[] }> = [
   {
-    id: 'classic',
-    title: 'Classic 12',
-    body: 'Driver, 5W, 5i-PW, 52/56, putter. A calm starting point for most golfers.',
+    title: 'Woods',
+    helper: 'Start at the top of the bag.',
     clubs: [
-      ['driver', 'Driver'],
-      ['5_wood', '5W'],
-      ['iron', '5i'],
-      ['iron', '6i'],
-      ['iron', '7i'],
-      ['iron', '8i'],
-      ['iron', '9i'],
-      ['iron', 'PW'],
-      ['wedge', '52°'],
-      ['wedge', '56°'],
-      ['putter', 'Putter'],
-    ].map(([club_type, club_label]) => ({
-      club_type,
-      club_label,
-      brand_id: 'titleist',
-      model_name: club_label,
-    })),
+      { type: 'driver', label: 'Driver' },
+      { type: '3_wood', label: '3W' },
+      { type: '5_wood', label: '5W' },
+      { type: '7_wood', label: '7W' },
+    ],
   },
   {
-    id: 'friendly',
-    title: 'Easy Launch',
-    body: 'Driver, 7W, hybrids, 6i-PW, 50/56, putter. Built for launch and forgiveness.',
+    title: 'Hybrids',
+    helper: 'Use these instead of long irons if they are easier to hit.',
     clubs: [
-      ['driver', 'Driver'],
-      ['7_wood', '7W'],
-      ['hybrid', '4H'],
-      ['hybrid', '5H'],
-      ['iron', '6i'],
-      ['iron', '7i'],
-      ['iron', '8i'],
-      ['iron', '9i'],
-      ['iron', 'PW'],
-      ['wedge', '50°'],
-      ['wedge', '56°'],
-      ['putter', 'Putter'],
-    ].map(([club_type, club_label]) => ({
-      club_type,
-      club_label,
-      brand_id: 'ping',
-      model_name: club_label,
-    })),
+      { type: 'hybrid', label: '3H' },
+      { type: 'hybrid', label: '4H' },
+      { type: 'hybrid', label: '5H' },
+      { type: 'utility', label: 'Utility' },
+    ],
   },
   {
-    id: 'player',
-    title: 'Player 14',
-    body: 'Driver, 3W, 4i-PW, 50/54/58, putter. For golfers who know the gaps.',
+    title: 'Irons',
+    helper: 'Most golfers can start from 6i through pitching wedge.',
     clubs: [
-      ['driver', 'Driver'],
-      ['3_wood', '3W'],
-      ['iron', '4i'],
-      ['iron', '5i'],
-      ['iron', '6i'],
-      ['iron', '7i'],
-      ['iron', '8i'],
-      ['iron', '9i'],
-      ['iron', 'PW'],
-      ['wedge', '50°'],
-      ['wedge', '54°'],
-      ['wedge', '58°'],
-      ['putter', 'Putter'],
-    ].map(([club_type, club_label]) => ({
-      club_type,
-      club_label,
-      brand_id: 'taylormade',
-      model_name: club_label,
-    })),
+      { type: 'iron', label: '4i' },
+      { type: 'iron', label: '5i' },
+      { type: 'iron', label: '6i' },
+      { type: 'iron', label: '7i' },
+      { type: 'iron', label: '8i' },
+      { type: 'iron', label: '9i' },
+      { type: 'iron', label: 'PW' },
+    ],
+  },
+  {
+    title: 'Wedges',
+    helper: 'Pick the lofts stamped on your wedges.',
+    clubs: [
+      { type: 'wedge', label: '48°' },
+      { type: 'wedge', label: '50°' },
+      { type: 'wedge', label: '52°' },
+      { type: 'wedge', label: '54°' },
+      { type: 'wedge', label: '56°' },
+      { type: 'wedge', label: '58°' },
+      { type: 'wedge', label: '60°' },
+    ],
+  },
+  {
+    title: 'Putter',
+    helper: 'One putter is enough.',
+    clubs: [{ type: 'putter', label: 'Putter' }],
   },
 ]
+
+const ALL_CLUB_CHOICES = CLUB_GROUPS.flatMap((group) => group.clubs)
+
+function clubsForLabels(labels: string[]): QuickAddClubData[] {
+  return labels.flatMap((label) => {
+    const choice = ALL_CLUB_CHOICES.find((club) => club.label === label)
+    if (!choice) return []
+
+    return {
+      club_type: choice.type,
+      club_label: choice.label,
+      brand_id: GENERIC_BRAND_ID,
+      model_name: choice.label,
+    }
+  })
+}
 
 export default function MyBag() {
   useTranslation()
@@ -103,6 +136,7 @@ export default function MyBag() {
   const [bagName, setBagName] = useState('')
   const [ballBrand, setBallBrand] = useState('')
   const [ballModel, setBallModel] = useState('')
+  const [selectedLabels, setSelectedLabels] = useState<string[]>(STARTER_LABELS)
 
   if (isLoading)
     return <div className="mono text-[11px] text-ink-3">LOADING BAG…</div>
@@ -149,15 +183,33 @@ export default function MyBag() {
     setEditingHeader(false)
   }
 
-  const applyPreset = async (preset: (typeof PRESETS)[number]) => {
+  const toggleSetupClub = (label: string) => {
+    setSelectedLabels((current) =>
+      current.includes(label)
+        ? current.filter((item) => item !== label)
+        : current.length >= 14
+        ? current
+        : [...current, label]
+    )
+  }
+
+  const applyLabels = async (nextLabels: string[]) => {
+    setSelectedLabels(nextLabels.slice(0, 14))
+  }
+
+  const addSelectedClubs = async () => {
     const used = new Set(labels.map((l) => l.toLowerCase()))
     const openSlots = Math.max(0, 14 - clubs.length)
-    const next = preset.clubs
+    const next = clubsForLabels(selectedLabels)
       .filter((club) => !used.has(club.club_label.toLowerCase()))
       .slice(0, openSlots)
     if (next.length === 0) return
     await quickAdd.mutateAsync(next)
   }
+
+  const addableSelectedCount = clubsForLabels(selectedLabels).filter(
+    (club) => !labels.some((label) => label.toLowerCase() === club.club_label.toLowerCase())
+  ).length
 
   return (
     <div className="space-y-6">
@@ -179,7 +231,7 @@ export default function MyBag() {
             disabled={clubs.length >= 14}
             className="mt-3 mono text-[10px] text-accent-fg uppercase tracking-micro hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
           >
-            {clubs.length >= 14 ? 'BAG FULL' : '+ ADD CLUB →'}
+            {clubs.length >= 14 ? 'BAG FULL' : '+ ADD ONE CLUB →'}
           </button>
         </Panel>
 
@@ -262,28 +314,92 @@ export default function MyBag() {
       </div>
 
       {clubs.length < 14 && (
-        <Panel id="SETUP" title="FAST SETUP">
-          <div className="grid lg:grid-cols-[0.8fr_1.2fr] gap-5">
+        <Panel id="SETUP" title="SET UP YOUR BAG">
+          <div className="grid lg:grid-cols-[0.75fr_1.25fr] gap-5">
             <div>
               <div className="display text-[28px]">
-                Build it in <em>five minutes.</em>
+                Pick the clubs you <em>carry.</em>
               </div>
               <p className="text-body text-ink-2 mt-2">
-                Start from a common bag, then edit labels, brands, models, lofts, and shafts when you care. You can always add a 4W, 7W, extra wedge, or custom club.
+                No brand logos, model search, or spec sheet required. Select the clubs in
+                your bag now; add brand, loft, lie, shaft, grip, or notes later only if
+                you care.
               </p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-3">
-              {PRESETS.map((preset) => (
+              <div className="flex flex-wrap gap-2 mt-4">
                 <button
-                  key={preset.id}
                   type="button"
-                  onClick={() => void applyPreset(preset)}
-                  disabled={quickAdd.isPending}
-                  className="text-left border border-line-strong p-4 hover:border-accent-fg hover:bg-bg-2 disabled:opacity-50"
+                  onClick={() => void applyLabels(STARTER_LABELS)}
+                  className="border border-line-strong px-3 py-2 mono text-[10px] uppercase tracking-micro text-ink-2 hover:border-accent-fg hover:text-accent-fg"
                 >
-                  <div className="mono text-[10px] text-accent-fg uppercase tracking-micro">{preset.title}</div>
-                  <p className="text-[13px] text-ink-2 leading-[1.45] mt-2">{preset.body}</p>
+                  Easy starter
                 </button>
+                <button
+                  type="button"
+                  onClick={() => void applyLabels(PLAYER_LABELS)}
+                  className="border border-line-strong px-3 py-2 mono text-[10px] uppercase tracking-micro text-ink-2 hover:border-accent-fg hover:text-accent-fg"
+                >
+                  Player set
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void applyLabels([])}
+                  className="border border-line-strong px-3 py-2 mono text-[10px] uppercase tracking-micro text-ink-2 hover:border-ink-3"
+                >
+                  Clear
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => void addSelectedClubs()}
+                disabled={
+                  quickAdd.isPending ||
+                  selectedLabels.length === 0 ||
+                  addableSelectedCount === 0
+                }
+                className="mt-5 bg-accent text-accent-ink px-5 py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2 disabled:opacity-50"
+              >
+                ADD {Math.min(addableSelectedCount, 14 - clubs.length)} CLUBS →
+              </button>
+              <div className="mono text-[10px] text-ink-3 tracking-micro mt-3">
+                {selectedLabels.length}/14 selected
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-3">
+              {CLUB_GROUPS.map((group) => (
+                <div key={group.title} className="border border-line-strong p-4">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="mono text-[10px] text-accent-fg uppercase tracking-micro">
+                      {group.title}
+                    </div>
+                    <div className="text-[12px] text-ink-3">{group.helper}</div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {group.clubs.map((club) => {
+                      const selected = selectedLabels.includes(club.label)
+                      const alreadyInBag = labels.some(
+                        (label) => label.toLowerCase() === club.label.toLowerCase()
+                      )
+
+                      return (
+                        <button
+                          key={club.label}
+                          type="button"
+                          onClick={() => toggleSetupClub(club.label)}
+                          disabled={alreadyInBag}
+                          className={`px-3 py-2 border mono text-[11px] uppercase tracking-micro transition-colors ${
+                            alreadyInBag
+                              ? 'border-line text-ink-3 opacity-50 cursor-not-allowed'
+                              : selected
+                              ? 'border-accent-fg bg-accent/15 text-accent-fg'
+                              : 'border-line-strong text-ink-2 hover:border-ink-3 hover:text-ink'
+                          }`}
+                        >
+                          {club.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -299,7 +415,7 @@ export default function MyBag() {
             disabled={clubs.length >= 14}
             className="bg-accent text-accent-ink px-3 py-1.5 mono text-[10px] uppercase tracking-micro hover:bg-accent-2 disabled:opacity-50"
           >
-            + ADD CLUB
+            + ADD ONE
           </button>
         }
       >
@@ -315,7 +431,7 @@ export default function MyBag() {
               onClick={startAdd}
               className="bg-accent text-accent-ink px-5 py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2"
             >
-              ADD YOUR FIRST CLUB →
+              ADD ONE CUSTOM CLUB →
             </button>
           </div>
         ) : (

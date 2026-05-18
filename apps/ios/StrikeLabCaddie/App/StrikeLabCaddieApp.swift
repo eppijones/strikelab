@@ -379,6 +379,21 @@ struct StrikeLabCaddieApp: App {
                 }
             }
         }
+
+        connectivity.onCompleteRoundRequested = { reply in
+            Task { @MainActor in
+                guard persistence.currentRound != nil else {
+                    reply(false, "No active round on iPhone")
+                    return
+                }
+                guard let saved = persistence.completeCurrentRound() else {
+                    reply(false, "Could not save round")
+                    return
+                }
+                connectivity.sendRoundCleared()
+                reply(true, "Saved \(saved.playFormat.shortLabel) · \(saved.formattedOverUnder)")
+            }
+        }
     }
 
     /// Push the current round (or absence of one) to the watch.
@@ -446,19 +461,19 @@ struct StrikeLabCaddieApp: App {
         let persistence = persistenceManager
         connectivityManager.onScoreUpdate = { holeNumber, gross, putts in
             Task { @MainActor in
-                guard var round = persistence.currentRound else { return }
-                guard let idx = round.holes.firstIndex(where: { $0.holeNumber == holeNumber }) else { return }
-                round.holes[idx].grossStrokes = gross
-                if let putts { round.holes[idx].putts = putts }
-                round.holes[idx].recalculateNet()
-                persistence.currentRound = round
+                persistence.commitCurrentRound({ round in
+                    guard let idx = round.holes.firstIndex(where: { $0.holeNumber == holeNumber }) else { return }
+                    round.holes[idx].grossStrokes = gross
+                    if let putts { round.holes[idx].putts = putts }
+                    round.holes[idx].recalculateNet()
+                }, connectivity: connectivityManager)
             }
         }
         connectivityManager.onHoleChanged = { holeNumber in
             Task { @MainActor in
-                guard var round = persistence.currentRound else { return }
-                round.currentHoleNumber = holeNumber
-                persistence.currentRound = round
+                persistence.commitCurrentRound({ round in
+                    round.currentHoleNumber = holeNumber
+                }, connectivity: connectivityManager)
             }
         }
 
@@ -468,14 +483,13 @@ struct StrikeLabCaddieApp: App {
             queue: .main
         ) { note in
             Task { @MainActor in
-                guard var round = persistence.currentRound,
-                      let rawPlayerId = note.userInfo?["playerId"] as? String,
+                guard let rawPlayerId = note.userInfo?["playerId"] as? String,
                       let playerId = UUID(uuidString: rawPlayerId),
                       let holeNumber = note.userInfo?["holeNumber"] as? Int,
                       let gross = note.userInfo?["grossStrokes"] as? Int else { return }
-                round.updateGroupScore(playerId: playerId, holeNumber: holeNumber, grossStrokes: gross)
-                persistence.currentRound = round
-                connectivityManager.sendRoundConfig(round)
+                persistence.commitCurrentRound({ round in
+                    round.updateGroupScore(playerId: playerId, holeNumber: holeNumber, grossStrokes: gross)
+                }, connectivity: connectivityManager)
             }
         }
     }
@@ -501,6 +515,8 @@ struct StrikeLabCaddieApp: App {
 struct ContentView: View {
     @EnvironmentObject var persistenceManager: PersistenceManager
     @State private var selectedTab = 0
+    @State private var teeDeepLinkBookingId: UUID?
+    @State private var teeStartRoundRequest: TeeStartRoundRequest?
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -516,11 +532,13 @@ struct ContentView: View {
             }
             .tag(0)
             
-            TeeRootView()
-                .tabItem {
-                    Label("Tee", systemImage: "calendar.badge.clock")
-                }
-                .tag(1)
+            if ReleasePolicy.allowsTeeCheckout {
+                TeeRootView(openBookingId: $teeDeepLinkBookingId)
+                    .tabItem {
+                        Label("Tee Beta", systemImage: "calendar.badge.clock")
+                    }
+                    .tag(1)
+            }
 
             NavigationStack {
                 PracticeView()
@@ -528,7 +546,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Practice", systemImage: "figure.golf")
             }
-            .tag(2)
+            .tag(ReleasePolicy.allowsTeeCheckout ? 2 : 1)
             
             NavigationStack {
                 if let round = persistenceManager.currentRound {
@@ -543,7 +561,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Scorecard", systemImage: "list.number")
             }
-            .tag(3)
+            .tag(ReleasePolicy.allowsTeeCheckout ? 3 : 2)
             
             NavigationStack {
                 PlayerProfileView()
@@ -552,11 +570,35 @@ struct ContentView: View {
             .tabItem {
                 Label("Profile", systemImage: "person.fill")
             }
-            .tag(4)
+            .tag(ReleasePolicy.allowsTeeCheckout ? 4 : 3)
         }
         .tint(Theme.accent)
         .onAppear {
             configureChromeAppearance()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openTeePass)) { note in
+            guard ReleasePolicy.allowsTeeCheckout,
+                  let raw = note.userInfo?["bookingId"] as? String,
+                  let bookingId = UUID(uuidString: raw) else { return }
+            teeDeepLinkBookingId = bookingId
+            selectedTab = 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .startRoundFromPass)) { note in
+            let rawCourseId = note.userInfo?["courseId"] as? String
+            let courseId = rawCourseId.flatMap(UUID.init(uuidString:))
+            let teeTime = note.userInfo?["teeTime"] as? Date
+            teeStartRoundRequest = TeeStartRoundRequest(courseId: courseId, teeTime: teeTime)
+            selectedTab = 0
+        }
+        .alert(item: $teeStartRoundRequest) { request in
+            Alert(
+                title: Text("Start round from Tee Beta?"),
+                message: Text(request.message),
+                primaryButton: .default(Text("Open Round tab")) {
+                    selectedTab = 0
+                },
+                secondaryButton: .cancel()
+            )
         }
     }
 
@@ -597,6 +639,24 @@ struct ContentView: View {
         UINavigationBar.appearance().scrollEdgeAppearance = nav
         UINavigationBar.appearance().compactAppearance = nav
         UINavigationBar.appearance().tintColor = UIColor(Theme.accent)
+    }
+}
+
+private struct TeeStartRoundRequest: Identifiable {
+    let id = UUID()
+    let courseId: UUID?
+    let teeTime: Date?
+
+    var message: String {
+        let timeText: String
+        if let teeTime {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "EEE d MMM · HH:mm"
+            timeText = formatter.string(from: teeTime)
+        } else {
+            timeText = "your booked tee time"
+        }
+        return "Tee Beta can hand off to the Round tab for \(timeText). Pick the matching course there to keep local scoring data accurate."
     }
 }
 

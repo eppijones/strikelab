@@ -58,6 +58,16 @@ def _sources_for_course(db: Session, course: Course, geometry: CourseGeometry | 
     return [attr for source_id in ids if (attr := _source_to_attr(by_id.get(source_id)))]
 
 
+def _ensure_norway_catalog_seeded(db: Session) -> None:
+    norway_courses = db.query(func.count(Course.id)).filter(Course.country_code == "NO").scalar() or 0
+    if norway_courses:
+        return
+
+    from app.seed.catalog import seed_catalog
+
+    seed_catalog(db)
+
+
 def _sources_for_conditions(db: Session, source: str | None, *, has_daylight: bool = True) -> list[PublicAttribution]:
     ids: list[str] = []
     source_id = {
@@ -166,6 +176,7 @@ def _course_to_public(db: Session, course: Course, geometry: CourseGeometry | No
 
 
 def _catalog_provider_search(db: Session, q: str, limit: int) -> list[PublicCourseResponse]:
+    _ensure_norway_catalog_seeded(db)
     like = f"%{q}%"
     rows = (
         db.query(Course)
@@ -364,6 +375,7 @@ def golfcourseapi_import(provider_id: str, response: Response, db: Session = Dep
 @router.get("/health")
 def public_health(response: Response, db: Session = Depends(get_db)):
     _cache(response, 60)
+    _ensure_norway_catalog_seeded(db)
     sources = db.query(func.count(DataSource.id)).scalar() or 0
     norway_courses = db.query(func.count(Course.id)).filter(Course.country_code == "NO").scalar() or 0
     geometries = db.query(func.count(CourseGeometry.id)).scalar() or 0
@@ -405,6 +417,8 @@ def list_courses(
     db: Session = Depends(get_db),
 ):
     _cache(response)
+    if country_code in {None, "NO"}:
+        _ensure_norway_catalog_seeded(db)
     query = db.query(Course)
     if verified_only:
         query = query.filter(Course.is_verified.is_(True))

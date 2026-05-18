@@ -11,13 +11,12 @@ import PassKit
 
 struct TeePayView: View {
     @EnvironmentObject var nav: TeeNavigation
-    let holdId: UUID
-    let courseId: UUID?
+    let hold: TeeHoldResponse
+    let splitMode: String
 
     @State private var method: PayMethod = .vipps
     @State private var inFlight = false
     @State private var error: String?
-    @State private var holdSummary: TeeHoldResponse?
 
     enum PayMethod: String, Hashable {
         case vipps, applePay = "apple_pay", card
@@ -27,6 +26,7 @@ struct TeePayView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                betaDisclosure
                 receiptCard
                 methodPicker
                 payCTA
@@ -53,25 +53,38 @@ struct TeePayView: View {
         }
     }
 
+    private var betaDisclosure: some View {
+        HStack(alignment: .top, spacing: 10) {
+            BetaBadge()
+            Text(ReleasePolicy.teeBetaDisclosure)
+                .font(Theme.labelFont(10))
+                .tracking(1.1)
+                .foregroundColor(Theme.warn)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.warn.opacity(0.08))
+        .overlay(Rectangle().stroke(Theme.warn.opacity(0.5), lineWidth: 1))
+    }
+
     private var receiptCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             TeeMicroLabel(text: "RECEIPT")
             HStack(alignment: .firstTextBaseline) {
-                Text(holdSummary?.courseName ?? "Tee")
+                Text(hold.courseName)
                     .font(.system(size: 16, weight: .medium))
                 Spacer()
-                if let t = holdSummary?.teeTime {
-                    Text(format(t))
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(Theme.ink3)
-                }
+                Text(format(hold.teeTime))
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(Theme.ink3)
             }
             Divider().background(Theme.lineStrong)
             HStack {
-                Text("\(holdSummary?.players ?? 1) × \(Int((holdSummary?.priceAmount ?? 0).rounded())) kr")
+                Text("\(hold.players) × \(Int((hold.priceAmount ?? 0).rounded())) kr")
                     .font(.system(size: 12, design: .monospaced))
                 Spacer()
-                Text("\(Int(((holdSummary?.priceAmount ?? 0) * Double(holdSummary?.players ?? 1)).rounded())) kr")
+                Text("\(Int((hold.totalAmount ?? ((hold.priceAmount ?? 0) * Double(hold.players))).rounded())) kr")
                     .font(.system(size: 12, design: .monospaced))
             }
             HStack {
@@ -148,11 +161,11 @@ struct TeePayView: View {
     }
 
     private var payLabel: String {
-        let total = (holdSummary?.priceAmount ?? 0) * Double(holdSummary?.players ?? 1)
+        let total = hold.totalAmount ?? ((hold.priceAmount ?? 0) * Double(hold.players))
         switch method {
-        case .vipps: return "PAY WITH VIPPS · \(Int(total.rounded())) kr →"
-        case .applePay: return " PAY · \(Int(total.rounded())) kr →"
-        case .card: return "PAY \(Int(total.rounded())) kr →"
+        case .vipps: return "SIMULATE VIPPS · \(Int(total.rounded())) kr →"
+        case .applePay: return "SIMULATE APPLE PAY · \(Int(total.rounded())) kr →"
+        case .card: return "SIMULATE CARD · \(Int(total.rounded())) kr →"
         }
     }
 
@@ -174,16 +187,16 @@ struct TeePayView: View {
                 }
             }
             let payload = TeeConfirmRequest(
-                holdId: holdId,
+                holdId: hold.id,
                 paymentMethod: method.rawValue,
-                paymentToken: nil,
-                splitMode: "together",
-                notes: nil
+                paymentToken: "beta_stub",
+                splitMode: splitMode,
+                notes: "StrikeLab Tee Beta internal/stubbed checkout"
             )
             let resp = try await TeeAPIClient.shared.confirm(payload)
             nav.push(.pass(bookingId: resp.bookingId))
         } catch {
-            self.error = "\(error)"
+            self.error = TeeUserFacingError.message(for: error)
         }
     }
 

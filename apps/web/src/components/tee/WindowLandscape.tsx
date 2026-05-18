@@ -65,9 +65,9 @@ export function WindowLandscape({
       : null
 
   return (
-    <div className="relative panel p-3">
+    <div className="relative panel p-4">
       <div className="flex items-baseline justify-between mb-2 px-1">
-        <div className="text-[14px] text-ink">
+        <div className="display text-[22px] text-ink">
           <em className="serif">The day as landscape</em>
         </div>
         <div className="micro">WIND ↗ SUN</div>
@@ -189,7 +189,7 @@ export function WindowLandscape({
                 onClick={() => !blocked && onSelect(slot)}
                 disabled={blocked}
                 className={clsx(
-                  'absolute left-0 right-0 h-[22px] px-2 flex items-center justify-between rounded-[2px] mono text-[10.5px] transition-colors',
+                'absolute left-0 right-0 h-[24px] px-2.5 flex items-center justify-between rounded-pill mono text-[10.5px] transition-colors',
                   isSel
                     ? 'bg-accent text-accent-ink border border-accent'
                     : blocked

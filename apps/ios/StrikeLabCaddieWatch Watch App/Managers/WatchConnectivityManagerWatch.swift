@@ -29,6 +29,7 @@ class WatchConnectivityManagerWatch: NSObject, ObservableObject {
     @Published var roundStartedAt: Date?
     @Published var roundElapsedSeconds: TimeInterval?
     @Published var roundElapsedSyncedAt: Date?
+    @Published var completeRoundStatus: WatchCompleteRoundStatus = .idle
 
     /// Next upcoming StrikeLab Tee booking — pushed from the iPhone via
     /// WCSession application context whenever the user books a round.
@@ -72,6 +73,8 @@ class WatchConnectivityManagerWatch: NSObject, ObservableObject {
     @Published var caddieConfidence: Double? = nil
     @Published var caddieWindMph: Double? = nil
     @Published var caddieWindDirectionDeg: Double? = nil
+    @Published var caddieGpsStatus: String = ""
+    @Published var caddieDistanceLabel: String = ""
 
     /// API config mirrored from the phone via application context. Not
     /// used directly by the watch today — kept so a future direct-API
@@ -895,6 +898,27 @@ class WatchConnectivityManagerWatch: NSObject, ObservableObject {
             session.transferUserInfo(message)
         }
     }
+
+    func requestCompleteRound() {
+        guard let session = session else {
+            completeRoundStatus = .failed("Open iPhone to save")
+            return
+        }
+        completeRoundStatus = .pending
+        let message: [String: Any] = ["completeRound": true]
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { [weak self] _ in
+                Task { @MainActor in
+                    self?.session?.transferUserInfo(message)
+                    self?.completeRoundStatus = .pending
+                }
+            }
+        } else if session.activationState == .activated {
+            session.transferUserInfo(message)
+        } else {
+            completeRoundStatus = .failed("Open iPhone to save")
+        }
+    }
 }
 
 // MARK: - WCSessionDelegate
@@ -909,6 +933,7 @@ extension WatchConnectivityManagerWatch: WCSessionDelegate {
             } else {
                 isPhoneReachable = session.isReachable
                 applyUnitsContext(initialContext)
+                applyNextTeeBooking(initialContext)
                 // Retry any pending-ended sessions and queued shots that
                 // survived the last app run.
                 flushPendingEndedSessions()
@@ -1085,6 +1110,8 @@ extension WatchConnectivityManagerWatch: WCSessionDelegate {
         else if let v = ctx["caddieWindMph"] as? Int { caddieWindMph = Double(v) }
         if let v = ctx["caddieWindDirectionDeg"] as? Double { caddieWindDirectionDeg = v }
         else if let v = ctx["caddieWindDirectionDeg"] as? Int { caddieWindDirectionDeg = Double(v) }
+        if let v = ctx["caddieGpsStatus"] as? String { caddieGpsStatus = v } else { caddieGpsStatus = "" }
+        if let v = ctx["caddieDistanceLabel"] as? String { caddieDistanceLabel = v } else { caddieDistanceLabel = "" }
 
         if let url = ctx["apiBaseURL"] as? String, !url.isEmpty {
             apiBaseURL = url
@@ -1246,7 +1273,31 @@ extension WatchConnectivityManagerWatch: WCSessionDelegate {
            let id = UUID(uuidString: raw) {
             acknowledgeEnhancedShot(id: id)
         }
+
+        if message["completeRoundAck"] as? Bool == true {
+            let detail = message["detail"] as? String
+            if message["success"] as? Bool == true {
+                completeRoundStatus = .completed(detail ?? "Round saved")
+                isRoundActive = false
+                recentShots.removeAll()
+                holes = WatchHoleState.defaultEighteen()
+                lastRoundId = nil
+                currentHoleNumber = 1
+                roundStartedAt = nil
+                roundElapsedSeconds = nil
+                roundElapsedSyncedAt = nil
+            } else {
+                completeRoundStatus = .failed(detail ?? "Open iPhone to save")
+            }
+        }
     }
+}
+
+enum WatchCompleteRoundStatus: Equatable {
+    case idle
+    case pending
+    case completed(String)
+    case failed(String)
 }
 
 // MARK: - Watch-side Range Session

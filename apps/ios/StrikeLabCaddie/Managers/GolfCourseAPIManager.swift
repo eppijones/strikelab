@@ -231,8 +231,9 @@ class GolfCourseAPIManager: ObservableObject {
         async let provider = try api.golfCourseAPISearch(query: query)
 
         let catalogResults = (await catalog ?? []).map { APISearchResult(publicCourse: $0) }
+        let bundledResults = Self.bundledNorwayResults(matching: query)
         let providerResults = try await provider.courses.map { APISearchResult(publicCourse: $0) }
-        return Self.mergeSearchResults(catalogResults + providerResults)
+        return Self.mergeSearchResults(catalogResults + bundledResults + providerResults)
     }
 
     private static func mergeSearchResults(_ results: [APISearchResult]) -> [APISearchResult] {
@@ -247,6 +248,17 @@ class GolfCourseAPIManager: ObservableObject {
             merged.append(result)
         }
         return merged
+    }
+
+    private static func bundledNorwayResults(matching query: String) -> [APISearchResult] {
+        let needle = query.normalizedCourseSearchToken
+        guard needle.count >= 2 else { return [] }
+        return CourseData.allCourses
+            .filter { course in
+                course.location.localizedCaseInsensitiveContains("Norway")
+                    && "\(course.name) \(course.location)".normalizedCourseSearchToken.contains(needle)
+            }
+            .map { APISearchResult(course: $0) }
     }
     
     // MARK: - Course Details
@@ -297,6 +309,9 @@ class GolfCourseAPIManager: ObservableObject {
     func getCourseDetails(for result: APISearchResult) async throws -> APICourseDetails {
         if let publicCourse = result.publicCourse, !result.isProviderBacked {
             return APICourseDetails(publicCourse: publicCourse)
+        }
+        if let courseId = result.courseId, let course = CourseData.allCourses.first(where: { $0.id == courseId }) {
+            return APICourseDetails(course: course)
         }
         if result.isProviderBacked, result.id > 0 {
             return try await getCourseDetails(id: result.id)
@@ -368,7 +383,7 @@ class GolfCourseAPIManager: ObservableObject {
             location: locationString,
             holes: holes,
             tees: tees,
-            apiCourseId: details.id,
+            apiCourseId: details.id > 0 ? details.id : nil,
             latitude: details.location?.latitude,
             longitude: details.location?.longitude,
             isCustom: false
@@ -412,6 +427,22 @@ class GolfCourseAPIManager: ObservableObject {
 }
 
 private extension APISearchResult {
+    init(course: Course) {
+        self.id = 0
+        self.courseId = course.id
+        self.publicCourse = nil
+        self.club_name = course.name
+        self.course_name = course.name
+        self.location = APILocation(
+            address: course.location,
+            city: nil,
+            state: nil,
+            country: course.location.localizedCaseInsensitiveContains("Norway") ? "Norway" : nil,
+            latitude: course.latitude,
+            longitude: course.longitude
+        )
+    }
+
     init(publicCourse: PublicCourse) {
         self.id = publicCourse.apiImportId
         self.courseId = publicCourse.id
@@ -430,6 +461,42 @@ private extension APISearchResult {
 }
 
 private extension APICourseDetails {
+    init(course: Course) {
+        let apiHoles = course.holes.map {
+            APIHole(par: $0.par, yardage: nil, handicap: $0.handicapIndex)
+        }
+        let apiTees = course.tees.map {
+            APITeeBox(
+                tee_name: $0.name,
+                course_rating: $0.courseRating,
+                slope_rating: $0.slope,
+                bogey_rating: nil,
+                total_yards: nil,
+                total_meters: nil,
+                number_of_holes: course.holes.count,
+                par_total: $0.par,
+                front_course_rating: nil,
+                front_slope_rating: nil,
+                back_course_rating: nil,
+                back_slope_rating: nil,
+                holes: apiHoles
+            )
+        }
+        self.id = 0
+        self.sourceCourseId = course.id
+        self.club_name = course.name
+        self.course_name = course.name
+        self.location = APILocation(
+            address: course.location,
+            city: nil,
+            state: nil,
+            country: course.location.localizedCaseInsensitiveContains("Norway") ? "Norway" : nil,
+            latitude: course.latitude,
+            longitude: course.longitude
+        )
+        self.tees = APITees(male: apiTees, female: nil)
+    }
+
     init(publicCourse: PublicCourse) {
         let holes = publicCourse.holes?.map {
             APIHole(par: $0.par, yardage: $0.yards, handicap: $0.handicap)
@@ -474,6 +541,16 @@ private extension PublicCourse {
         let scalars = id.uuidString.unicodeScalars
         let hash = scalars.reduce(5381) { (($0 << 5) &+ $0) &+ Int($1.value) }
         return max(1, abs(hash % Int(Int32.max)))
+    }
+}
+
+private extension String {
+    var normalizedCourseSearchToken: String {
+        folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "nb_NO"))
+            .replacingOccurrences(of: "æ", with: "ae")
+            .replacingOccurrences(of: "ø", with: "o")
+            .replacingOccurrences(of: "å", with: "aa")
+            .lowercased()
     }
 }
 

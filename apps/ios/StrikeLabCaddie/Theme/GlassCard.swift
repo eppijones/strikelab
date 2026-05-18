@@ -96,6 +96,14 @@ extension View {
                     .stroke(isSelected ? accent : Theme.line, lineWidth: 1)
             )
     }
+
+    /// Booking-style flat panel with a square hairline edge.
+    func slPanel(padding: CGFloat = Theme.padding) -> some View {
+        self
+            .padding(padding)
+            .background(Theme.surfaceSolid)
+            .overlay(Rectangle().stroke(Theme.lineStrong, lineWidth: 1))
+    }
 }
 
 // MARK: - Preview

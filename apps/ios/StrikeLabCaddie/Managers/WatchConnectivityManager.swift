@@ -34,6 +34,10 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     /// asked to start a round. Argument is the course's UUID string.
     var onStartRoundRequested: ((String) -> Void)?
 
+    /// Callback when the watch asks the phone to save and complete the
+    /// active round. Reply closure returns success + a user-facing message.
+    var onCompleteRoundRequested: ((@escaping (Bool, String) -> Void) -> Void)?
+
     // MARK: - Range session callbacks
 
     /// Watch reports a single swing during a range session.
@@ -244,7 +248,9 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         source: String? = nil,
         confidence: Double? = nil,
         windMph: Double? = nil,
-        windDirectionDeg: Double? = nil
+        windDirectionDeg: Double? = nil,
+        gpsStatus: String? = nil,
+        distanceLabel: String? = nil
     ) {
         guard let session = session else { return }
         var ctx = session.applicationContext
@@ -268,6 +274,8 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         if let confidence { ctx["caddieConfidence"] = confidence } else { ctx.removeValue(forKey: "caddieConfidence") }
         if let windMph { ctx["caddieWindMph"] = windMph } else { ctx.removeValue(forKey: "caddieWindMph") }
         if let windDirectionDeg { ctx["caddieWindDirectionDeg"] = windDirectionDeg } else { ctx.removeValue(forKey: "caddieWindDirectionDeg") }
+        if let gpsStatus, !gpsStatus.isEmpty { ctx["caddieGpsStatus"] = gpsStatus } else { ctx.removeValue(forKey: "caddieGpsStatus") }
+        if let distanceLabel, !distanceLabel.isEmpty { ctx["caddieDistanceLabel"] = distanceLabel } else { ctx.removeValue(forKey: "caddieDistanceLabel") }
         try? session.updateApplicationContext(ctx)
     }
 
@@ -376,7 +384,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             let longitude: Double
         }
         let pins: [WatchPinPayload] = (round.course.holeLayouts ?? []).compactMap { layout in
-            let coord = layout.greenCenter ?? layout.greenFront
+            let coord = round.pinCoordinate(for: layout.holeNumber)
             guard let c = coord else { return nil }
             return WatchPinPayload(holeNumber: layout.holeNumber, latitude: c.latitude, longitude: c.longitude)
         }
@@ -659,6 +667,14 @@ extension WatchConnectivityManager: WCSessionDelegate {
             onStartRoundRequested?(startCourseId)
         }
 
+        if message["completeRound"] as? Bool == true {
+            onCompleteRoundRequested? { [weak self] success, detail in
+                Task { @MainActor in
+                    self?.sendCompleteRoundAck(success: success, detail: detail)
+                }
+            }
+        }
+
         // Handle "open Tee Pass" request from the watch (tap on the
         // countdown card). We post a notification the app can observe to
         // navigate the iOS Tee tab to that pass.
@@ -722,6 +738,22 @@ extension WatchConnectivityManager: WCSessionDelegate {
             }
         } else if session.activationState == .activated {
             session.transferUserInfo(message)
+        }
+    }
+
+    private func sendCompleteRoundAck(success: Bool, detail: String) {
+        guard let session else { return }
+        let payload: [String: Any] = [
+            "completeRoundAck": true,
+            "success": success,
+            "detail": detail
+        ]
+        if session.isReachable {
+            session.sendMessage(payload, replyHandler: nil) { _ in
+                session.transferUserInfo(payload)
+            }
+        } else if session.activationState == .activated {
+            session.transferUserInfo(payload)
         }
     }
 

@@ -25,10 +25,16 @@ struct ScorecardView: View {
     @State private var showExtendRoundAlert = false
     @State private var quickEntryGuest: GuestScoreTarget?
     @State private var showAddGuest = false
+    @State private var summaryRound: Round?
     
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                SLHeroHeader(
+                    eyebrow: "Scorecard",
+                    title: round.course.name,
+                    subtitle: "\(round.playFormat.displayName) · \(round.holesCompleted)/\(round.playFormat.totalHoles) holes posted"
+                )
                 // Score summary header
                 scoreSummaryCard
 
@@ -60,7 +66,9 @@ struct ScorecardView: View {
 
                 Spacer(minLength: 40)
             }
-            .padding()
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+            .padding(.bottom, 16)
         }
         .nordicBackground()
         .navigationTitle(round.course.name)
@@ -85,7 +93,8 @@ struct ScorecardView: View {
         }
         .alert("End Round?", isPresented: $showEndRoundAlert) {
             Button("Save & Complete", role: .destructive) {
-                persistenceManager.completeCurrentRound()
+                summaryRound = persistenceManager.completeCurrentRound()
+                connectivityManager.sendRoundCleared()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -155,7 +164,21 @@ struct ScorecardView: View {
         }
         .sheet(isPresented: $showAddGuest) {
             NavigationStack {
-                GroupPlayerEditorView(round: $round)
+                GroupPlayerEditorView(round: $round) {
+                    let guests = round.groupPlayers
+                    commitScorecardChange { liveRound in
+                        liveRound.groupPlayers = guests
+                    }
+                }
+            }
+        }
+        .fullScreenCover(item: $summaryRound) { snapshot in
+            NavigationStack {
+                RoundSummaryView(round: snapshot, onClose: {
+                    summaryRound = nil
+                    dismiss()
+                })
+                .environmentObject(persistenceManager)
             }
         }
     }
@@ -166,7 +189,11 @@ struct ScorecardView: View {
         guard let idx = round.holes.firstIndex(where: { $0.id == hole.id }) else { return }
         round.holes[idx].grossStrokes = value
         round.holes[idx].recalculateNet()
-        persistenceManager.saveCurrentRound()
+        commitScorecardChange { liveRound in
+            guard let liveIdx = liveRound.holes.firstIndex(where: { $0.id == hole.id }) else { return }
+            liveRound.holes[liveIdx].grossStrokes = value
+            liveRound.holes[liveIdx].recalculateNet()
+        }
     }
 
     private func applyGuestScore(_ value: Int?, target: GuestScoreTarget) {
@@ -175,7 +202,20 @@ struct ScorecardView: View {
             holeNumber: target.score.holeNumber,
             grossStrokes: value
         )
-        persistenceManager.saveCurrentRound()
+        commitScorecardChange { liveRound in
+            liveRound.updateGroupScore(
+                playerId: target.playerId,
+                holeNumber: target.score.holeNumber,
+                grossStrokes: value
+            )
+        }
+    }
+
+    private func applyGuestScore(_ value: Int?, playerId: UUID, holeNumber: Int) {
+        round.updateGroupScore(playerId: playerId, holeNumber: holeNumber, grossStrokes: value)
+        commitScorecardChange { liveRound in
+            liveRound.updateGroupScore(playerId: playerId, holeNumber: holeNumber, grossStrokes: value)
+        }
     }
     
     // MARK: - Share Functionality
@@ -221,6 +261,7 @@ struct ScorecardView: View {
                 }
             }
         }
+        .slPanel()
     }
 
     private func groupMiniCard(name: String, gross: Int, net: Int, isPrimary: Bool) -> some View {
@@ -282,7 +323,8 @@ struct ScorecardView: View {
             HStack {
                 Text(title)
                     .font(Theme.labelFont(12))
-                    .foregroundColor(Theme.nordicForest.opacity(0.6))
+                    .tracking(1.8)
+                    .foregroundColor(Theme.ink3)
                 Spacer()
             }
             
@@ -451,7 +493,13 @@ struct ScorecardView: View {
         let current = round.holes[index].grossStrokes ?? 0
         round.holes[index].grossStrokes = current + 1
         round.holes[index].recalculateNet()
-        persistenceManager.saveCurrentRound()
+        let holeId = round.holes[index].id
+        commitScorecardChange { liveRound in
+            guard let liveIdx = liveRound.holes.firstIndex(where: { $0.id == holeId }) else { return }
+            let liveCurrent = liveRound.holes[liveIdx].grossStrokes ?? 0
+            liveRound.holes[liveIdx].grossStrokes = liveCurrent + 1
+            liveRound.holes[liveIdx].recalculateNet()
+        }
     }
 
     /// "−": never goes below 0. At 0 the score stays cleared (stored as
@@ -463,7 +511,15 @@ struct ScorecardView: View {
         if current > 0 {
             round.holes[index].grossStrokes = current - 1
             round.holes[index].recalculateNet()
-            persistenceManager.saveCurrentRound()
+            let holeId = round.holes[index].id
+            commitScorecardChange { liveRound in
+                guard let liveIdx = liveRound.holes.firstIndex(where: { $0.id == holeId }) else { return }
+                let liveCurrent = liveRound.holes[liveIdx].grossStrokes ?? 0
+                if liveCurrent > 0 {
+                    liveRound.holes[liveIdx].grossStrokes = liveCurrent - 1
+                    liveRound.holes[liveIdx].recalculateNet()
+                }
+            }
         }
     }
 
@@ -474,7 +530,17 @@ struct ScorecardView: View {
         round.holes[index].grossStrokes = nil
         round.holes[index].putts = nil
         round.holes[index].recalculateNet()
-        persistenceManager.saveCurrentRound()
+        let holeId = round.holes[index].id
+        commitScorecardChange { liveRound in
+            guard let liveIdx = liveRound.holes.firstIndex(where: { $0.id == holeId }) else { return }
+            liveRound.holes[liveIdx].grossStrokes = nil
+            liveRound.holes[liveIdx].putts = nil
+            liveRound.holes[liveIdx].recalculateNet()
+        }
+    }
+
+    private func commitScorecardChange(_ mutateLiveRound: @escaping (inout Round) -> Void) {
+        persistenceManager.commitCurrentRound(mutateLiveRound, connectivity: connectivityManager)
     }
     
     // MARK: - Subtotal Row
@@ -625,43 +691,81 @@ struct ScorecardView: View {
     }
 
     private func guestHoleRow(guest: GroupPlayer, score: GroupPlayerHoleScore) -> some View {
-        Button {
-            quickEntryGuest = GuestScoreTarget(playerId: guest.id, score: score)
-        } label: {
-            HStack(spacing: 0) {
-                Text("\(score.holeNumber)")
-                    .font(Theme.statFont(13))
-                    .frame(width: 45, alignment: .leading)
-                Text("\(score.par)")
-                    .font(Theme.labelFont(12))
-                    .frame(width: 35)
-                Text("\(score.handicapIndex)")
-                    .font(Theme.labelFont(10))
-                    .foregroundColor(Theme.ink3)
-                    .frame(width: 30)
-                Text(score.strokesReceived > 0 ? "\(score.strokesReceived)" : "-")
-                    .font(Theme.labelFont(10))
-                    .foregroundColor(score.strokesReceived > 0 ? Theme.warn : Theme.ink3)
-                    .frame(width: 25)
-                Spacer()
+        HStack(spacing: 0) {
+            Text("\(score.holeNumber)")
+                .font(Theme.statFont(13))
+                .frame(width: 45, alignment: .leading)
+            Text("\(score.par)")
+                .font(Theme.labelFont(12))
+                .frame(width: 35)
+            Text("\(score.handicapIndex)")
+                .font(Theme.labelFont(10))
+                .foregroundColor(Theme.ink3)
+                .frame(width: 30)
+            Text(score.strokesReceived > 0 ? "\(score.strokesReceived)" : "-")
+                .font(Theme.labelFont(10))
+                .foregroundColor(score.strokesReceived > 0 ? Theme.warn : Theme.ink3)
+                .frame(width: 25)
+            Spacer()
+
+            if !isReadOnly {
+                HStack(spacing: 6) {
+                    Button {
+                        let current = score.grossStrokes ?? 0
+                        guard current > 0 else { return }
+                        applyGuestScore(current - 1, playerId: guest.id, holeNumber: score.holeNumber)
+                    } label: {
+                        Image(systemName: "minus.circle")
+                            .font(.system(size: 20))
+                            .foregroundColor(Theme.ink3.opacity((score.grossStrokes ?? 0) > 0 ? 1.0 : 0.3))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled((score.grossStrokes ?? 0) <= 0)
+
+                    Button {
+                        quickEntryGuest = GuestScoreTarget(playerId: guest.id, score: score)
+                    } label: {
+                        Text(score.grossStrokes.map(String.init) ?? "-")
+                            .font(Theme.statFont(15))
+                            .foregroundColor(.scoreColor(strokes: score.grossStrokes, par: score.par))
+                            .frame(width: 34, height: 34)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .onLongPressGesture(minimumDuration: 0.4) {
+                        applyGuestScore(nil, playerId: guest.id, holeNumber: score.holeNumber)
+                    }
+
+                    Button {
+                        let current = score.grossStrokes ?? 0
+                        applyGuestScore(current + 1, playerId: guest.id, holeNumber: score.holeNumber)
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(Theme.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(width: 116, alignment: .trailing)
+            } else {
                 Text(score.grossStrokes.map(String.init) ?? "-")
                     .font(Theme.statFont(14))
                     .foregroundColor(.scoreColor(strokes: score.grossStrokes, par: score.par))
                     .frame(width: 58)
-                Text(score.netStrokes.map(String.init) ?? "-")
-                    .font(Theme.statFont(12))
-                    .foregroundColor(score.netStrokes == nil ? Theme.ink3 : Theme.accent)
-                    .frame(width: 45)
             }
-            .foregroundColor(Theme.ink)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(score.holeNumber == round.currentHoleNumber ? Theme.accent.opacity(0.08) : Theme.surface)
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(Theme.line).frame(height: 1)
-            }
+
+            Text(score.netStrokes.map(String.init) ?? "-")
+                .font(Theme.statFont(12))
+                .foregroundColor(score.netStrokes == nil ? Theme.ink3 : Theme.accent)
+                .frame(width: 45)
         }
-        .buttonStyle(.plain)
+        .foregroundColor(Theme.ink)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(score.holeNumber == round.currentHoleNumber ? Theme.accent.opacity(0.08) : Theme.surface)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Theme.line).frame(height: 1)
+        }
     }
     
     // MARK: - Action Buttons
@@ -769,6 +873,7 @@ private struct GuestScoreTarget: Identifiable {
 
 private struct GroupPlayerEditorView: View {
     @Binding var round: Round
+    var onSave: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var draftGuests: [DraftGuest] = []
 
@@ -814,6 +919,7 @@ private struct GroupPlayerEditorView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
                     save()
+                    onSave()
                     dismiss()
                 }
                 .foregroundColor(Theme.accent)

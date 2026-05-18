@@ -60,6 +60,7 @@ struct ActiveRoundHomeView: View {
         .alert("End round?", isPresented: $showEndRoundAlert) {
             Button("Save & complete", role: .destructive) {
                 summaryRound = persistenceManager.completeCurrentRound()
+                connectivityManager.sendRoundCleared()
             }
             Button("Cancel", role: .cancel) { }
         } message: {
@@ -92,6 +93,11 @@ struct ActiveRoundHomeView: View {
             VStack(spacing: 14) {
                 StrikeLabLogoLockup(subtitle: "Live round")
                     .padding(.top, 4)
+                SLHeroHeader(
+                    eyebrow: "Caddie live",
+                    title: "On course.",
+                    subtitle: "Score, shots, motion, and Watch capture stay in sync while you play."
+                )
                 heroCard(round: round)
                 captureHealthCard(round: round)
                 resumeCard(round: round)

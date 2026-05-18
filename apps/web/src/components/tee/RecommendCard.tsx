@@ -39,7 +39,7 @@ export function RecommendCard({ slot, showHero = true }: Props) {
     <Link
       to={`/tee/courses/${slot.course_id}/sheet?date=${time.toISOString().slice(0, 10)}`}
       state={{ slotId: slot.slot_id }}
-      className="block bg-surface-solid border border-line-strong rounded-[2px] hover:border-ink-3 transition-colors overflow-hidden"
+      className="block tee-card hover:border-ink-3 transition-colors overflow-hidden"
     >
       {showHero && (
         <div className="relative">
@@ -52,7 +52,7 @@ export function RecommendCard({ slot, showHero = true }: Props) {
             </Tag>
           </div>
           {slot.drive_min != null && (
-            <div className="absolute right-2 bottom-2 mono text-[10px] uppercase tracking-micro text-ink-3 bg-bg-2/80 backdrop-blur-sm border border-line-strong px-2 py-0.5">
+            <div className="absolute right-2 bottom-2 tee-pill bg-surface/80 backdrop-blur-sm py-1 px-2 text-[10.5px]">
               {slot.drive_min} MIN
             </div>
           )}
@@ -60,10 +60,10 @@ export function RecommendCard({ slot, showHero = true }: Props) {
       )}
       <div className="p-3.5">
         <div className="flex items-baseline justify-between gap-2">
-          <div className="text-[16px] text-ink leading-tight">
+          <div className="display text-[22px] text-ink leading-tight">
             {slot.course_name}
           </div>
-          <div className="mono text-[16px] text-ink">
+          <div className="mono text-[15px] text-ink">
             {hh}:{mm}
           </div>
         </div>
@@ -90,7 +90,7 @@ export function RecommendCard({ slot, showHero = true }: Props) {
 
         <div className="mt-3 pt-3 border-t border-line-strong flex items-baseline justify-between mono text-[12px]">
           <span className="text-ink-3">FROM</span>
-          <span className="text-ink">
+          <span className="text-ink font-semibold">
             {slot.price_amount != null ? `${Math.round(slot.price_amount)} kr` : '—'}
           </span>
         </div>
