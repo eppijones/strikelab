@@ -131,7 +131,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const user = useAuthStore((s) => s.user)
   if (!isAuthenticated) {
-    if (window.location.pathname === '/') return <Marketing />
     return <Navigate to="/login" replace />
   }
   if (user && !user.onboardingCompleted && window.location.pathname !== '/onboarding') {
@@ -160,7 +159,9 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/marketing" element={<Marketing />} />
+        <Route path="/" element={<Marketing locale="no" />} />
+        <Route path="/en" element={<Marketing locale="en" />} />
+        <Route path="/marketing" element={<Navigate to="/" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route
@@ -193,7 +194,7 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Dashboard />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="sessions" element={<Sessions />} />
           <Route path="sessions/:id" element={<SessionDetail />} />
           <Route path="sessions/:id/log" element={<SessionLog />} />

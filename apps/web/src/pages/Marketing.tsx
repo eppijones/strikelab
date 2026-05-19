@@ -1,262 +1,290 @@
 import { Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { Panel, SLLogo, Stat, Tag } from '@/components/ui'
+import { Panel, SLLogo, Stat } from '@/components/ui'
+import { landingEn } from '@/content/landing.en'
+import { landingNo } from '@/content/landing.no'
+import { DEMO_TEE_COURSES } from '@/lib/teeDemoData'
 
-const PILLARS = [
-  {
-    id: 'courses',
-    title: 'Courses',
-    titleNo: 'Baner',
-    body: 'Norwegian courses, facilities, scorecards, and favorites. Find where you play and keep the history there.',
-    bodyNo: 'Norske baner, fasiliteter, scorekort og favoritter. Finn stedet du spiller, og behold historikken der.',
-  },
-  {
-    id: 'watch',
-    title: 'Scorecards + Watch',
-    titleNo: 'Scorekort + Watch',
-    body: 'Track rounds with iPhone and Apple Watch, then review the scorecard when the round is done.',
-    bodyNo: 'Spor runder med iPhone og Apple Watch, og se scorekortet når runden er ferdig.',
-  },
-  {
-    id: 'practice',
-    title: 'Range sessions',
-    titleNo: 'Rangeøkter',
-    body: 'Upload sessions from Caddie or launch monitor exports. Keep shots, clubs, and notes in one place.',
-    bodyNo: 'Last opp økter fra Caddie eller launch monitor-eksporter. Samle slag, køller og notater på ett sted.',
-  },
-  {
-    id: 'bag',
-    title: 'Your bag',
-    titleNo: 'Din bag',
-    body: 'Build the clubs you actually carry. Average carry and consistency fill in as you practice.',
-    bodyNo: 'Bygg bagen du faktisk spiller med. Carry og konsistens fylles inn etter hvert som du trener.',
-  },
-]
+type LandingContent = typeof landingNo | typeof landingEn
 
-const TRUST_LINKS = [
-  { label: 'Privacy', labelNo: 'Personvern', href: '/privacy' },
-  { label: 'Terms', labelNo: 'Vilkår', href: '/terms' },
-  { label: 'Data security', labelNo: 'Datasikkerhet', href: '/security' },
-  { label: 'Contact', labelNo: 'Kontakt', href: 'mailto:hello@strikelab.golf' },
-]
+const betaHref = import.meta.env.VITE_BETA_URL || 'mailto:beta@strikelab.golf?subject=Caddie%20Beta'
+const sectionPad = 'px-5 sm:px-8 py-16 sm:py-24 max-w-[1440px] mx-auto'
+const ctaClass =
+  'tee-cta inline-flex items-center justify-center px-5 sm:px-6 py-3 mono text-[11px] uppercase tracking-micro focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-accent-fg'
+const outlineClass =
+  'tee-pill inline-flex items-center justify-center px-5 sm:px-6 py-3 mono text-[11px] uppercase tracking-micro focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-accent-fg'
 
-export default function Marketing() {
-  const { i18n } = useTranslation()
-  const isNo = i18n.language === 'no'
-  const sectionPad = 'px-5 sm:px-8 py-16 sm:py-24 max-w-[1440px] mx-auto'
-  const primaryLink =
-    'inline-flex items-center justify-center bg-accent text-accent-ink px-5 sm:px-6 py-3 mono text-[11px] uppercase tracking-micro hover:bg-accent-2 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-accent-fg'
-  const secondaryLink =
-    'inline-flex items-center justify-center bg-transparent text-ink-2 border border-line-strong px-5 sm:px-6 py-3 mono text-[11px] uppercase tracking-micro hover:border-ink-3 hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-accent-fg'
+export default function Marketing({ locale = 'no' }: { locale?: 'no' | 'en' }) {
+  const content = locale === 'en' ? landingEn : landingNo
 
   return (
-    <div className="min-h-screen bg-bg text-ink">
-      <header className="border-b border-line-strong">
-        <div className="px-5 sm:px-8 min-h-14 py-3 flex items-center justify-between gap-4 max-w-[1440px] mx-auto">
+    <div className="tee-editorial min-h-screen bg-bg text-ink">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface/85 backdrop-blur-md">
+        <div className="mx-auto flex min-h-14 max-w-[1440px] items-center justify-between gap-4 px-5 py-3 sm:px-8">
           <Link to="/" className="flex items-center gap-2.5 text-ink hover:text-accent-fg" aria-label="StrikeLab home">
-            <SLLogo size={20} withWord wordSize={12} condensed />
+            <SLLogo size={16} withWord wordSize={13} condensed animated />
           </Link>
-          <nav className="hidden lg:flex gap-8 mono text-[10px] uppercase tracking-micro text-ink-3" aria-label="Marketing sections">
-            <a href="#courses" className="hover:text-ink">{isNo ? 'Baner' : 'Courses'}</a>
-            <a href="#watch" className="hover:text-ink">Watch</a>
-            <a href="#practice" className="hover:text-ink">{isNo ? 'Trening' : 'Practice'}</a>
-            <a href="#bag" className="hover:text-ink">Bag</a>
+          <nav className="hidden gap-8 mono text-[10px] uppercase tracking-micro text-ink-3 lg:flex" aria-label={content.navLabel}>
+            {content.nav.map((item) => (
+              <a key={item.href} href={item.href} className="hover:text-ink">
+                {item.label}
+              </a>
+            ))}
           </nav>
           <div className="flex items-center gap-3 sm:gap-4">
-            <Link to="/login" className="mono text-[10px] text-ink-3 hover:text-ink uppercase tracking-micro">
-              {isNo ? 'Logg inn' : 'Login'}
+            <Link to={content.languageToggle.href} className="tee-pill px-3 py-1.5 mono text-[10px] uppercase tracking-micro">
+              {content.languageToggle.label}
             </Link>
-            <Link to="/register" className="bg-accent text-accent-ink px-3 sm:px-4 py-2 mono text-[10px] uppercase tracking-micro hover:bg-accent-2">
-              {isNo ? 'Kom i gang' : 'Get started'} →
-            </Link>
+            <a href={betaHref} className="tee-cta px-3 py-2 mono text-[10px] uppercase tracking-micro">
+              {content.hero.primaryCta} →
+            </a>
           </div>
         </div>
       </header>
 
-      <section className={`${sectionPad} pb-12 sm:pb-16`}>
-        <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-16 items-end">
-          <div>
-            <div className="micro">STRIKELAB · {isNo ? 'BYGD I NORGE' : 'BUILT IN NORWAY'}</div>
-            <h1 className="display text-[clamp(4rem,12vw,9.5rem)] mt-6 leading-[0.86] max-w-[980px]">
-              {isNo ? (
-                <>
-                  All golfen din. <em>På ett sted.</em>
-                </>
-              ) : (
-                <>
-                  Your golf, all in <em>one place.</em>
-                </>
-              )}
-            </h1>
-            <p className="text-[18px] sm:text-[20px] text-ink-2 max-w-[720px] mt-8 leading-[1.55]">
-              {isNo
-                ? 'Baner, scorekort, Apple Watch-runder, rangeøkter og bagen din samlet i én rolig golfbase.'
-                : 'Courses, scorecards, Apple Watch rounds, range sessions, and your bag in one calm golf homebase.'}
-            </p>
-            <div className="flex gap-3 mt-10 flex-wrap">
-              <Link to="/register" className={primaryLink}>
-                {isNo ? 'Kom i gang' : 'Get started'} →
-              </Link>
-              <a href="#courses" className={secondaryLink}>
-                {isNo ? 'Se hva du får' : 'See what you get'} →
-              </a>
-            </div>
+      <main>
+        <HeroSection content={content} />
+        <CaddieTodaySection content={content} />
+        <MergeSection content={content} />
+        <CoursesSection content={content} />
+        <TeePreviewSection content={content} />
+        <FounderSection content={content} />
+      </main>
+
+      <LandingFooter content={content} />
+    </div>
+  )
+}
+
+function HeroSection({ content }: { content: LandingContent }) {
+  return (
+    <section className={`${sectionPad} pb-12 sm:pb-16`} aria-labelledby="landing-hero-title">
+      <div className="grid items-end gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16">
+        <div>
+          <div className="micro">{content.hero.eyebrow}</div>
+          <h1 id="landing-hero-title" className="display mt-6 max-w-[1040px] text-[clamp(3.8rem,11vw,9.25rem)] leading-[0.86]">
+            {content.hero.headline.before} <em>{content.hero.headline.emphasis}</em>
+          </h1>
+          <p className="mt-8 max-w-[760px] text-[18px] leading-[1.55] text-ink-2 sm:text-[20px]">{content.hero.subhead}</p>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <a href={betaHref} className={ctaClass}>
+              {content.hero.primaryCta} →
+            </a>
+            <a href="#how-it-works" className={outlineClass}>
+              {content.hero.secondaryCta}
+            </a>
           </div>
-
-          <Panel id="LIVE 01" title={isNo ? 'GOLFBASEN' : 'GOLF HOMEBASE'} className="glow">
-            <div className="grid grid-cols-3 gap-3">
-              <Stat label={isNo ? 'NGF-KLUBBER' : 'NGF CLUBS'} value="156" size="sm" />
-              <Stat label="WATCH" value="SE" unit="+" size="sm" />
-              <Stat label="BAG" value="14" unit={isNo ? 'køller' : 'clubs'} size="sm" />
-            </div>
-            <div className="mt-5 border border-line-strong p-4">
-              <div className="micro mb-2">{isNo ? 'NESTE TING' : 'NEXT THING'}</div>
-              <div className="display text-[28px]">{isNo ? 'Losby, fredag 14:50' : 'Losby, Friday 14:50'}</div>
-              <p className="text-body text-ink-2 mt-2">
-                {isNo ? 'Scorekortet ligger klart. Bagen husker avstandene dine.' : 'Scorecard is ready. Your bag remembers your distances.'}
-              </p>
-            </div>
-          </Panel>
         </div>
-      </section>
 
-      <section id="courses" className={`border-t border-line-strong ${sectionPad}`}>
-        <div className="micro">01 — {isNo ? 'Hva du får' : 'What you get'}</div>
-        <h2 className="display text-[clamp(2.75rem,7vw,5.25rem)] mt-4">
-          {isNo ? <>Fire ting. <em>Ingen støy.</em></> : <>Four things. <em>No noise.</em></>}
-        </h2>
-        <p className="text-body text-ink-2 max-w-[680px] mt-6">
-          {isNo
-            ? 'StrikeLab starter med det du allerede gjør: spiller baner, fører score, trener på range og velger kølle.'
-            : 'StrikeLab starts with what you already do: play courses, keep score, practice on the range, and choose a club.'}
-        </p>
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {PILLARS.map((p, i) => (
-            <Panel key={p.id} id={String(i + 1).padStart(2, '0')} title={(isNo ? p.titleNo : p.title).toUpperCase()}>
-              <div className="display text-[34px]">{isNo ? p.titleNo : p.title}</div>
-              <p className="text-body text-ink-2 mt-3 leading-[1.55]">{isNo ? p.bodyNo : p.body}</p>
-            </Panel>
-          ))}
-        </div>
-      </section>
-
-      <section id="watch" className="border-t border-line-strong bg-[#ede8de] text-[#141614]">
-        <div className={sectionPad}>
-          <div className="micro !text-[#4a4842]">02 — APPLE WATCH + IPHONE</div>
-          <h2 className="display text-[clamp(2.75rem,7vw,5.25rem)] mt-4">
-            {isNo ? <>Spor runden uten å <em>styre.</em></> : <>Track the round without <em>fiddling.</em></>}
-          </h2>
-          <p className="text-[17px] text-[#4a4842] leading-[1.6] max-w-[720px] mt-6">
-            {isNo
-              ? 'Apple Watch tar slag, putter og avstander når du spiller. iPhone husker runden, scorekortet og historikken etterpå.'
-              : 'Apple Watch handles strokes, putts, and distances while you play. iPhone remembers the round, scorecard, and history afterward.'}
+        <Panel id="LIVE 01" title={content.hero.visual.label} className="glow">
+          <div className="border border-line-strong p-4">
+            <div className="micro mb-2">{content.hero.visual.label}</div>
+            <div className="display text-[44px] leading-none">{content.hero.visual.title}</div>
+            <p className="mt-3 text-body leading-[1.55] text-ink-2">{content.hero.visual.body}</p>
+          </div>
+          <div className="mt-5 grid grid-cols-3 gap-3">
+            {content.hero.visual.stats.map((stat) => (
+              <Stat key={stat.label} label={stat.label} value={stat.value} unit={stat.unit} size="sm" />
+            ))}
+          </div>
+          <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
+            <MiniSourceCard label="Trackman" value="Range" />
+            <div className="mono text-[18px] text-accent-fg">→</div>
+            <MiniSourceCard label="Apple Watch" value={content.lang === 'no' ? 'Bane' : 'Course'} />
+          </div>
+          <p className="mt-5 border-t border-line pt-4 mono text-[10px] uppercase tracking-micro text-ink-3">
+            {content.hero.visual.footer}
           </p>
-          <div className="mt-10 grid md:grid-cols-3 gap-4">
-            {[
-              [isNo ? 'På banen' : 'On course', isNo ? 'Avstander, score og enkle valg på håndleddet.' : 'Distances, score, and simple choices on the wrist.'],
-              [isNo ? 'Etterpå' : 'Afterward', isNo ? 'Scorekort, hull og runder samlet på web og iPhone.' : 'Scorecards, holes, and rounds kept on web and iPhone.'],
-              [isNo ? 'Rolig' : 'Quiet', isNo ? 'Caddien snakker når det trengs, ikke hele tiden.' : 'The caddie speaks when needed, not all the time.'],
-            ].map(([title, body]) => (
-              <div key={title} className="border border-[#b6af9c] p-5">
-                <div className="display text-[28px]">{title}</div>
-                <p className="text-[14px] text-[#4a4842] mt-3 leading-[1.55]">{body}</p>
-              </div>
+        </Panel>
+      </div>
+    </section>
+  )
+}
+
+function MiniSourceCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="tee-card p-3 text-left">
+      <div className="micro">{label}</div>
+      <div className="display mt-1 text-[24px]">{value}</div>
+    </div>
+  )
+}
+
+function CaddieTodaySection({ content }: { content: LandingContent }) {
+  return (
+    <section id={content.caddieToday.id} className={`border-t border-line ${sectionPad}`} aria-labelledby="caddie-today-title">
+      <div className="micro">{content.caddieToday.eyebrow}</div>
+      <h2 id="caddie-today-title" className="display mt-4 text-[clamp(2.75rem,7vw,5.25rem)]">
+        {content.caddieToday.heading.before} <em>{content.caddieToday.heading.emphasis}</em>
+      </h2>
+      <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {content.caddieToday.cards.map((card, index) => (
+          <Panel key={card.title} id={String(index + 1).padStart(2, '0')} title={card.title.toUpperCase()}>
+            <div className="display text-[34px] leading-none">{card.title}</div>
+            <p className="mt-3 text-body leading-[1.55] text-ink-2">{card.body}</p>
+          </Panel>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function MergeSection({ content }: { content: LandingContent }) {
+  return (
+    <section id={content.merge.id} className="border-t border-line bg-surface/35 text-ink" aria-labelledby="merge-title">
+      <div className={sectionPad}>
+        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <div className="micro">{content.merge.eyebrow}</div>
+            <h2 id="merge-title" className="display mt-4 text-[clamp(2.75rem,7vw,5.25rem)] leading-[0.95]">
+              {content.merge.heading.before} <em>{content.merge.heading.emphasis}</em>
+            </h2>
+            <p className="mt-6 max-w-[760px] text-[17px] leading-[1.6] text-ink-2">{content.merge.body}</p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch">
+            {content.merge.flow.map((step, index) => (
+              <MergeStep key={step.label} step={step} showArrow={index < content.merge.flow.length - 1} />
             ))}
           </div>
         </div>
-      </section>
+      </div>
+    </section>
+  )
+}
 
-      <section id="practice" className={`border-t border-line-strong ${sectionPad}`}>
-        <div className="micro">03 — {isNo ? 'Range og bag' : 'Practice and bag'}</div>
-        <h2 className="display text-[clamp(2.75rem,7vw,5.25rem)] mt-4">
-          {isNo ? <>Få dine egne <em>køllelengder.</em></> : <>Know your own <em>club distances.</em></>}
-        </h2>
-        <p className="text-body text-ink-2 max-w-[720px] mt-6">
-          {isNo
-            ? 'Bygg bagen din, last opp rangeøkter, og se carry og spredning per kølle etter hvert som du trener.'
-            : 'Build your bag, upload range sessions, and see carry and dispersion per club as you practice.'}
-        </p>
-        <div id="bag" className="mt-10 grid lg:grid-cols-[1fr_1fr] gap-4">
-          <Panel id="BAG" title={isNo ? 'DIN BAG' : 'YOUR BAG'} className="glow">
-            <div className="display text-[36px]">{isNo ? 'Driver. 7W. 5-PW. Wedger.' : 'Driver. 7W. 5-PW. Wedges.'}</div>
-            <p className="text-body text-ink-2 mt-4">
-              {isNo
-                ? 'Ingen tvungen standardbag. Legg inn akkurat det du spiller med, også 4W, 7W, hybrider eller ekstra wedger.'
-                : 'No forced standard set. Add exactly what you play, including 4W, 7W, hybrids, or extra wedges.'}
-            </p>
-          </Panel>
-          <Panel id="DATA" title={isNo ? 'FRA ØKT TIL AVSTAND' : 'FROM SESSION TO DISTANCE'}>
-            <div className="grid grid-cols-3 gap-3">
-              <Stat label="7I" value="142" unit="m" size="sm" />
-              <Stat label="DRV" value="218" unit="m" size="sm" />
-              <Stat label="56" value="74" unit="m" size="sm" />
-            </div>
-            <p className="text-body text-ink-2 mt-4">
-              {isNo ? 'Tallene blir dine når du logger økter.' : 'The numbers become yours as you log sessions.'}
-            </p>
-          </Panel>
+function MergeStep({
+  step,
+  showArrow,
+}: {
+  step: { label: string; value: string }
+  showArrow: boolean
+}) {
+  return (
+    <>
+      <div className="tee-card p-5">
+        <div className="micro">{step.label}</div>
+        <div className="display mt-4 text-[30px] leading-none">{step.value}</div>
+      </div>
+      {showArrow && <div className="hidden items-center justify-center mono text-[24px] text-accent-fg md:flex">→</div>}
+    </>
+  )
+}
+
+function CoursesSection({ content }: { content: LandingContent }) {
+  return (
+    <section id={content.courses.id} className={`border-t border-line ${sectionPad}`} aria-labelledby="courses-title">
+      <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+        <div>
+          <div className="micro">{content.courses.eyebrow}</div>
+          <h2 id="courses-title" className="display mt-4 text-[clamp(2.75rem,7vw,5.25rem)] leading-[0.95]">
+            {content.courses.heading}
+          </h2>
+          <p className="mt-6 max-w-[680px] text-body leading-[1.6] text-ink-2">{content.courses.body}</p>
+          <a href={content.courses.ctaHref} className={`${outlineClass} mt-8`}>
+            {content.courses.cta} →
+          </a>
         </div>
-      </section>
-
-      <section className={`border-t border-line-strong ${sectionPad}`}>
-        <Panel id="START" title={isNo ? 'KOM I GANG' : 'GET STARTED'} className="glow">
-          <div className="grid lg:grid-cols-[0.8fr_1.2fr] gap-8">
-            <div>
-              <div className="micro">{isNo ? 'Første steg' : 'First step'}</div>
-              <h2 className="display text-[clamp(2.5rem,6vw,5.5rem)] mt-4">
-                {isNo ? <>Klar for første <em>runde?</em></> : <>Ready to bring your <em>golf together?</em></>}
-              </h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {DEMO_TEE_COURSES.map((course) => (
+            <div key={course.id} className="tee-card p-5">
+              <div className="micro">{[course.city, course.region].filter(Boolean).join(' · ')}</div>
+              <div className="display mt-2 text-[30px] leading-none">{course.name}</div>
+              <p className="mt-4 mono text-[10px] uppercase tracking-micro text-ink-3">
+                {course.holes_count} {content.lang === 'no' ? 'hull' : 'holes'} · Par {course.par}
+              </p>
             </div>
-            <div className="space-y-4">
-              {[
-                [isNo ? 'Velg en bane' : 'Pick a course', isNo ? 'Finn en norsk bane og lagre den som favoritt.' : 'Find a Norwegian course and save it as a favorite.'],
-                [isNo ? 'Bygg bagen' : 'Build your bag', isNo ? 'Legg inn køllene du faktisk spiller med.' : 'Add the clubs you actually play.'],
-                [isNo ? 'Logg en runde eller økt' : 'Log a round or session', isNo ? 'Apple Watch, iPhone eller rangeeksport holder historikken i gang.' : 'Apple Watch, iPhone, or range export keeps the history moving.'],
-              ].map(([title, body]) => (
-                <div key={title} className="border border-line-strong p-4">
-                  <div className="micro">{title}</div>
-                  <p className="text-body text-ink-2 mt-2">{body}</p>
-                </div>
-              ))}
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function TeePreviewSection({ content }: { content: LandingContent }) {
+  return (
+    <section id={content.tee.id} className="border-t border-line bg-surface/35" aria-labelledby="tee-preview-title">
+      <div className={sectionPad}>
+        <Panel
+          id="TEE"
+          title={content.tee.eyebrow}
+          className="glow"
+          right={<span className="tee-pill px-3 py-1 mono text-[10px] uppercase tracking-micro">{content.tee.badge}</span>}
+        >
+          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+            <div>
+              <h2 id="tee-preview-title" className="display text-[clamp(2.75rem,7vw,5.25rem)] leading-[0.95]">
+                {content.tee.heading}
+              </h2>
+              <p className="mt-6 max-w-[760px] text-body leading-[1.6] text-ink-2">{content.tee.body}</p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Link to="/tee" className={outlineClass}>
+                  {content.tee.cta} →
+                </Link>
+                <span className="mono text-[10px] uppercase tracking-micro text-ink-3">{content.tee.note}</span>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <PreviewStat label="Window" value="18:10" />
+              <PreviewStat label="Club" value="NGF" />
+              <PreviewStat label="Status" value="Preview" />
             </div>
           </div>
         </Panel>
-      </section>
+      </div>
+    </section>
+  )
+}
 
-      <section className="border-t border-line-strong px-5 sm:px-8 py-16 sm:py-24 max-w-[1440px] mx-auto text-center">
-        <h2 className="display text-[clamp(3rem,9vw,7rem)]">
-          {isNo ? <>All golfen din. <em>På ett sted.</em></> : <>Your golf, all in <em>one place.</em></>}
-        </h2>
-        <Link to="/register" className="inline-flex mt-10 bg-accent text-accent-ink px-8 py-4 mono text-[12px] uppercase tracking-micro hover:bg-accent-2">
-          {isNo ? 'Kom i gang' : 'Get started'} →
-        </Link>
-      </section>
-
-      <footer className="border-t border-line-strong px-5 sm:px-8 py-8 max-w-[1440px] mx-auto">
-        <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div>
-            <div className="mono text-[10px] uppercase tracking-micro text-ink-4">© 2026 STRIKELAB · STRIKELAB.GOLF</div>
-            <p className="text-body text-ink-3 mt-3 max-w-[680px]">
-              {isNo
-                ? 'StrikeLab samler baner, scorekort, Watch-runder, rangeøkter og bagdata for norske golfere.'
-                : 'StrikeLab brings courses, scorecards, Watch rounds, range sessions, and bag data together for Norwegian golfers.'}
-            </p>
-          </div>
-          <nav className="flex flex-wrap gap-4 mono text-[10px] uppercase tracking-micro text-ink-3" aria-label="Legal and contact">
-            {TRUST_LINKS.map((link) =>
-              link.href.startsWith('mailto:') ? (
-                <a key={link.href} href={link.href} className="hover:text-ink">
-                  {isNo ? link.labelNo : link.label}
-                </a>
-              ) : (
-                <Link key={link.href} to={link.href} className="hover:text-ink">
-                  {isNo ? link.labelNo : link.label}
-                </Link>
-              ),
-            )}
-          </nav>
-        </div>
-      </footer>
+function PreviewStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="tee-card p-4">
+      <div className="micro">{label}</div>
+      <div className="display mt-2 text-[28px]">{value}</div>
     </div>
+  )
+}
+
+function FounderSection({ content }: { content: LandingContent }) {
+  return (
+    <section id={content.founder.id} className={`border-t border-line ${sectionPad}`} aria-labelledby="founder-title">
+      <div className="mx-auto max-w-[920px]">
+        <div className="micro">{content.founder.eyebrow}</div>
+        <h2 id="founder-title" className="display mt-4 text-[clamp(2.75rem,7vw,5.25rem)]">
+          {content.founder.heading}
+        </h2>
+        <div className="mt-8 space-y-5 border-l border-line-strong pl-6 text-[18px] leading-[1.65] text-ink-2">
+          {content.founder.body.map((paragraph, index) => (
+            <p key={paragraph} className={index === 0 ? 'mono text-[10px] uppercase tracking-micro text-ink-4' : undefined}>
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function LandingFooter({ content }: { content: LandingContent }) {
+  return (
+    <footer className="mx-auto max-w-[1440px] border-t border-line px-5 py-8 sm:px-8">
+      <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div>
+          <div className="mono text-[10px] uppercase tracking-micro text-ink-4">{content.footer.copyright}</div>
+          <p className="mt-3 max-w-[680px] text-body text-ink-3">{content.footer.tagline}</p>
+        </div>
+        <nav className="flex flex-wrap gap-4 mono text-[10px] uppercase tracking-micro text-ink-3" aria-label="Legal and contact">
+          {content.footer.links.map((link) =>
+            link.href.startsWith('mailto:') ? (
+              <a key={link.href} href={link.href} className="hover:text-ink">
+                {link.label}
+              </a>
+            ) : (
+              <Link key={link.href} to={link.href} className="hover:text-ink">
+                {link.label}
+              </Link>
+            ),
+          )}
+        </nav>
+      </div>
+    </footer>
   )
 }

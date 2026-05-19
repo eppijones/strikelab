@@ -7,6 +7,7 @@ import { Course, useCourses } from '@/api/courses'
 import { RecommendedSlot, useDiscover, useUpcomingPasses } from '@/api/tee'
 import { useAuthStore } from '@/stores/authStore'
 import { HeroKind, HeroLandscape, PassCard } from '@/components/tee'
+import { DEMO_TEE_COURSES } from '@/lib/teeDemoData'
 
 const COURSE_KIND: Record<string, HeroKind> = {
   parkland: 'parkland',
@@ -17,64 +18,6 @@ const COURSE_KIND: Record<string, HeroKind> = {
   mountain: 'mountain',
   fjord: 'fjord',
 }
-
-const FALLBACK_COURSES = [
-  {
-    id: 'losby',
-    name: 'Losby Golfklubb',
-    city: 'Lørenskog',
-    region: 'Oslo',
-    course_type: 'parkland',
-    holes_count: 18,
-    par: 72,
-    total_meters: 6420,
-    course_rating: 4.6,
-  },
-  {
-    id: 'larvik',
-    name: 'Larvik Golfklubb',
-    city: 'Larvik',
-    region: 'Vestfold',
-    course_type: 'links',
-    holes_count: 18,
-    par: 72,
-    total_meters: 6040,
-    course_rating: 4.8,
-  },
-  {
-    id: 'miklagard',
-    name: 'Miklagard Golf',
-    city: 'Kløfta',
-    region: 'Oslo',
-    course_type: 'championship',
-    holes_count: 18,
-    par: 72,
-    total_meters: 6765,
-    course_rating: 4.7,
-  },
-  {
-    id: 'tyrifjord',
-    name: 'Tyrifjord Golfklubb',
-    city: 'Krokkleiva',
-    region: 'Buskerud',
-    course_type: 'lakeside',
-    holes_count: 18,
-    par: 72,
-    total_meters: 6105,
-    course_rating: 4.5,
-  },
-  {
-    id: 'atlungstad',
-    name: 'Atlungstad Golf',
-    city: 'Ottestad',
-    region: 'Innlandet',
-    course_type: 'farmland',
-    holes_count: 18,
-    par: 72,
-    total_meters: 6240,
-    course_rating: 4.5,
-  },
-] satisfies Partial<Course>[]
 
 const FILTERS = {
   en: ['All', 'Near me', 'Windows now', 'Twilight', '18 holes', '9 holes'],
@@ -111,7 +54,7 @@ export default function TeeDiscover() {
   const featured = todaysWindow[0] ?? bestNow[0]
   const railSlots = (todaysWindow.length ? todaysWindow : bestNow).slice(0, 4)
   const courses = useMemo(
-    () => (courseResults?.length ? courseResults : FALLBACK_COURSES) as Course[],
+    () => (courseResults?.length ? courseResults : DEMO_TEE_COURSES) as Course[],
     [courseResults],
   )
 
@@ -124,6 +67,9 @@ export default function TeeDiscover() {
               {lang === 'no'
                 ? 'Tirsdag 24 juni · 18° · 5 m/s SW · solnedgang 21:12'
                 : 'Tuesday June 24 · 18° · 5 m/s SW · sunset 21:12'}
+            </div>
+            <div className="mb-5 inline-flex tee-pill px-3 py-1.5 mono text-[10px] uppercase tracking-micro">
+              DEMO · SEEDED DATA
             </div>
             <h1 className="display m-0 max-w-4xl text-[clamp(4.5rem,10vw,8.5rem)]">
               {lang === 'no' ? (
