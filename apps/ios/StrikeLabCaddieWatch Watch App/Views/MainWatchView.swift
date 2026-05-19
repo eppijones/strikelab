@@ -226,16 +226,11 @@ struct MainWatchView: View {
     }
 
     private var startLogoLockup: some View {
-        VStack(spacing: 3) {
-            Image("AppLogo")
+        VStack(spacing: 1) {
+            Image("StrikeLabLockup")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 26, height: 26)
-
-            Text("StrikeLab")
-                .font(.system(size: 17, weight: .medium, design: .serif))
-                .foregroundColor(SLW.ink)
-                .lineLimit(1)
+                .frame(width: 118, height: 37)
 
             Text("CADDIE")
                 .font(SLW.mono(7, weight: .semibold))
