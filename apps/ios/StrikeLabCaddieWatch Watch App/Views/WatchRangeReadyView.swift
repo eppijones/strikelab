@@ -64,7 +64,10 @@ struct WatchRangeReadyView: View {
                 .foregroundColor(SLW.accentInk)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
-                .background(SLW.accent)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(SLW.ink)
+                )
         }
         // Reserve leading space for the system back chevron on pushed range sessions.
         .padding(.leading, 36)

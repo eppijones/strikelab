@@ -51,11 +51,11 @@ struct TeeCountdownView: View {
     private func tile(for booking: WatchTeeBooking) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
-                Circle().fill(Color.green).frame(width: 5, height: 5)
+                Circle().fill(SLW.accent).frame(width: 5, height: 5)
                 Text("READY IN")
                     .font(.system(size: 9, weight: .semibold, design: .monospaced))
                     .tracking(1.4)
-                    .foregroundColor(.gray)
+                    .foregroundColor(SLW.ink3)
                 Spacer()
                 if let state = booking.forecastState {
                     Text(state.uppercased())
@@ -67,41 +67,41 @@ struct TeeCountdownView: View {
             }
             Text(formatCountdown(seconds: max(0, Int(booking.teeTime.timeIntervalSince(now)))))
                 .font(.system(size: 28, weight: .medium, design: .monospaced))
-                .foregroundColor(.green)
+                .foregroundColor(SLW.accent)
             Text(booking.courseName)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white)
+                .foregroundColor(SLW.ink)
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)
             HStack(spacing: 6) {
                 Text(format(booking.teeTime))
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(SLW.ink2)
                 if let t = booking.forecastTempC {
                     Text("\(Int(t.rounded()))°")
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(SLW.ink3)
                 }
                 if let w = booking.forecastWindMs {
                     Text("\(Int(w.rounded())) m/s")
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(SLW.ink3)
                 }
             }
             if let code = booking.checkInCode {
                 Text(code)
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .tracking(2)
-                    .foregroundColor(.green.opacity(0.9))
+                    .foregroundColor(SLW.accent)
             }
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.black.opacity(0.6))
-        .cornerRadius(2)
+        .background(SLW.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 2)
-                .stroke(Color.green.opacity(0.4), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(SLW.accent.opacity(0.4), lineWidth: 1)
         )
         .onTapGesture {
             connectivity.requestOpenPass(bookingId: booking.bookingId)
@@ -113,10 +113,10 @@ struct TeeCountdownView: View {
             Text("NO BOOKING")
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .tracking(1.4)
-                .foregroundColor(.gray)
+                .foregroundColor(SLW.ink3)
             Text("Open Tee on iPhone to book a round.")
                 .font(.system(size: 11))
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundColor(SLW.ink2)
         }
         .padding(10)
     }
@@ -138,9 +138,9 @@ struct TeeCountdownView: View {
 
     private func weatherColor(_ state: String) -> Color {
         switch state.lowercased() {
-        case "rain": return .red
-        case "showers": return .orange
-        default: return .green
+        case "rain": return SLW.bad
+        case "showers": return SLW.warn
+        default: return SLW.accent
         }
     }
 }

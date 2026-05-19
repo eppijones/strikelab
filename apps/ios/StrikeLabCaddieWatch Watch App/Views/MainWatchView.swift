@@ -209,18 +209,8 @@ struct MainWatchView: View {
 
     private var startView: some View {
         ScrollView {
-            VStack(spacing: 8) {
-                HStack {
-                    Text("STRIKELAB")
-                        .font(SLW.mono(9, weight: .semibold))
-                        .tracking(2.0)
-                        .foregroundColor(SLW.accent)
-                    Spacer()
-                    Text("CADDIE")
-                        .font(SLW.mono(9, weight: .semibold))
-                        .tracking(2.0)
-                        .foregroundColor(SLW.ink3)
-                }
+            VStack(spacing: 9) {
+                startHeader
 
                 // Tee booking countdown — only shown when an upcoming
                 // StrikeLab Tee booking has been pushed from the iPhone.
@@ -255,68 +245,36 @@ struct MainWatchView: View {
 
                 // Primary: GPS-detected start, or generic Round CTA.
                 if let nearby = nearbyCourse {
-                    Button {
+                    startActionButton(
+                        eyebrow: "START AT",
+                        title: nearby.name.uppercased(),
+                        icon: "location.fill",
+                        isPrimary: true
+                    ) {
                         beginStartAction(.nearbyRound(nearby))
-                    } label: {
-                        VStack(spacing: 2) {
-                            Text("START AT")
-                                .font(SLW.mono(8, weight: .semibold))
-                                .tracking(1.4)
-                                .foregroundColor(SLW.accentInk.opacity(0.6))
-                            Text(nearby.name.uppercased())
-                                .font(SLW.mono(11, weight: .semibold))
-                                .tracking(1.0)
-                                .foregroundColor(SLW.accentInk)
-                                .lineLimit(2)
-                                .multilineTextAlignment(.center)
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(SLW.accent)
                     }
-                    .buttonStyle(.plain)
                 } else {
-                    Button {
+                    startActionButton(
+                        eyebrow: "ROUND",
+                        title: "START ROUND",
+                        icon: "flag.fill",
+                        isPrimary: true
+                    ) {
                         beginStartAction(.genericRound)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "flag.fill")
-                            Text("START ROUND").tracking(1.4)
-                        }
-                        .font(SLW.mono(11, weight: .semibold))
-                        .foregroundColor(SLW.accentInk)
-                        .frame(maxWidth: .infinity, minHeight: 36)
-                        .background(SLW.accent)
                     }
-                    .buttonStyle(.plain)
                 }
 
                 // Secondary: Range / driving range session.
-                Button {
+                startActionButton(
+                    eyebrow: "PRACTICE",
+                    title: "RANGE",
+                    icon: "scope",
+                    isPrimary: false
+                ) {
                     beginStartAction(.range)
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "scope")
-                        Text("RANGE").tracking(1.4)
-                    }
-                    .font(SLW.mono(11, weight: .semibold))
-                    .foregroundColor(SLW.ink)
-                    .frame(maxWidth: .infinity, minHeight: 32)
-                    .background(SLW.surface2)
-                    .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
                 }
-                .buttonStyle(.plain)
 
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(connectivityManager.isPhoneReachable ? SLW.accent : SLW.bad.opacity(0.7))
-                        .frame(width: 6, height: 6)
-
-                    Text(startHint)
-                        .font(SLW.mono(9))
-                        .foregroundColor(SLW.ink3)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.75)
-                }
+                startStatusPanel
 
                 if showsPhoneContextHint {
                     Text("Open StrikeLab on iPhone to pick a course, sync your bag, or send the next tee time.")
@@ -328,10 +286,138 @@ struct MainWatchView: View {
                         .padding(.horizontal, 4)
                 }
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 7)
             .padding(.vertical, 4)
         }
+        .background(SLW.bg.ignoresSafeArea())
         .onAppear { locationManager.startBriefly() }
+    }
+
+    private var startHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("STRIKELAB")
+                    .font(SLW.mono(9, weight: .semibold))
+                    .tracking(2.2)
+                    .foregroundColor(SLW.accent)
+                Spacer()
+                Text("CADDIE")
+                    .font(SLW.mono(9, weight: .semibold))
+                    .tracking(2.0)
+                    .foregroundColor(SLW.ink3)
+            }
+
+            HStack(alignment: .lastTextBaseline, spacing: 6) {
+                Text(connectivityManager.isRoundActive ? "LIVE" : "READY")
+                    .font(SLW.num(34))
+                    .foregroundColor(SLW.ink)
+                    .lineLimit(1)
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(connectivityManager.isPhoneReachable ? "SYNC" : "OFFLINE")
+                        .font(SLW.mono(8, weight: .semibold))
+                        .tracking(1.5)
+                        .foregroundColor(connectivityManager.isPhoneReachable ? SLW.accent : SLW.bad)
+                    Text(Date(), style: .time)
+                        .font(SLW.num(12))
+                        .foregroundColor(SLW.ink2)
+                }
+            }
+
+            Text(startHint.uppercased())
+                .font(SLW.mono(8, weight: .semibold))
+                .tracking(1.2)
+                .foregroundColor(SLW.ink2)
+                .lineLimit(2)
+                .minimumScaleFactor(0.72)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [SLW.surface, SLW.bg2.opacity(0.92)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(SLW.line, lineWidth: 1)
+        )
+    }
+
+    private func startActionButton(
+        eyebrow: String,
+        title: String,
+        icon: String,
+        isPrimary: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 18)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(eyebrow)
+                        .font(SLW.mono(7, weight: .semibold))
+                        .tracking(1.5)
+                        .opacity(0.65)
+                    Text(title)
+                        .font(SLW.mono(11, weight: .semibold))
+                        .tracking(1.2)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.72)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .opacity(0.75)
+            }
+            .foregroundColor(isPrimary ? SLW.accentInk : SLW.ink)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, minHeight: 42)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isPrimary ? SLW.ink : SLW.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isPrimary ? SLW.ink.opacity(0.9) : SLW.line, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var startStatusPanel: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(connectivityManager.isPhoneReachable ? SLW.accent : SLW.bad.opacity(0.8))
+                .frame(width: 6, height: 6)
+
+            Text(startHint)
+                .font(SLW.mono(9))
+                .foregroundColor(SLW.ink2)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
+
+            Spacer(minLength: 4)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(SLW.surface.opacity(0.9))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(SLW.line.opacity(0.75), lineWidth: 1)
+        )
     }
 
     /// Kick off a range session — defaults the active club to 7-iron, the
@@ -409,25 +495,32 @@ struct MainWatchView: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(SLW.accentInk)
+                    .foregroundColor(SLW.accent)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title)
                         .font(SLW.mono(10, weight: .semibold))
                         .tracking(1.4)
-                        .foregroundColor(SLW.accentInk)
+                        .foregroundColor(SLW.ink)
                     Text(detail)
                         .font(SLW.mono(9))
-                        .foregroundColor(SLW.accentInk.opacity(0.75))
+                        .foregroundColor(SLW.ink3)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(SLW.accentInk)
+                    .foregroundColor(SLW.accent)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
-            .background(SLW.accent)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(SLW.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(SLW.accent.opacity(0.45), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }
@@ -499,7 +592,10 @@ struct MainWatchView: View {
                     .foregroundColor(SLW.accentInk)
                     .frame(maxWidth: .infinity, minHeight: 30)
             }
-            .background(SLW.accent)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(SLW.ink)
+            )
             .buttonStyle(.plain)
             .disabled(isCompleteRoundPending)
         }
@@ -561,14 +657,20 @@ struct MainWatchView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(5)
-        .background(SLW.surface)
-        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(SLW.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(SLW.line, lineWidth: 1)
+        )
     }
 
     // MARK: - Hole page
 
     private func holePage(for hole: WatchHoleState) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 5) {
             holeHeader(for: hole)
             fieldToggle
             heroTile(for: hole)
@@ -581,6 +683,7 @@ struct MainWatchView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, 6)
         .padding(.top, 2)
+        .background(SLW.bg.ignoresSafeArea())
     }
 
     // MARK: - Header
@@ -596,7 +699,7 @@ struct MainWatchView: View {
                 Text("HOLE \(hole.holeNumber)")
                     .font(SLW.mono(9, weight: .semibold))
                     .tracking(1.4)
-                    .foregroundColor(SLW.ink)
+                    .foregroundColor(SLW.accent)
                 Text("·")
                     .foregroundColor(SLW.ink3)
                 Text("PAR \(hole.par)")
@@ -662,8 +765,15 @@ struct MainWatchView: View {
             toggleButton(label: "PUTTS", field: .putts)
         }
         .frame(height: 32)
-        .background(SLW.surface2)
-        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+        .padding(2)
+        .background(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .fill(SLW.bg2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .stroke(SLW.line, lineWidth: 1)
+        )
         .clipped()
     }
 
@@ -674,8 +784,10 @@ struct MainWatchView: View {
             .tracking(1.4)
             .foregroundColor(isActive ? SLW.accentInk : SLW.ink2)
             .frame(maxWidth: .infinity, minHeight: 32, maxHeight: 32)
-            .background(isActive ? SLW.accent : SLW.surface2)
-            .overlay(Rectangle().stroke(isActive ? SLW.accent : Color.clear, lineWidth: 1))
+            .background(
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(isActive ? SLW.ink : Color.clear)
+            )
             .contentShape(Rectangle())
             .onTapGesture {
                 if activeField == field {
@@ -774,9 +886,18 @@ struct MainWatchView: View {
             .frame(maxWidth: .infinity, minHeight: 88, maxHeight: 96)
             .padding(.vertical, 4)
             .padding(.horizontal, 4)
-            .background(SLW.surface)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [SLW.surface, SLW.bg2.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
             .overlay(
-                Rectangle().stroke(
+                RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(
                     crownArmed ? SLW.accent : SLW.line,
                     lineWidth: crownArmed ? 2 : 1
                 )
@@ -843,8 +964,14 @@ struct MainWatchView: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(enabled ? SLW.ink : SLW.ink3.opacity(0.5))
                 .frame(width: 32, height: 32)
-                .background(SLW.surface2)
-                .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+                .background(
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(SLW.surface2)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .stroke(SLW.line, lineWidth: 1)
+                )
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
@@ -949,9 +1076,18 @@ struct MainWatchView: View {
             .frame(maxWidth: .infinity, minHeight: 88, maxHeight: 96)
             .padding(.vertical, 4)
             .padding(.horizontal, 4)
-            .background(SLW.surface)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [SLW.surface, SLW.bg2.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
             .overlay(
-                Rectangle().stroke(
+                RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(
                     crownArmed ? SLW.accent : SLW.line,
                     lineWidth: crownArmed ? 2 : 1
                 )
@@ -1059,8 +1195,12 @@ struct MainWatchView: View {
         }
         .padding(.horizontal, 5)
         .padding(.vertical, 3)
-        .background(SLW.bg.opacity(0.78))
-        .overlay(Rectangle().stroke(SLW.line.opacity(0.75), lineWidth: 1))
+        .background(SLW.surface.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(SLW.line.opacity(0.75), lineWidth: 1)
+        )
     }
 
     private func handicapCornerChip(for hole: WatchHoleState) -> some View {
@@ -1072,8 +1212,14 @@ struct MainWatchView: View {
                     .foregroundColor(SLW.accentInk)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 3)
-                    .background(SLW.accent)
-                    .overlay(Rectangle().stroke(SLW.accent.opacity(0.9), lineWidth: 1))
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(SLW.ink)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(SLW.ink.opacity(0.9), lineWidth: 1)
+                    )
             }
         }
     }
@@ -1270,8 +1416,14 @@ struct MainWatchView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(SLW.ink)
                         .frame(maxWidth: .infinity, minHeight: 30)
-                        .background(SLW.surface2)
-                        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(SLW.surface2)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(SLW.line, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
                 .disabled(gross <= 0)
@@ -1288,8 +1440,14 @@ struct MainWatchView: View {
                         .tracking(1.2)
                         .foregroundColor(SLW.ink)
                         .frame(maxWidth: .infinity, minHeight: 30)
-                        .background(SLW.surface2)
-                        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(SLW.surface2)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(SLW.line, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
 
@@ -1304,15 +1462,27 @@ struct MainWatchView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(SLW.ink)
                         .frame(maxWidth: .infinity, minHeight: 30)
-                        .background(SLW.surface2)
-                        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(SLW.surface2)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(SLW.line, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(10)
-        .background(SLW.surface)
-        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(SLW.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(SLW.line, lineWidth: 1)
+        )
     }
 
     private func actionRow(icon: String, label: String, danger: Bool = false) -> some View {
@@ -1326,8 +1496,14 @@ struct MainWatchView: View {
             Spacer()
         }
         .padding(8)
-        .background(SLW.surface)
-        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(SLW.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(SLW.line, lineWidth: 1)
+        )
     }
 
     // MARK: - Score helpers

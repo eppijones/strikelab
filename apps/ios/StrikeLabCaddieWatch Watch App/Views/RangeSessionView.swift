@@ -128,8 +128,14 @@ struct RangeSessionView: View {
             )
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
-            .background(detectFlash ? SLW.accent.opacity(0.18) : SLW.surface)
-            .overlay(Rectangle().stroke(detectFlash ? SLW.accent : SLW.line, lineWidth: 1))
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(detectFlash ? SLW.accent.opacity(0.16) : SLW.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(detectFlash ? SLW.accent : SLW.line, lineWidth: 1)
+            )
             .animation(.easeOut(duration: 0.25), value: detectFlash)
 
             Button {
@@ -141,7 +147,10 @@ struct RangeSessionView: View {
                     .tracking(1.4)
                     .foregroundColor(SLW.accentInk)
                     .frame(maxWidth: .infinity, minHeight: 32)
-                    .background(SLW.accent)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(SLW.ink)
+                    )
             }
             .buttonStyle(.plain)
 
@@ -228,8 +237,14 @@ struct RangeSessionView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity)
-            .background(isActive ? SLW.accent : SLW.surface)
-            .overlay(Rectangle().stroke(isActive ? SLW.accent : SLW.line, lineWidth: 1))
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isActive ? SLW.ink : SLW.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isActive ? SLW.ink.opacity(0.9) : SLW.line, lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }
@@ -365,15 +380,27 @@ struct RangeSessionView: View {
                         .tracking(1.6)
                         .foregroundColor(metronomeOn ? SLW.bad : SLW.accentInk)
                         .frame(maxWidth: .infinity, minHeight: 28)
-                        .background(metronomeOn ? SLW.surface2 : SLW.accent)
-                        .overlay(Rectangle().stroke(metronomeOn ? SLW.bad : SLW.accent, lineWidth: 1))
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(metronomeOn ? SLW.surface2 : SLW.ink)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(metronomeOn ? SLW.bad : SLW.ink, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(8)
-        .background(SLW.surface)
-        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(SLW.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(SLW.line, lineWidth: 1)
+        )
     }
 
     private var consistencyBlock: some View {
@@ -404,8 +431,14 @@ struct RangeSessionView: View {
                 .foregroundColor(SLW.ink3)
         }
         .padding(8)
-        .background(SLW.surface)
-        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(SLW.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(SLW.line, lineWidth: 1)
+        )
     }
 
     private var pressureBlock: some View {
@@ -432,8 +465,14 @@ struct RangeSessionView: View {
                 .foregroundColor(SLW.ink3)
         }
         .padding(8)
-        .background(SLW.surface)
-        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(SLW.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(SLW.line, lineWidth: 1)
+        )
     }
 
     // MARK: - Metronome plumbing
@@ -497,15 +536,27 @@ struct RangeSessionView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(SLW.bad)
                     .frame(width: 30, height: 30)
-                    .background(SLW.surface2)
-                    .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(SLW.surface2)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(SLW.line, lineWidth: 1)
+                    )
             }
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
-        .background(SLW.surface)
-        .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(SLW.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(SLW.line, lineWidth: 1)
+        )
     }
 
     private func relativeTime(_ ts: Date) -> String {

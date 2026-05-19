@@ -62,11 +62,15 @@ struct WatchMapView: View {
                             Text(String(format: "%.1fx", zoomLevel))
                                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                         }
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(SLW.ink2)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.black.opacity(0.4))
-                        .cornerRadius(8)
+                        .background(SLW.surface.opacity(0.9))
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(SLW.line.opacity(0.7), lineWidth: 1)
+                        )
                         .padding(.bottom, 4)
                     }
                 }
