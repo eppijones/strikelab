@@ -208,169 +208,128 @@ struct MainWatchView: View {
     // MARK: - Start screen
 
     private var startView: some View {
-        ScrollView {
-            VStack(spacing: 9) {
-                startHeader
-
-                // Tee booking countdown — only shown when an upcoming
-                // StrikeLab Tee booking has been pushed from the iPhone.
-                if connectivityManager.nextTeeBooking != nil {
-                    TeeCountdownView()
-                        .padding(.bottom, 4)
-                }
-
-                // Resume banners — shown when a session is alive but the
-                // user has popped out via the system back chevron. Tapping
-                // pushes the live view back onto the NavigationStack.
-                if connectivityManager.rangeSession != nil && !showingRange {
-                    resumeBanner(
-                        title: "RESUME RANGE",
-                        detail: "\(connectivityManager.rangeTotalSwings) swings",
-                        icon: "scope"
-                    ) {
-                        showingRange = true
-                        Haptics.play(.click)
-                    }
-                }
-                if connectivityManager.isRoundActive && !showingRound {
-                    resumeBanner(
-                        title: "RESUME ROUND",
-                        detail: "Hole \(connectivityManager.currentHoleNumber) · \(connectivityManager.formattedToPar)",
-                        icon: "flag.fill"
-                    ) {
-                        showingRound = true
-                        Haptics.play(.click)
-                    }
-                }
-
-                // Primary: GPS-detected start, or generic Round CTA.
-                if let nearby = nearbyCourse {
-                    startActionButton(
-                        eyebrow: "START AT",
-                        title: nearby.name.uppercased(),
-                        icon: "location.fill",
-                        isPrimary: true
-                    ) {
-                        beginStartAction(.nearbyRound(nearby))
-                    }
-                } else {
-                    startActionButton(
-                        eyebrow: "ROUND",
-                        title: "START ROUND",
-                        icon: "flag.fill",
-                        isPrimary: true
-                    ) {
-                        beginStartAction(.genericRound)
-                    }
-                }
-
-                // Secondary: Range / driving range session.
-                startActionButton(
-                    eyebrow: "PRACTICE",
-                    title: "RANGE",
-                    icon: "scope",
-                    isPrimary: false
-                ) {
-                    beginStartAction(.range)
-                }
-
-                startStatusPanel
-
-                if showsPhoneContextHint {
-                    Text("Open StrikeLab on iPhone to pick a course, sync your bag, or send the next tee time.")
-                        .font(SLW.mono(8))
-                        .foregroundColor(SLW.ink3)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(3)
-                        .minimumScaleFactor(0.75)
-                        .padding(.horizontal, 4)
-                }
+        VStack(spacing: 0) {
+            Spacer(minLength: 8)
+            startLogoLockup
+                .padding(.top, 6)
+            Spacer(minLength: 12)
+            VStack(spacing: 8) {
+                roundStartTile
+                rangeStartTile
             }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(SLW.bg.ignoresSafeArea())
         .onAppear { locationManager.startBriefly() }
     }
 
-    private var startHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("STRIKELAB")
-                    .font(SLW.mono(9, weight: .semibold))
-                    .tracking(2.2)
-                    .foregroundColor(SLW.accent)
-                Spacer()
-                Text("CADDIE")
-                    .font(SLW.mono(9, weight: .semibold))
-                    .tracking(2.0)
-                    .foregroundColor(SLW.ink3)
-            }
+    private var startLogoLockup: some View {
+        VStack(spacing: 3) {
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 26, height: 26)
 
-            HStack(alignment: .lastTextBaseline, spacing: 6) {
-                Text(connectivityManager.isRoundActive ? "LIVE" : "READY")
-                    .font(SLW.num(34))
-                    .foregroundColor(SLW.ink)
-                    .lineLimit(1)
-                Spacer()
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(connectivityManager.isPhoneReachable ? "SYNC" : "OFFLINE")
-                        .font(SLW.mono(8, weight: .semibold))
-                        .tracking(1.5)
-                        .foregroundColor(connectivityManager.isPhoneReachable ? SLW.accent : SLW.bad)
-                    Text(Date(), style: .time)
-                        .font(SLW.num(12))
-                        .foregroundColor(SLW.ink2)
-                }
-            }
+            Text("StrikeLab")
+                .font(.system(size: 17, weight: .medium, design: .serif))
+                .foregroundColor(SLW.ink)
+                .lineLimit(1)
 
-            Text(startHint.uppercased())
-                .font(SLW.mono(8, weight: .semibold))
-                .tracking(1.2)
-                .foregroundColor(SLW.ink2)
-                .lineLimit(2)
-                .minimumScaleFactor(0.72)
+            Text("CADDIE")
+                .font(SLW.mono(7, weight: .semibold))
+                .tracking(2.0)
+                .foregroundColor(SLW.ink3)
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [SLW.surface, SLW.bg2.opacity(0.92)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(SLW.line, lineWidth: 1)
-        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("StrikeLab Caddie")
     }
 
-    private func startActionButton(
+    private var roundStartTile: some View {
+        let isContinuing = connectivityManager.isRoundActive
+        let subtitle: String = {
+            if isContinuing {
+                return "H\(connectivityManager.currentHoleNumber) · \(connectivityManager.formattedToPar)"
+            }
+            if let nearby = nearbyCourse {
+                return nearby.name
+            }
+            if let course = connectivityManager.courseName {
+                return course
+            }
+            return "No round"
+        }()
+
+        return startActionTile(
+            eyebrow: isContinuing ? "ROUND" : "ROUND",
+            title: isContinuing ? "CONTINUE" : "START ROUND",
+            subtitle: subtitle,
+            icon: "flag.fill",
+            isPrimary: true
+        ) {
+            if isContinuing {
+                showingRound = true
+                Haptics.play(.click)
+            } else if let nearby = nearbyCourse {
+                beginStartAction(.nearbyRound(nearby))
+            } else {
+                beginStartAction(.genericRound)
+            }
+        }
+    }
+
+    private var rangeStartTile: some View {
+        let isContinuing = connectivityManager.rangeSession != nil
+        let subtitle = isContinuing
+            ? "\(connectivityManager.rangeTotalSwings) logs today"
+            : "Start range"
+
+        return startActionTile(
+            eyebrow: "RANGE",
+            title: isContinuing ? "CONTINUE" : "START RANGE",
+            subtitle: subtitle,
+            icon: "scope",
+            isPrimary: false
+        ) {
+            if isContinuing {
+                showingRange = true
+                Haptics.play(.click)
+            } else {
+                beginStartAction(.range)
+            }
+        }
+    }
+
+    private func startActionTile(
         eyebrow: String,
         title: String,
+        subtitle: String,
         icon: String,
         isPrimary: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 18)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(spacing: 2) {
+                    Image(systemName: icon)
+                        .font(.system(size: 9, weight: .semibold))
                     Text(eyebrow)
-                        .font(SLW.mono(7, weight: .semibold))
-                        .tracking(1.5)
-                        .opacity(0.65)
+                        .font(SLW.mono(6, weight: .semibold))
+                        .tracking(1.1)
+                }
+                .frame(width: 31)
+                VStack(alignment: .leading, spacing: 1) {
                     Text(title)
-                        .font(SLW.mono(11, weight: .semibold))
-                        .tracking(1.2)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.72)
+                        .font(SLW.mono(11, weight: .bold))
+                        .tracking(1.0)
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(SLW.mono(7, weight: .medium))
+                        .tracking(0.8)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                        .opacity(isPrimary ? 0.72 : 0.6)
                 }
                 Spacer(minLength: 4)
                 Image(systemName: "chevron.right")
@@ -378,9 +337,9 @@ struct MainWatchView: View {
                     .opacity(0.75)
             }
             .foregroundColor(isPrimary ? SLW.accentInk : SLW.ink)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, minHeight: 42)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, minHeight: 39)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(isPrimary ? SLW.ink : SLW.surface)
@@ -391,33 +350,6 @@ struct MainWatchView: View {
             )
         }
         .buttonStyle(.plain)
-    }
-
-    private var startStatusPanel: some View {
-        HStack(spacing: 7) {
-            Circle()
-                .fill(connectivityManager.isPhoneReachable ? SLW.accent : SLW.bad.opacity(0.8))
-                .frame(width: 6, height: 6)
-
-            Text(startHint)
-                .font(SLW.mono(9))
-                .foregroundColor(SLW.ink2)
-                .lineLimit(2)
-                .minimumScaleFactor(0.75)
-
-            Spacer(minLength: 4)
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(SLW.surface.opacity(0.9))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(SLW.line.opacity(0.75), lineWidth: 1)
-        )
     }
 
     /// Kick off a range session — defaults the active club to 7-iron, the
@@ -438,21 +370,6 @@ struct MainWatchView: View {
         }
         guard let best = candidates.min(by: { $0.1 < $1.1 }) else { return nil }
         return best.1 < 500 ? best.0 : nil
-    }
-
-    private var startHint: String {
-        if !connectivityManager.isPhoneReachable { return "No iPhone connection" }
-        if let nearby = nearbyCourse { return "Detected · \(nearby.name)" }
-        if let course = connectivityManager.courseName { return course }
-        return "Pick course on iPhone"
-    }
-
-    private var showsPhoneContextHint: Bool {
-        connectivityManager.nextTeeBooking == nil
-            && connectivityManager.rangeSession == nil
-            && !connectivityManager.isRoundActive
-            && nearbyCourse == nil
-            && connectivityManager.courseName == nil
     }
 
     private func beginStartAction(_ action: StartAction) {
@@ -481,48 +398,6 @@ struct MainWatchView: View {
             startRangeSession()
             showingRange = true
         }
-    }
-
-    /// Big "Resume <session>" pill shown on the start screen when a
-    /// session is running in the background.
-    private func resumeBanner(
-        title: String,
-        detail: String,
-        icon: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(SLW.accent)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(SLW.mono(10, weight: .semibold))
-                        .tracking(1.4)
-                        .foregroundColor(SLW.ink)
-                    Text(detail)
-                        .font(SLW.mono(9))
-                        .foregroundColor(SLW.ink3)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(SLW.accent)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(SLW.surface)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(SLW.accent.opacity(0.45), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Active round
