@@ -561,9 +561,15 @@ struct MainWatchView: View {
     private func holeHeader(for hole: WatchHoleState) -> some View {
         // Long-press the header to mark Par instantly — the most common
         // score and the fastest single gesture for a confident player.
-        HStack(alignment: .center, spacing: 4) {
-            // Keep the leading edge clear for watchOS' system back chevron.
-            Spacer(minLength: 58)
+        HStack(alignment: .center, spacing: 6) {
+            // Keep the leading edge clear for watchOS' system back chevron,
+            // but use the strip as a quiet brand anchor on every score page.
+            Spacer(minLength: 30)
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 14, height: 14)
+            Spacer(minLength: 10)
 
             HStack(spacing: 4) {
                 Text("HOLE \(hole.holeNumber)")

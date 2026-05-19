@@ -127,15 +127,9 @@ struct RangeSessionView: View {
                 onClubTap: { showBagSheet = true }
             )
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(detectFlash ? SLW.accent.opacity(0.16) : SLW.surface)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(detectFlash ? SLW.accent : SLW.line, lineWidth: 1)
-            )
+            .padding(.vertical, 2)
+            .background(detectFlash ? SLW.accent.opacity(0.12) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .animation(.easeOut(duration: 0.25), value: detectFlash)
 
             Button {
@@ -174,9 +168,9 @@ struct RangeSessionView: View {
                 }
             }
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 8)
         .padding(.top, 2)
-        .padding(.bottom, 6)
+        .padding(.bottom, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 

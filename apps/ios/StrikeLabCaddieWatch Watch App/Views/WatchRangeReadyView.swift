@@ -18,12 +18,16 @@ struct WatchRangeReadyView: View {
     var onClubTap: (() -> Void)? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("READY")
-                    .font(SLW.mono(9, weight: .semibold))
-                    .tracking(1.6)
-                    .foregroundColor(SLW.accent)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 14, height: 14)
+                Text("READY · \(activeClubShort.uppercased())")
+                    .font(SLW.mono(8, weight: .semibold))
+                    .tracking(1.3)
+                    .foregroundColor(SLW.ink2)
                 Spacer()
                 Text("\(totalSwings) today")
                     .font(SLW.mono(8))
@@ -31,18 +35,19 @@ struct WatchRangeReadyView: View {
             }
 
             Text(activeClubShort.uppercased())
-                .font(SLW.num(44))
+                .font(SLW.num(40))
                 .foregroundColor(SLW.ink)
                 .contentShape(Rectangle())
                 .onTapGesture { onClubTap?() }
-            Text("\(activeCount) swings")
-                .font(SLW.mono(9))
-                .foregroundColor(SLW.accent)
 
             if let r = lastTempo {
-                Text(String(format: "Last tempo %.2f", r))
-                    .font(SLW.mono(8))
-                    .foregroundColor(SLW.ink3)
+                HStack {
+                    Text("LAST TEMPO")
+                    Spacer()
+                    Text(String(format: "%.2f", r))
+                }
+                .font(SLW.mono(8))
+                .foregroundColor(SLW.ink3)
                 let wLo = window?.tempoWindowLo ?? 2.7
                 let wHi = window?.tempoWindowHi ?? 3.3
                 let cLo = window?.tempoCareerLo ?? 2.0
@@ -56,6 +61,10 @@ struct WatchRangeReadyView: View {
                     recent: recentTempos
                 )
                 .frame(height: 28)
+            } else {
+                Text("\(activeCount) swings")
+                    .font(SLW.mono(9))
+                    .foregroundColor(SLW.accent)
             }
 
             Text("CAPTURE")
@@ -69,9 +78,7 @@ struct WatchRangeReadyView: View {
                         .fill(SLW.ink)
                 )
         }
-        // Reserve leading space for the system back chevron on pushed range sessions.
-        .padding(.leading, 36)
-        .padding(.trailing, 4)
+        .padding(.horizontal, 2)
     }
 }
 
