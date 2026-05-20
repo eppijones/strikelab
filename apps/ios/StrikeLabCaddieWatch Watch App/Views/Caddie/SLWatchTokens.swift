@@ -177,3 +177,32 @@ struct SLWAnimatedMark: View {
             }
     }()
 }
+
+struct SLWStatusWash: View {
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .topTrailing) {
+                RadialGradient(
+                    colors: [
+                        Color(red: 0x2D / 255, green: 0x4A / 255, blue: 0x2B / 255).opacity(0.42),
+                        Color(red: 0x2D / 255, green: 0x4A / 255, blue: 0x2B / 255).opacity(0.18),
+                        .clear
+                    ],
+                    center: .topTrailing,
+                    startRadius: 2,
+                    endRadius: min(geometry.size.width, geometry.size.height) * 0.58
+                )
+                .frame(width: geometry.size.width * 0.58, height: geometry.size.height * 0.34)
+                .allowsHitTesting(false)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+extension View {
+    func slwStatusWash() -> some View {
+        overlay(SLWStatusWash())
+    }
+}

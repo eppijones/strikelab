@@ -224,6 +224,7 @@ struct MainWatchView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(SLW.bg.ignoresSafeArea())
+        .slwStatusWash()
         .onAppear {
             locationManager.startBriefly()
         }
@@ -569,6 +570,7 @@ struct MainWatchView: View {
         .padding(.horizontal, 6)
         .padding(.top, 2)
         .background(SLW.bg.ignoresSafeArea())
+        .slwStatusWash()
     }
 
     // MARK: - Header
