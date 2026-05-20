@@ -230,7 +230,7 @@ struct MainWatchView: View {
             Image("StrikeLabLockup")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 118, height: 37)
+                .frame(width: 120, height: 30)
 
             Text("CADDIE")
                 .font(SLW.mono(7, weight: .semibold))
