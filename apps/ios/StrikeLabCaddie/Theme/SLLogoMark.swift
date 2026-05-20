@@ -2,177 +2,172 @@
 //  SLLogoMark.swift
 //  StrikeLabCaddie
 //
-//  Brand mark for StrikeLabCaddie. A precision-instrument reticule with the
-//  "SL" monogram inside — communicates the "performance instrument" identity
-//  in one shape. Renders crisply at any size.
+//  Brand mark for StrikeLabCaddie. Mirrors the current StrikeLab brand guide:
+//  moss ring, hex-packed dimple field, and Oslo/strike point in sun yellow.
 //
 
 import SwiftUI
 
-/// The reticule + SL monogram brand mark. Use anywhere we'd previously
-/// have shown a logo or splash visual. Looks correct on dark surfaces.
+/// Animated StrikeLab mark. The guide specifies a 720ms mark animation that
+/// replays every 4.4s: ring draws, dimples materialise outside-in, the strike
+/// lands last. `accent` is kept for source compatibility with older callers.
 struct SLLogoMark: View {
-    /// Scaled to fit any container. Pass `accent: true` to make the ring
-    /// pick up the lime accent (used for app icon / hero) or false for
-    /// monochrome ink (used in compact UI like nav titles).
     var accent: Bool = true
+    var animate: Bool = true
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        GeometryReader { geo in
-            let size = min(geo.size.width, geo.size.height)
-            let stroke: CGFloat = max(size * 0.045, 1)
-            let halfStroke = stroke / 2
-
-            ZStack {
-                // Outer ring — the reticule
-                Circle()
-                    .strokeBorder(ringColor, lineWidth: stroke)
-                    .padding(halfStroke)
-
-                // Inner concentric tick ring
-                Circle()
-                    .strokeBorder(Theme.ink3.opacity(0.45), lineWidth: max(size * 0.012, 0.6))
-                    .padding(size * 0.12)
-
-                // Crosshair lines that stop short of center to leave room
-                // for the monogram. Long horizontal ticks emphasise the
-                // "instrument" feel.
-                CrosshairShape()
-                    .stroke(Theme.ink3.opacity(0.55), lineWidth: max(size * 0.012, 0.6))
-                    .frame(width: size * 0.86, height: size * 0.86)
-
-                // SL monogram — rendered as a single stylised path so it
-                // reads as a mark, not text.
-                MonogramShape()
-                    .fill(Theme.ink)
-                    .frame(width: size * 0.42, height: size * 0.42)
-
-                // Single accent dot at the lower-right tick — a subtle
-                // "signal" reference matching Signal Lime branding.
-                Circle()
-                    .fill(Theme.accent)
-                    .frame(width: size * 0.06, height: size * 0.06)
-                    .offset(x: size * 0.32, y: size * 0.32)
-            }
-            .frame(width: size, height: size)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+        StrikeLabAnimatedMark(
+            animate: animate && !reduceMotion,
+            ringColor: StrikeLabBrand.moss,
+            strikeColor: StrikeLabBrand.sun,
+            dimpleColor: StrikeLabBrand.ink.opacity(0.32),
+            fillColor: StrikeLabBrand.cream
+        )
         .aspectRatio(1, contentMode: .fit)
     }
-
-    private var ringColor: Color {
-        accent ? Theme.accent : Theme.ink
-    }
 }
 
-// MARK: - Crosshair
-
-private struct CrosshairShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let cx = rect.midX
-        let cy = rect.midY
-        let outer = min(rect.width, rect.height) / 2
-        let innerGap = outer * 0.32
-
-        // Top tick
-        path.move(to: CGPoint(x: cx, y: rect.minY))
-        path.addLine(to: CGPoint(x: cx, y: cy - innerGap))
-
-        // Bottom tick
-        path.move(to: CGPoint(x: cx, y: cy + innerGap))
-        path.addLine(to: CGPoint(x: cx, y: rect.maxY))
-
-        // Left tick
-        path.move(to: CGPoint(x: rect.minX, y: cy))
-        path.addLine(to: CGPoint(x: cx - innerGap, y: cy))
-
-        // Right tick
-        path.move(to: CGPoint(x: cx + innerGap, y: cy))
-        path.addLine(to: CGPoint(x: rect.maxX, y: cy))
-
-        return path
-    }
+enum StrikeLabBrand {
+    static let moss = Color(red: 0x2D / 255, green: 0x4A / 255, blue: 0x2B / 255)
+    static let sun = Color(red: 0xE8 / 255, green: 0xB5 / 255, blue: 0x47 / 255)
+    static let ink = Color(red: 0x0E / 255, green: 0x14 / 255, blue: 0x10 / 255)
+    static let cream = Color(red: 0xFB / 255, green: 0xFA / 255, blue: 0xF6 / 255)
 }
 
-// MARK: - SL Monogram
+struct StrikeLabAnimatedMark: View {
+    var animate = true
+    var ringColor: Color = StrikeLabBrand.moss
+    var strikeColor: Color = StrikeLabBrand.sun
+    var dimpleColor: Color = StrikeLabBrand.ink.opacity(0.32)
+    var fillColor: Color = StrikeLabBrand.cream
 
-/// Stacked S over L drawn as one continuous mark. Sized to fit a square
-/// drawing area; the actual frame is set by the caller.
-private struct MonogramShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
+    private let loopDuration: TimeInterval = 4.4
 
-        // S — top half. Draw as two arcs forming an S.
-        let w = rect.width
-        let h = rect.height
-        let strokeWidth = h * 0.18
-
-        // Top S — built from two flat bars and a connector for a chunkier
-        // industrial feel rather than calligraphic.
-        let topRect = CGRect(x: rect.minX, y: rect.minY, width: w, height: h * 0.46)
-        path.addPath(sShape(in: topRect, strokeWidth: strokeWidth))
-
-        // Bottom L — sits below.
-        let bottomY = rect.minY + h * 0.5
-        // Vertical stem of the L
-        path.addRect(CGRect(
-            x: rect.minX,
-            y: bottomY,
-            width: strokeWidth,
-            height: h * 0.5
-        ))
-        // Horizontal foot of the L
-        path.addRect(CGRect(
-            x: rect.minX,
-            y: rect.maxY - strokeWidth,
-            width: w,
-            height: strokeWidth
-        ))
-
-        return path
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            let phase = animate
+                ? timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: loopDuration)
+                : 0.72
+            mark(phase: min(phase, 0.72))
+        }
     }
 
-    private func sShape(in rect: CGRect, strokeWidth: CGFloat) -> Path {
-        var p = Path()
-        // Top horizontal bar
-        p.addRect(CGRect(
-            x: rect.minX,
-            y: rect.minY,
-            width: rect.width,
-            height: strokeWidth
-        ))
-        // Middle horizontal bar
-        let midY = rect.midY - strokeWidth / 2
-        p.addRect(CGRect(
-            x: rect.minX,
-            y: midY,
-            width: rect.width,
-            height: strokeWidth
-        ))
-        // Bottom horizontal bar
-        p.addRect(CGRect(
-            x: rect.minX,
-            y: rect.maxY - strokeWidth,
-            width: rect.width,
-            height: strokeWidth
-        ))
-        // Left vertical (top half)
-        p.addRect(CGRect(
-            x: rect.minX,
-            y: rect.minY,
-            width: strokeWidth,
-            height: (rect.height / 2)
-        ))
-        // Right vertical (bottom half)
-        p.addRect(CGRect(
-            x: rect.maxX - strokeWidth,
-            y: rect.midY - strokeWidth / 2,
-            width: strokeWidth,
-            height: (rect.height / 2) + strokeWidth / 2
-        ))
-        return p
+    private func mark(phase: TimeInterval) -> some View {
+        GeometryReader { geo in
+            let size = min(geo.size.width, geo.size.height)
+            let scale = size / 64
+            let dimples = Self.orderedDimples
+
+            ZStack {
+                Circle()
+                    .fill(fillColor)
+                    .frame(width: 52 * scale, height: 52 * scale)
+
+                Circle()
+                    .trim(from: 0, to: ringProgress(phase))
+                    .stroke(
+                        ringColor,
+                        style: StrokeStyle(lineWidth: max(3.2 * scale, 1.2), lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 52 * scale, height: 52 * scale)
+
+                ForEach(dimples) { dimple in
+                    let progress = dimpleProgress(phase, delay: dimple.delay)
+                    Circle()
+                        .fill(dimpleColor)
+                        .frame(width: 2.7 * scale, height: 2.7 * scale)
+                        .scaleEffect(0.2 + 0.95 * progress)
+                        .opacity(0.32 * progress)
+                        .position(point(x: dimple.x, y: dimple.y, size: size))
+                }
+
+                Circle()
+                    .fill(strikeColor)
+                    .frame(width: strikeDiameter(phase, scale: scale), height: strikeDiameter(phase, scale: scale))
+                    .opacity(strikeProgress(phase) > 0 ? 1 : 0)
+                    .position(point(x: 36, y: 26.5, size: size))
+            }
+            .frame(width: size, height: size)
+            .position(x: geo.size.width / 2, y: geo.size.height / 2)
+        }
     }
+
+    private func point(x: CGFloat, y: CGFloat, size: CGFloat) -> CGPoint {
+        let scale = size / 64
+        return CGPoint(x: size / 2 + (x - 32) * scale, y: size / 2 + (y - 32) * scale)
+    }
+
+    private func ringProgress(_ phase: TimeInterval) -> CGFloat {
+        easedProgress(phase / 0.32)
+    }
+
+    private func dimpleProgress(_ phase: TimeInterval, delay: TimeInterval) -> CGFloat {
+        easedProgress((phase - delay) / 0.38)
+    }
+
+    private func strikeProgress(_ phase: TimeInterval) -> CGFloat {
+        easedProgress((phase - 0.36) / 0.36)
+    }
+
+    private func strikeDiameter(_ phase: TimeInterval, scale: CGFloat) -> CGFloat {
+        let p = strikeProgress(phase)
+        guard p > 0 else { return 0 }
+        let radius = p < 0.55
+            ? 5.6 * (p / 0.55)
+            : 5.6 - (5.6 - 4.6) * ((p - 0.55) / 0.45)
+        return radius * 2 * scale
+    }
+
+    private func easedProgress(_ raw: TimeInterval) -> CGFloat {
+        let clamped = min(1, max(0, raw))
+        return CGFloat(1 - pow(1 - clamped, 3))
+    }
+
+    private struct Dimple: Identifiable {
+        let id: Int
+        let x: CGFloat
+        let y: CGFloat
+        let distance: CGFloat
+        let delay: TimeInterval
+    }
+
+    private static let orderedDimples: [Dimple] = {
+        let spacing: CGFloat = 5.2
+        let rowHeight = spacing * sqrt(3) / 2
+        let strike = CGPoint(x: 36, y: 26.5)
+        var dimples: [(CGFloat, CGFloat, CGFloat)] = []
+
+        for row in -5...5 {
+            let y = 32 + CGFloat(row) * rowHeight
+            let xOffset = abs(row) % 2 == 0 ? CGFloat(0) : spacing / 2
+            for col in -5...5 {
+                let x = 32 + CGFloat(col) * spacing + xOffset
+                let distance = hypot(x - 32, y - 32)
+                let strikeDistance = hypot(x - strike.x, y - strike.y)
+                if distance <= 20, strikeDistance > 6.1 {
+                    dimples.append((x, y, distance))
+                }
+            }
+        }
+
+        let maxDistance = dimples.map { $0.2 }.max() ?? 1
+        return dimples
+            .sorted { $0.2 > $1.2 }
+            .enumerated()
+            .map { index, dimple in
+                let ringIndex = round((maxDistance - dimple.2) / 2.6)
+                return Dimple(
+                    id: index,
+                    x: dimple.0,
+                    y: dimple.1,
+                    distance: dimple.2,
+                    delay: 0.14 + TimeInterval(ringIndex) * 0.028
+                )
+            }
+    }()
 }
 
 // MARK: - App Icon Surface

@@ -248,10 +248,7 @@ struct MainWatchView: View {
 
     private var startLogoLockup: some View {
         VStack(spacing: 4) {
-            Image("AppLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 38, height: 38)
+            SLWAnimatedMark(size: 38)
 
             HStack(alignment: .lastTextBaseline, spacing: 0) {
                 Text("Strike")
@@ -600,10 +597,7 @@ struct MainWatchView: View {
             // Keep the leading edge clear for watchOS' system back chevron,
             // but use the strip as a quiet brand anchor on every score page.
             Spacer(minLength: 30)
-            Image("AppLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 14, height: 14)
+            SLWAnimatedMark(size: 14)
             Spacer(minLength: 10)
 
             HStack(spacing: 4) {

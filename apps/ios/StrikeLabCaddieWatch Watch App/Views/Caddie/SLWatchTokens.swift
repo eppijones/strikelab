@@ -53,3 +53,127 @@ struct SLWPanel<Content: View>: View {
         .overlay(Rectangle().stroke(SLW.line, lineWidth: 1))
     }
 }
+
+struct SLWAnimatedMark: View {
+    var size: CGFloat
+    var animate = true
+
+    private let loopDuration: TimeInterval = 4.4
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            let phase = animate
+                ? timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: loopDuration)
+                : 0.72
+            mark(phase: min(phase, 0.72))
+        }
+        .frame(width: size, height: size)
+    }
+
+    private func mark(phase: TimeInterval) -> some View {
+        let scale = size / 64
+        return ZStack {
+            Circle()
+                .fill(Color(red: 0xFB / 255, green: 0xFA / 255, blue: 0xF6 / 255))
+                .frame(width: 52 * scale, height: 52 * scale)
+
+            Circle()
+                .trim(from: 0, to: ringProgress(phase))
+                .stroke(
+                    Color(red: 0x2D / 255, green: 0x4A / 255, blue: 0x2B / 255),
+                    style: StrokeStyle(lineWidth: max(3.2 * scale, 1.2), lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: 52 * scale, height: 52 * scale)
+
+            ForEach(Self.orderedDimples) { dimple in
+                let progress = dimpleProgress(phase, delay: dimple.delay)
+                Circle()
+                    .fill(Color(red: 0x0E / 255, green: 0x14 / 255, blue: 0x10 / 255).opacity(0.32))
+                    .frame(width: 2.7 * scale, height: 2.7 * scale)
+                    .scaleEffect(0.2 + 0.95 * progress)
+                    .opacity(0.32 * progress)
+                    .position(point(x: dimple.x, y: dimple.y))
+            }
+
+            Circle()
+                .fill(Color(red: 0xE8 / 255, green: 0xB5 / 255, blue: 0x47 / 255))
+                .frame(width: strikeDiameter(phase, scale: scale), height: strikeDiameter(phase, scale: scale))
+                .opacity(strikeProgress(phase) > 0 ? 1 : 0)
+                .position(point(x: 36, y: 26.5))
+        }
+        .frame(width: size, height: size)
+    }
+
+    private func point(x: CGFloat, y: CGFloat) -> CGPoint {
+        let scale = size / 64
+        return CGPoint(x: size / 2 + (x - 32) * scale, y: size / 2 + (y - 32) * scale)
+    }
+
+    private func ringProgress(_ phase: TimeInterval) -> CGFloat {
+        easedProgress(phase / 0.32)
+    }
+
+    private func dimpleProgress(_ phase: TimeInterval, delay: TimeInterval) -> CGFloat {
+        easedProgress((phase - delay) / 0.38)
+    }
+
+    private func strikeProgress(_ phase: TimeInterval) -> CGFloat {
+        easedProgress((phase - 0.36) / 0.36)
+    }
+
+    private func strikeDiameter(_ phase: TimeInterval, scale: CGFloat) -> CGFloat {
+        let progress = strikeProgress(phase)
+        guard progress > 0 else { return 0 }
+        let radius = progress < 0.55
+            ? 5.6 * (progress / 0.55)
+            : 5.6 - (5.6 - 4.6) * ((progress - 0.55) / 0.45)
+        return radius * 2 * scale
+    }
+
+    private func easedProgress(_ raw: TimeInterval) -> CGFloat {
+        let clamped = min(1, max(0, raw))
+        return CGFloat(1 - pow(1 - clamped, 3))
+    }
+
+    private struct Dimple: Identifiable {
+        let id: Int
+        let x: CGFloat
+        let y: CGFloat
+        let delay: TimeInterval
+    }
+
+    private static let orderedDimples: [Dimple] = {
+        let spacing: CGFloat = 5.2
+        let rowHeight = spacing * sqrt(3) / 2
+        let strike = CGPoint(x: 36, y: 26.5)
+        var dimples: [(x: CGFloat, y: CGFloat, distance: CGFloat)] = []
+
+        for row in -5...5 {
+            let y = 32 + CGFloat(row) * rowHeight
+            let xOffset = abs(row) % 2 == 0 ? CGFloat(0) : spacing / 2
+            for col in -5...5 {
+                let x = 32 + CGFloat(col) * spacing + xOffset
+                let distance = hypot(x - 32, y - 32)
+                let strikeDistance = hypot(x - strike.x, y - strike.y)
+                if distance <= 20, strikeDistance > 6.1 {
+                    dimples.append((x, y, distance))
+                }
+            }
+        }
+
+        let maxDistance = dimples.map { $0.distance }.max() ?? 1
+        return dimples
+            .sorted { $0.distance > $1.distance }
+            .enumerated()
+            .map { index, dimple in
+                let ringIndex = round((maxDistance - dimple.distance) / 2.6)
+                return Dimple(
+                    id: index,
+                    x: dimple.x,
+                    y: dimple.y,
+                    delay: 0.14 + TimeInterval(ringIndex) * 0.028
+                )
+            }
+    }()
+}

@@ -20,10 +20,7 @@ struct WatchRangeReadyView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
-                Image("AppLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 14, height: 14)
+                SLWAnimatedMark(size: 14)
                 Text("READY · \(activeClubShort.uppercased())")
                     .font(SLW.mono(8, weight: .semibold))
                     .tracking(1.3)
