@@ -226,15 +226,29 @@ struct MainWatchView: View {
     }
 
     private var startLogoLockup: some View {
-        VStack(spacing: 1) {
-            Image("StrikeLabLockup")
+        VStack(spacing: 4) {
+            Image("AppLogo")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 120, height: 30)
+                .frame(width: 38, height: 38)
+
+            HStack(alignment: .lastTextBaseline, spacing: 0) {
+                Text("Strike")
+                    .font(.system(size: 25, weight: .medium, design: .serif))
+                    .italic()
+                Text("Lab")
+                    .font(.system(size: 25, weight: .bold, design: .default))
+                Text(".")
+                    .font(.system(size: 25, weight: .bold, design: .default))
+                    .foregroundColor(SLW.warn)
+            }
+            .foregroundColor(SLW.ink)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
 
             Text("CADDIE")
-                .font(SLW.mono(7, weight: .semibold))
-                .tracking(2.0)
+                .font(SLW.mono(8, weight: .semibold))
+                .tracking(2.8)
                 .foregroundColor(SLW.ink3)
         }
         .accessibilityElement(children: .combine)
