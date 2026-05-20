@@ -203,6 +203,7 @@ struct MainWatchView: View {
                     disarmCrown()
                 }
         }
+        .preferredColorScheme(.light)
     }
 
     // MARK: - Start screen
