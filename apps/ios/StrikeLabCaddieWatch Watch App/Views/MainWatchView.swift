@@ -579,9 +579,10 @@ struct MainWatchView: View {
         HStack(alignment: .center, spacing: 6) {
             // Keep the leading edge clear for watchOS' system back chevron,
             // but use the strip as a quiet brand anchor on every score page.
-            Spacer(minLength: 30)
-            SLWAnimatedMark(size: 14)
-            Spacer(minLength: 10)
+            Spacer(minLength: 28)
+            SLWAnimatedMark(size: 34)
+                .offset(y: 2)
+            Spacer(minLength: 8)
 
             HStack(spacing: 4) {
                 Text("HOLE \(hole.holeNumber)")
