@@ -81,16 +81,17 @@ final class RealtimeClient: NSObject, ObservableObject {
 
     private func receiveNext() {
         task?.receive { [weak self] result in
-            Task { @MainActor in
-                guard let self else { return }
+            let client = self
+            Task { @MainActor [client, result] in
+                guard let client else { return }
                 switch result {
                 case .failure:
-                    self.handleClose()
+                    client.handleClose()
                 case .success(let message):
-                    if !self.isConnected { self.isConnected = true }
-                    self.reconnectAttempts = 0
-                    self.handle(message: message)
-                    self.receiveNext()
+                    if !client.isConnected { client.isConnected = true }
+                    client.reconnectAttempts = 0
+                    client.handle(message: message)
+                    client.receiveNext()
                 }
             }
         }
