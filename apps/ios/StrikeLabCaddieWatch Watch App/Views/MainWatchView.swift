@@ -203,6 +203,7 @@ struct MainWatchView: View {
                     disarmCrown()
                 }
         }
+        .containerBackground(SLW.bg, for: .navigation)
         .preferredColorScheme(.light)
     }
 
