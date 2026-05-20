@@ -182,17 +182,16 @@ struct SLWStatusWash: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .topTrailing) {
-                RadialGradient(
-                    colors: [
-                        Color(red: 0x2D / 255, green: 0x4A / 255, blue: 0x2B / 255).opacity(0.22),
-                        Color(red: 0x2D / 255, green: 0x4A / 255, blue: 0x2B / 255).opacity(0.08),
-                        .clear
-                    ],
-                    center: .topTrailing,
-                    startRadius: 2,
-                    endRadius: min(geometry.size.width, geometry.size.height) * 0.28
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 20,
+                    bottomLeadingRadius: 20,
+                    bottomTrailingRadius: 0,
+                    topTrailingRadius: 0,
+                    style: .continuous
                 )
-                .frame(width: geometry.size.width * 0.28, height: geometry.size.height * 0.18)
+                .fill(SLW.ink)
+                .frame(width: min(geometry.size.width * 0.36, 104), height: 34)
+                .padding(.top, 17)
                 .allowsHitTesting(false)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
