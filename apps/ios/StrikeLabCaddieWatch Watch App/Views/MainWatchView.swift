@@ -210,21 +210,40 @@ struct MainWatchView: View {
     // MARK: - Start screen
 
     private var startView: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 8)
-            startLogoLockup
-                .padding(.top, 6)
-            Spacer(minLength: 12)
-            VStack(spacing: 8) {
-                roundStartTile
-                rangeStartTile
+        ZStack(alignment: .topTrailing) {
+            VStack(spacing: 0) {
+                Spacer(minLength: 8)
+                startLogoLockup
+                    .padding(.top, 6)
+                Spacer(minLength: 12)
+                VStack(spacing: 8) {
+                    roundStartTile
+                    rangeStartTile
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
             }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 12)
+            startClock
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(SLW.bg.ignoresSafeArea())
-        .onAppear { locationManager.startBriefly() }
+        .onAppear {
+            locationManager.startBriefly()
+        }
+    }
+
+    private var startClock: some View {
+        TimelineView(.periodic(from: Date(), by: 30)) { context in
+            Text(context.date, style: .time)
+                .font(SLW.num(23))
+                .foregroundColor(SLW.ink)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(SLW.bg)
+                .padding(.top, 16)
+                .padding(.trailing, 20)
+                .accessibilityHidden(true)
+        }
     }
 
     private var startLogoLockup: some View {
