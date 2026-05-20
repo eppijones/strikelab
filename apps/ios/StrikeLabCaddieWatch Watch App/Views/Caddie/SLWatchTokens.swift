@@ -191,7 +191,7 @@ struct SLWStatusWash: View {
                 )
                 .fill(SLW.ink)
                 .frame(width: min(geometry.size.width * 0.36, 104), height: 34)
-                .padding(.top, 17)
+                .padding(.top, 5)
                 .allowsHitTesting(false)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
