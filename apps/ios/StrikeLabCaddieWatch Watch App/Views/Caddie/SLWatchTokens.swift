@@ -184,15 +184,15 @@ struct SLWStatusWash: View {
             ZStack(alignment: .topTrailing) {
                 RadialGradient(
                     colors: [
-                        Color(red: 0x2D / 255, green: 0x4A / 255, blue: 0x2B / 255).opacity(0.42),
-                        Color(red: 0x2D / 255, green: 0x4A / 255, blue: 0x2B / 255).opacity(0.18),
+                        Color(red: 0x2D / 255, green: 0x4A / 255, blue: 0x2B / 255).opacity(0.22),
+                        Color(red: 0x2D / 255, green: 0x4A / 255, blue: 0x2B / 255).opacity(0.08),
                         .clear
                     ],
                     center: .topTrailing,
                     startRadius: 2,
-                    endRadius: min(geometry.size.width, geometry.size.height) * 0.58
+                    endRadius: min(geometry.size.width, geometry.size.height) * 0.28
                 )
-                .frame(width: geometry.size.width * 0.58, height: geometry.size.height * 0.34)
+                .frame(width: geometry.size.width * 0.28, height: geometry.size.height * 0.18)
                 .allowsHitTesting(false)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
