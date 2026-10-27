@@ -10,6 +10,8 @@
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/tracer", "destination": "https://strikelab-tracer.vercel.app/tracer/" },
+    { "source": "/tracer/:path*", "destination": "https://strikelab-tracer.vercel.app/tracer/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
